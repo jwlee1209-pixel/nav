@@ -65,11 +65,19 @@ function tile(z, x, y) {
   return Buffer.from(vtpbf.fromGeojsonVt(layers, { version: 2 }));
 }
 
+// en: 실제 Photon 이 lang 없이 한국어 브라우저 요청을 받으면 돌려주는 영문 이름·주소(name:en 등)
+const EN_SEOUL = { district: 'Jongno-gu', city: 'Seoul', street: 'Daehak-ro' };
 const PLACES = [
-  { name: '대학로 테스트 목적지', lon: P.G[0], lat: P.G[1], street: '대학로', housenumber: '101', district: '종로구', city: '서울', osm_value: 'theatre' },
-  { name: '대학로 공원', lon: 127.0010, lat: 37.5780, street: '대학로', district: '종로구', city: '서울', osm_value: 'park' },
-  { name: '대학로 주차장', lon: 126.9990, lat: 37.5690, street: '대학로', district: '종로구', city: '서울', osm_value: 'parking' },
+  { name: '대학로 테스트 목적지', lon: P.G[0], lat: P.G[1], street: '대학로', housenumber: '101', district: '종로구', city: '서울', osm_value: 'theatre', en: { ...EN_SEOUL, name: 'Daehak-ro Test Destination' } },
+  { name: '대학로 공원', lon: 127.0010, lat: 37.5780, street: '대학로', district: '종로구', city: '서울', osm_value: 'park', en: { ...EN_SEOUL, name: 'Daehak-ro Park' } },
+  { name: '대학로 주차장', lon: 126.9990, lat: 37.5690, street: '대학로', district: '종로구', city: '서울', osm_value: 'parking', en: { ...EN_SEOUL } },
+  { name: '렛츠런파크 영천', lon: 128.8905, lat: 35.9879, state: '경상북도', city: '영천시', district: '청통면', osm_value: 'racetrack', en: { name: 'Lets Run Park: Yeongcheon', state: 'North Gyeongsang', city: 'Yeongcheon', district: 'Cheongtong-myeon' } },
 ];
+// Photon 흉내: lang=default 면 현지(한국어) 이름, 아니면 영어. 검색어는 어느 언어 이름과도 맞춘다
+function photonHits(q, lang) {
+  const hits = PLACES.filter(p => p.name.includes(q) || (q.includes('대학로') && p.name.includes('대학로')) || (p.en && p.en.name && p.en.name.includes(q)));
+  return hits.map(({ en, ...p }) => (lang === 'default' ? p : { ...p, ...en }));
+}
 
 async function install(context, opt = {}) {
   const log = opt.log || [];
@@ -84,8 +92,8 @@ async function install(context, opt = {}) {
   await context.route(/cdn\.jsdelivr\.net/, r => r.fulfill({ contentType: 'text/css', body: '' }));
   await context.route(/photon\.komoot\.io\/api/, r => {
     log.push('photon ' + decodeURIComponent(r.request().url()));
-    const q = new URL(r.request().url()).searchParams.get('q');
-    const hits = PLACES.filter(p => p.name.includes(q) || q.includes('대학로'));
+    const u = new URL(r.request().url());
+    const hits = photonHits(u.searchParams.get('q') || '', u.searchParams.get('lang'));
     r.fulfill({ contentType: 'application/json', body: JSON.stringify({ type: 'FeatureCollection', features: hits.map(p => ({ type: 'Feature', geometry: { type: 'Point', coordinates: [p.lon, p.lat] }, properties: { ...p, osm_key: 'amenity' } })) }) });
   });
   await context.route(/photon\.komoot\.io\/reverse/, r => r.fulfill({ contentType: 'application/json', body: JSON.stringify({ type: 'FeatureCollection', features: [] }) }));

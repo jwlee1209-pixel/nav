@@ -86,7 +86,10 @@ async function photonSearch(q, near, signal) {
   u.searchParams.set('q', q);
   u.searchParams.set('limit', '12');
   u.searchParams.set('bbox', KR_BBOX.join(','));
-  if (near) { u.searchParams.set('lat', near.lat.toFixed(4)); u.searchParams.set('lon', near.lon.toFixed(4)); }
+  // lang 을 비우면 Photon 은 브라우저 언어 목록(ko-KR, ko, en-US, en …)에서 자기가 아는 첫 언어(영어)를 골라
+  // 'Lets Run Park: Yeongcheon' 처럼 영문 이름·주소를 돌려준다. default = 현지(한국어) 이름
+  u.searchParams.set('lang', 'default');
+  if (near) { u.searchParams.set('lat', (+near.lat).toFixed(4)); u.searchParams.set('lon', (+near.lon).toFixed(4)); }
   const data = await photonPace(() => fetchJSON(u.toString(), { timeout: 10000, signal }));
   return (data.features || []).map(photonToPlace).filter(Boolean);
 }
@@ -108,7 +111,7 @@ async function nominatimSearch(q, near, signal) {
 async function searchPlaces(q, near, signal) {
   q = q.trim().replace(/\s+/g, ' ');
   if (!q) return { items: [], errors: [] };
-  const key = q + '|' + (near ? near.lat.toFixed(1) + ',' + near.lon.toFixed(1) : '');
+  const key = 'ko|' + q + '|' + (near ? near.lat.toFixed(1) + ',' + near.lon.toFixed(1) : '');   // 'ko|': v1.7 이전(영문 섞인) 캐시는 쓰지 않음
   const cached = cacheGet(key);
   if (cached) return { items: withDistance(cached, near), errors: [], cached: true };
 
@@ -153,6 +156,7 @@ async function reversePlace(lon, lat, signal) {
     try {
       const u = new URL(PHOTON + '/reverse');
       u.searchParams.set('lat', lat.toFixed(6)); u.searchParams.set('lon', lon.toFixed(6));
+      u.searchParams.set('lang', 'default');
       const d = await photonPace(() => fetchJSON(u.toString(), { timeout: 8000, signal }));
       if (d.features && d.features[0]) place = photonToPlace(d.features[0]);
     } catch (e) { if (signal && signal.aborted) throw e; }
@@ -160,4 +164,52 @@ async function reversePlace(lon, lat, signal) {
   const res = place ? { ...place, lat, lon } : { name: '선택한 위치', addr: `${lat.toFixed(5)}, ${lon.toFixed(5)}`, lat, lon, cat: '' };
   revCache.set(key, res);
   return res;
+}
+
+// ── 저장된 장소의 영문 이름·주소를 한글로 고치기(v1.6 까지 Photon 이 영어로 돌려준 것) ──
+const hasHangul = s => /[가-힣]/.test(s || '');
+const latinOnly = s => /[A-Za-z]/.test(s || '') && !hasHangul(s);
+const needsKo = p => !!p && (latinOnly(p.name) || latinOnly(p.addr));
+
+// 같은 장소를 한국어로 다시 찾는다: 이름으로 Photon 검색(영문 이름도 찾아짐) → 300m 안의 가장 가까운 결과.
+// 이름은 같은 장소를 찾았을 때만 바꾸고, 주소는 못 찾으면 그 좌표의 주소(Nominatim 한국어)로 바꾼다.
+async function koreanize(p) {
+  const out = { name: null, addr: null, err: false };
+  const near = { lat: +p.lat, lon: +p.lon }, d = r => hav([r.lon, r.lat], [near.lon, near.lat]);
+  let errs = 0;
+  try {
+    const hit = (await photonSearch(p.name, near)).filter(r => d(r) < 300).sort((a, b) => d(a) - d(b))[0];
+    if (hit) {
+      if (latinOnly(p.name) && hasHangul(hit.name)) out.name = hit.name;
+      if (hasHangul(hit.addr)) out.addr = hit.addr;
+    }
+  } catch (e) { errs++; }
+  if (!out.addr && latinOnly(p.addr)) {
+    const r = await reversePlace(near.lon, near.lat);
+    if (hasHangul(r.addr)) out.addr = r.addr; else errs++;
+  }
+  out.err = errs > 0 && !out.name && !out.addr;
+  return out;
+}
+
+async function fixSavedNames() {
+  if (store.meta.ko) return 0;
+  store.scache = store.scache.filter(x => String(x[0]).startsWith('ko|'));
+  const places = () => [store.home, store.work, ...store.favs, ...store.recents].filter(Boolean);
+  const dests = () => store.trips.map(t => t.dest).filter(Boolean);
+  const todo = new Map();
+  for (const p of [...places(), ...dests()]) if (needsKo(p) && !todo.has(placeKey(p))) todo.set(placeKey(p), p);
+  let changed = 0, failed = 0;
+  for (const [k, p] of [...todo].slice(0, 40)) {
+    const fix = await koreanize(p);
+    if (fix.err) { failed++; continue; }
+    for (const o of places()) if (placeKey(o) === k) {
+      if (fix.name && latinOnly(o.name)) { o.name = fix.name; changed++; }
+      if (fix.addr && latinOnly(o.addr)) { o.addr = fix.addr; changed++; }
+    }
+    for (const o of dests()) if (placeKey(o) === k && fix.name && latinOnly(o.name)) o.name = fix.name;
+  }
+  if (!failed) store.meta.ko = 1;     // 네트워크 오류로 못 고친 것이 있으면 다음에 다시
+  saveStore(true);
+  return changed;
 }

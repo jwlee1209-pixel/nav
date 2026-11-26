@@ -35,6 +35,7 @@ const store = {
   roads: {},             // 도로별·시간대별 실제 통행 속도 학습 {'도로명|시간대': {r, n, t}}
   view: null,            // 마지막 지도 위치 {c:[lon,lat], z}
   scache: [],            // 검색 결과 캐시 [[key, ts, results]]
+  meta: {},              // 한 번만 하는 정리 작업 표시 {ko: 1 = 저장된 장소 한글화 완료}
 };
 
 function placeKey(p) { return p ? `${(+p.lat).toFixed(4)},${(+p.lon).toFixed(4)}` : ''; }
@@ -60,6 +61,7 @@ function applyData(d) {
   }
   if (d.view && Array.isArray(d.view.c) && isFinite(d.view.z)) store.view = d.view;
   if (Array.isArray(d.scache)) store.scache = d.scache.slice(-40);
+  store.meta = d.meta && typeof d.meta === 'object' ? { ...d.meta } : {};
   return true;
 }
 

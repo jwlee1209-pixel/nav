@@ -108,6 +108,16 @@ function boot() {
     if (S.trip && S.trip.routes.length) { attachCams(S.trip.routes); MV.setCams(S.trip.routes[S.trip.sel].cams); if (S.screen === 'preview') renderSheet(); }
     if (S.nav && !S.nav.cams.length) setNavCams(S.nav.route);
   });
+  // 예전 버전이 영문으로 저장한 장소 이름·주소를 한글로(한 번만, 지도를 띄운 뒤 천천히)
+  setTimeout(() => {
+    if (navigator.onLine === false) return;
+    fixSavedNames().then(n => {
+      if (!n) return;
+      refreshPts();
+      if (S.screen === 'home') { renderSheet(); renderChips(); }
+      toast('저장된 장소 이름·주소를 한글로 바꿨습니다');
+    }).catch(() => { /* 다음에 다시 */ });
+  }, 4000);
   window.__navi = { S, store, MV, Voice, navFix, startTrip, finishNav, applyTheme, openSettings, openPlaces, onPos };
 }
 

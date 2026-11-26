@@ -9,7 +9,7 @@
 <meta name="apple-mobile-web-app-title" content="&#xae38;&#xc7a1;&#xc774; &#xb0b4;&#xbe44;">
 <meta name="description" content="&#xbb34;&#xb8cc; &#xc9c0;&#xb3c4;(OpenStreetMap)&#xb85c; &#xae38;&#xc744; &#xcc3e;&#xace0; &#xd55c;&#xad6d;&#xc5b4; &#xc74c;&#xc131;&#xc73c;&#xb85c; &#xc548;&#xb0b4;&#xd558;&#xb294; &#xac1c;&#xc778;&#xc6a9; &#xcc28;&#xb7c9; &#xb0b4;&#xbe44;&#xac8c;&#xc774;&#xc158;">
 <title>&#xae38;&#xc7a1;&#xc774; &#xb0b4;&#xbe44;</title>
-<meta name="generator" content="&#xae38;&#xc7a1;&#xc774; &#xb0b4;&#xbe44; v1.6">
+<meta name="generator" content="&#xae38;&#xc7a1;&#xc774; &#xb0b4;&#xbe44; v1.7">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230B5CAD'/%3E%3Cpath d='M11 25V15.5a3.5 3.5 0 0 1 3.5-3.5H20' fill='none' stroke='%23fff' stroke-width='3.4' stroke-linecap='round'/%3E%3Cpath d='M19 7.2 25.5 12 19 16.8z' fill='%23fff'/%3E%3C/svg%3E">
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
@@ -464,7 +464,7 @@ return maplibregl$1;
 </script>
 <script>(function () {
 'use strict';
-const APP_VERSION = '1.6';
+const APP_VERSION = '1.7';
 // ===== 00-util.js =====
 // \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 \uacf5\ud1b5 \ub3c4\uad6c \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
 const $ = (s, r = document) => r.querySelector(s);
@@ -780,6 +780,7 @@ const store = {
   roads: {},             // \ub3c4\ub85c\ubcc4\u00b7\uc2dc\uac04\ub300\ubcc4 \uc2e4\uc81c \ud1b5\ud589 \uc18d\ub3c4 \ud559\uc2b5 {'\ub3c4\ub85c\uba85|\uc2dc\uac04\ub300': {r, n, t}}
   view: null,            // \ub9c8\uc9c0\ub9c9 \uc9c0\ub3c4 \uc704\uce58 {c:[lon,lat], z}
   scache: [],            // \uac80\uc0c9 \uacb0\uacfc \uce90\uc2dc [[key, ts, results]]
+  meta: {},              // \ud55c \ubc88\ub9cc \ud558\ub294 \uc815\ub9ac \uc791\uc5c5 \ud45c\uc2dc {ko: 1 = \uc800\uc7a5\ub41c \uc7a5\uc18c \ud55c\uae00\ud654 \uc644\ub8cc}
 };
 
 function placeKey(p) { return p ? `${(+p.lat).toFixed(4)},${(+p.lon).toFixed(4)}` : ''; }
@@ -805,6 +806,7 @@ function applyData(d) {
   }
   if (d.view && Array.isArray(d.view.c) && isFinite(d.view.z)) store.view = d.view;
   if (Array.isArray(d.scache)) store.scache = d.scache.slice(-40);
+  store.meta = d.meta && typeof d.meta === 'object' ? { ...d.meta } : {};
   return true;
 }
 
@@ -1054,7 +1056,10 @@ async function photonSearch(q, near, signal) {
   u.searchParams.set('q', q);
   u.searchParams.set('limit', '12');
   u.searchParams.set('bbox', KR_BBOX.join(','));
-  if (near) { u.searchParams.set('lat', near.lat.toFixed(4)); u.searchParams.set('lon', near.lon.toFixed(4)); }
+  // lang \uc744 \ube44\uc6b0\uba74 Photon \uc740 \ube0c\ub77c\uc6b0\uc800 \uc5b8\uc5b4 \ubaa9\ub85d(ko-KR, ko, en-US, en \u2026)\uc5d0\uc11c \uc790\uae30\uac00 \uc544\ub294 \uccab \uc5b8\uc5b4(\uc601\uc5b4)\ub97c \uace8\ub77c
+  // 'Lets Run Park: Yeongcheon' \ucc98\ub7fc \uc601\ubb38 \uc774\ub984\u00b7\uc8fc\uc18c\ub97c \ub3cc\ub824\uc900\ub2e4. default = \ud604\uc9c0(\ud55c\uad6d\uc5b4) \uc774\ub984
+  u.searchParams.set('lang', 'default');
+  if (near) { u.searchParams.set('lat', (+near.lat).toFixed(4)); u.searchParams.set('lon', (+near.lon).toFixed(4)); }
   const data = await photonPace(() => fetchJSON(u.toString(), { timeout: 10000, signal }));
   return (data.features || []).map(photonToPlace).filter(Boolean);
 }
@@ -1076,7 +1081,7 @@ async function nominatimSearch(q, near, signal) {
 async function searchPlaces(q, near, signal) {
   q = q.trim().replace(/\s+/g, ' ');
   if (!q) return { items: [], errors: [] };
-  const key = q + '|' + (near ? near.lat.toFixed(1) + ',' + near.lon.toFixed(1) : '');
+  const key = 'ko|' + q + '|' + (near ? near.lat.toFixed(1) + ',' + near.lon.toFixed(1) : '');   // 'ko|': v1.7 \uc774\uc804(\uc601\ubb38 \uc11e\uc778) \uce90\uc2dc\ub294 \uc4f0\uc9c0 \uc54a\uc74c
   const cached = cacheGet(key);
   if (cached) return { items: withDistance(cached, near), errors: [], cached: true };
 
@@ -1121,6 +1126,7 @@ async function reversePlace(lon, lat, signal) {
     try {
       const u = new URL(PHOTON + '/reverse');
       u.searchParams.set('lat', lat.toFixed(6)); u.searchParams.set('lon', lon.toFixed(6));
+      u.searchParams.set('lang', 'default');
       const d = await photonPace(() => fetchJSON(u.toString(), { timeout: 8000, signal }));
       if (d.features && d.features[0]) place = photonToPlace(d.features[0]);
     } catch (e) { if (signal && signal.aborted) throw e; }
@@ -1128,6 +1134,54 @@ async function reversePlace(lon, lat, signal) {
   const res = place ? { ...place, lat, lon } : { name: '\uc120\ud0dd\ud55c \uc704\uce58', addr: `${lat.toFixed(5)}, ${lon.toFixed(5)}`, lat, lon, cat: '' };
   revCache.set(key, res);
   return res;
+}
+
+// \u2500\u2500 \uc800\uc7a5\ub41c \uc7a5\uc18c\uc758 \uc601\ubb38 \uc774\ub984\u00b7\uc8fc\uc18c\ub97c \ud55c\uae00\ub85c \uace0\uce58\uae30(v1.6 \uae4c\uc9c0 Photon \uc774 \uc601\uc5b4\ub85c \ub3cc\ub824\uc900 \uac83) \u2500\u2500
+const hasHangul = s => /[\uac00-\ud7a3]/.test(s || '');
+const latinOnly = s => /[A-Za-z]/.test(s || '') && !hasHangul(s);
+const needsKo = p => !!p && (latinOnly(p.name) || latinOnly(p.addr));
+
+// \uac19\uc740 \uc7a5\uc18c\ub97c \ud55c\uad6d\uc5b4\ub85c \ub2e4\uc2dc \ucc3e\ub294\ub2e4: \uc774\ub984\uc73c\ub85c Photon \uac80\uc0c9(\uc601\ubb38 \uc774\ub984\ub3c4 \ucc3e\uc544\uc9d0) \u2192 300m \uc548\uc758 \uac00\uc7a5 \uac00\uae4c\uc6b4 \uacb0\uacfc.
+// \uc774\ub984\uc740 \uac19\uc740 \uc7a5\uc18c\ub97c \ucc3e\uc558\uc744 \ub54c\ub9cc \ubc14\uafb8\uace0, \uc8fc\uc18c\ub294 \ubabb \ucc3e\uc73c\uba74 \uadf8 \uc88c\ud45c\uc758 \uc8fc\uc18c(Nominatim \ud55c\uad6d\uc5b4)\ub85c \ubc14\uafbc\ub2e4.
+async function koreanize(p) {
+  const out = { name: null, addr: null, err: false };
+  const near = { lat: +p.lat, lon: +p.lon }, d = r => hav([r.lon, r.lat], [near.lon, near.lat]);
+  let errs = 0;
+  try {
+    const hit = (await photonSearch(p.name, near)).filter(r => d(r) < 300).sort((a, b) => d(a) - d(b))[0];
+    if (hit) {
+      if (latinOnly(p.name) && hasHangul(hit.name)) out.name = hit.name;
+      if (hasHangul(hit.addr)) out.addr = hit.addr;
+    }
+  } catch (e) { errs++; }
+  if (!out.addr && latinOnly(p.addr)) {
+    const r = await reversePlace(near.lon, near.lat);
+    if (hasHangul(r.addr)) out.addr = r.addr; else errs++;
+  }
+  out.err = errs > 0 && !out.name && !out.addr;
+  return out;
+}
+
+async function fixSavedNames() {
+  if (store.meta.ko) return 0;
+  store.scache = store.scache.filter(x => String(x[0]).startsWith('ko|'));
+  const places = () => [store.home, store.work, ...store.favs, ...store.recents].filter(Boolean);
+  const dests = () => store.trips.map(t => t.dest).filter(Boolean);
+  const todo = new Map();
+  for (const p of [...places(), ...dests()]) if (needsKo(p) && !todo.has(placeKey(p))) todo.set(placeKey(p), p);
+  let changed = 0, failed = 0;
+  for (const [k, p] of [...todo].slice(0, 40)) {
+    const fix = await koreanize(p);
+    if (fix.err) { failed++; continue; }
+    for (const o of places()) if (placeKey(o) === k) {
+      if (fix.name && latinOnly(o.name)) { o.name = fix.name; changed++; }
+      if (fix.addr && latinOnly(o.addr)) { o.addr = fix.addr; changed++; }
+    }
+    for (const o of dests()) if (placeKey(o) === k && fix.name && latinOnly(o.name)) o.name = fix.name;
+  }
+  if (!failed) store.meta.ko = 1;     // \ub124\ud2b8\uc6cc\ud06c \uc624\ub958\ub85c \ubabb \uace0\uce5c \uac83\uc774 \uc788\uc73c\uba74 \ub2e4\uc74c\uc5d0 \ub2e4\uc2dc
+  saveStore(true);
+  return changed;
 }
 
 // ===== 05-route.js =====
@@ -3601,6 +3655,16 @@ function boot() {
     if (S.trip && S.trip.routes.length) { attachCams(S.trip.routes); MV.setCams(S.trip.routes[S.trip.sel].cams); if (S.screen === 'preview') renderSheet(); }
     if (S.nav && !S.nav.cams.length) setNavCams(S.nav.route);
   });
+  // \uc608\uc804 \ubc84\uc804\uc774 \uc601\ubb38\uc73c\ub85c \uc800\uc7a5\ud55c \uc7a5\uc18c \uc774\ub984\u00b7\uc8fc\uc18c\ub97c \ud55c\uae00\ub85c(\ud55c \ubc88\ub9cc, \uc9c0\ub3c4\ub97c \ub744\uc6b4 \ub4a4 \ucc9c\ucc9c\ud788)
+  setTimeout(() => {
+    if (navigator.onLine === false) return;
+    fixSavedNames().then(n => {
+      if (!n) return;
+      refreshPts();
+      if (S.screen === 'home') { renderSheet(); renderChips(); }
+      toast('\uc800\uc7a5\ub41c \uc7a5\uc18c \uc774\ub984\u00b7\uc8fc\uc18c\ub97c \ud55c\uae00\ub85c \ubc14\uafe8\uc2b5\ub2c8\ub2e4');
+    }).catch(() => { /* \ub2e4\uc74c\uc5d0 \ub2e4\uc2dc */ });
+  }, 4000);
   window.__navi = { S, store, MV, Voice, navFix, startTrip, finishNav, applyTheme, openSettings, openPlaces, onPos };
 }
 
