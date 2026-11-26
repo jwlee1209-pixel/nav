@@ -54,12 +54,12 @@ const TYPES = { html: 'text/html; charset=euc-kr', json: 'application/json', js:
   await page.waitForSelector('#cambox:not([hidden])', { timeout: 60000 }).catch(() => null);
   await page.waitForTimeout(600);
   await page.screenshot({ path: path.join(OUT, 'web-2-guide.png') });
-  await page.waitForFunction(() => /구간단속/.test(document.querySelector('#camTitle').textContent) && document.querySelector('#camTitle').textContent.includes('평균'), null, { timeout: 90000 }).catch(() => null);
+  await page.waitForFunction(() => /구간단속/.test(document.querySelector('#camTitle').textContent) && document.querySelector('#camTitle').textContent.includes('평균'), null, { timeout: 15000 }).catch(() => null);
   await page.screenshot({ path: path.join(OUT, 'web-2b-section.png') });
   await page.waitForTimeout(8000);
   console.log('카메라 음성:', (await page.evaluate(() => window.__said.filter(s => /카메라|구간단속|제한속도/.test(s)))).join(' / '));
   console.log('음성:', (await page.evaluate(() => window.__said.filter(s => s.trim()).slice(0, 3))).join(' / '));
-  await page.click('#gEnd'); await page.click('.dialog .btn--danger');
+  if (await page.isVisible('#gEnd')) { await page.click('#gEnd'); await page.click('.dialog .btn--danger'); }
   await page.click('#btnSettings'); await page.waitForTimeout(300);
   console.log('앱 정보:', (await page.textContent('.group:has-text("앱 정보")')).replace(/\s+/g, ' ').slice(0, 120));
   console.log('받은 요청:', served.slice(0, 8).join(', '));

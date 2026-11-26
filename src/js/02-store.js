@@ -22,6 +22,7 @@ const DEFAULT_SETTINGS = {
   camVoice: true,        // 단속 카메라 음성 안내
   camSignal: true,       // 신호 단속 카메라도 안내
   overWarn: true,        // 제한속도 초과 경고
+  fullscreen: true,      // 안내 중 전체 화면
 };
 
 const store = {

@@ -286,4 +286,36 @@ input[type="range"] { width: 180px; accent-color: var(--accent); }
   .maplibregl-ctrl-bottom-left { left: calc(var(--col) + 40px); bottom: 0; }
   #app[data-screen="guide"] .maplibregl-ctrl-bottom-left { bottom: 0; left: calc(var(--col) + 100px); }
 }
+/* ── 휴대폰 가로 화면: 안내판과 아래 막대를 왼쪽 좁은 열로, 나머지는 지도 ── */
+@media (orientation: landscape) and (max-height: 560px) {
+  :root { --lcol: clamp(260px, 36vw, 330px); }
+  .mpanel { left: var(--sl); right: auto; top: calc(var(--st) + 8px); width: var(--lcol); border-radius: 16px; padding: 8px 12px 9px 10px; gap: 10px; }
+  .mpanel__icon { width: 54px; height: 54px; border-radius: 12px; border-width: 2px; }
+  .mpanel__icon svg { width: 46px; height: 46px; }
+  .mpanel__dist b { font-size: 32px; }
+  .mpanel__dist span { font-size: 16px; }
+  .mpanel__title { font-size: 16.5px; margin-top: 2px; }
+  .mpanel__sub { font-size: 13px; }
+  .nexthint { left: var(--sl); top: calc(var(--st) + var(--mp-h, 80px) + 14px); height: 32px; padding: 0 10px 0 8px; font-size: 13px; border-radius: 10px; }
+  .nexthint svg { width: 20px; height: 20px; }
+  .gbar { left: var(--sl); right: auto; bottom: calc(8px + var(--sb)); width: var(--lcol); border-radius: 16px; padding: 7px 8px 7px 12px; gap: 6px 8px; }
+  .gbar__time { font-size: 22px; }
+  .gbar__eta, .gbar__dist { font-size: 12.5px; }
+  .gbtn { width: 40px; height: 40px; border-radius: 11px; }
+  .gbtn svg { width: 20px; height: 20px; }
+  .gbtn--end { padding: 0 11px; font-size: 14px; }
+  .simbar { padding-bottom: 6px; }
+  .simbar .seg button { min-height: 30px; }
+  .speed { left: calc(var(--sl) + var(--lcol) + 12px); bottom: calc(10px + var(--sb)); width: 54px; height: 54px; }
+  .speed b { font-size: 19px; }
+  .cambox { left: calc(var(--sl) + var(--lcol) + 74px); bottom: calc(10px + var(--sb)); padding: 4px 12px 4px 4px; max-width: calc(100% - var(--lcol) - 160px); }
+  .limsign { width: 44px; height: 44px; border-width: 5px; }
+  .limsign b { font-size: 16px; }
+  .cambox__txt b { font-size: 13px; }
+  .cambox__txt span { font-size: 12.5px; }
+  .caption { top: calc(var(--st) + 8px); left: calc(var(--sl) + var(--lcol) + (100% - var(--lcol) - var(--sl)) / 2); max-width: calc(100% - var(--lcol) - 80px); font-size: 13px; }
+  .banner, [data-screen="guide"] .banner { left: calc(var(--sl) + var(--lcol) + 12px); right: var(--sr); width: auto; top: calc(var(--st) + 52px); padding: 8px 12px; font-size: 13.5px; }
+  .recenter { bottom: calc(10px + var(--sb)); }
+  #app[data-screen="guide"] .maplibregl-ctrl-bottom-left { left: calc(var(--sl) + var(--lcol) + 6px); bottom: calc(72px + var(--sb)); }
+}
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }

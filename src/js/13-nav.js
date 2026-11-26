@@ -64,17 +64,29 @@ const Wake = {
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && S.nav) Wake.on(); });
 
 // ── 길 안내 시작/진행/종료 ──
+// 안내 중에는 전체 화면으로(브라우저 주소창·상태 표시줄을 숨겨 지도를 넓게)
+function enterFull() {
+  const el = document.documentElement;
+  if (!store.settings.fullscreen || document.fullscreenElement || !el.requestFullscreen) return;
+  try { el.requestFullscreen({ navigationUI: 'hide' }).catch(() => {}); } catch (e) { /* 지원하지 않으면 그대로 */ }
+}
+function exitFull() {
+  if (document.fullscreenElement && document.exitFullscreen) document.exitFullscreen().catch(() => {});
+}
+document.addEventListener('fullscreenchange', () => setTimeout(() => { measure(); if (S.nav) { MV.pad = guidePad(); MV.padDirty = true; } }, 250));
+
 async function startNav(sim) {
   const t = S.trip;
   if (!t || !t.routes.length) return;
   Voice.unlock();   // 휴대폰은 누른 순간에 음성을 깨워 둬야 한다(아래 확인 창보다 먼저)
+  enterFull();      // 전체 화면도 누른 순간에만 허용된다
   if (!sim && t.origin) {
     const ok = await ask('실제 안내는 현재 위치에서 출발합니다. 현재 위치 기준으로 경로를 다시 찾을까요?', { ok: '다시 찾기' });
-    if (!ok) return;
+    if (!ok) { exitFull(); return; }
     t.origin = null; renderPlan(); await computeRoutes();
     if (!t.routes.length) return;
   }
-  if (!sim && !S.me) { toast(GPS_BAD.includes(S.gps) ? gpsMsg('long') + ' 모의 주행은 쓸 수 있습니다.' : '현재 위치를 찾는 중입니다. 잠시 뒤 다시 눌러 주세요.', 4500); return; }
+  if (!sim && !S.me) { exitFull(); toast(GPS_BAD.includes(S.gps) ? gpsMsg('long') + ' 모의 주행은 쓸 수 있습니다.' : '현재 위치를 찾는 중입니다. 잠시 뒤 다시 눌러 주세요.', 4500); return; }
   const route = t.routes[t.sel];
   const ef = etaFactor();
   S.nav = {
@@ -155,8 +167,13 @@ function makeGuide(route, rerouted) {
   });
 }
 
+const LANDSCAPE = '(orientation: landscape) and (max-height: 560px)';
 function guidePad() {
   const H = innerHeight, W = innerWidth;
+  if (matchMedia(LANDSCAPE).matches) {
+    const r = $('#mpanel').getBoundingClientRect();
+    return { top: Math.round(H * 0.36), bottom: 12, left: Math.round((r.right || 300) + 12), right: 12 };
+  }
   if (W >= 760) return { top: Math.round(H * 0.42), bottom: 40, left: 420 + 16, right: 20 };
   const gb = $('#gbar').offsetHeight || 90;
   return { top: Math.round(H * 0.42), bottom: gb + 10, left: 0, right: 0 };
@@ -270,6 +287,7 @@ function finishNav(arrived) {
   }
   S.nav = null; S.trip = null;
   $('#cambox').hidden = true; $('#speed').classList.remove('over');
+  exitFull();
   MV.stopGuideCam();
   MV.clearRoutes();
   MV.setTripMarks(null, [], null);
@@ -354,7 +372,8 @@ function openSettings() {
       row('지도 밝기', '자동: 해가 지면 야간 지도로 바꿉니다', seg([['auto', '자동'], ['day', '주간'], ['night', '야간']], st.theme, k => { setS('theme', k); applyTheme(); }, '지도 밝기')),
       row('안내 중 지도 방향', null, seg([['1', '진행 방향 위'], ['0', '북쪽 위']], st.headingUp ? '1' : '0', k => { setS('headingUp', k === '1'); MV.headingUp = k === '1'; }, '지도 방향')),
       row('안내 중 3D 시점', '지도를 기울여 앞쪽 길을 멀리 보여 줍니다', sw(st.tilt, v => { setS('tilt', v); MV.tilt = v; }, '3D 시점')),
-      row('화면 꺼짐 방지', '안내 중에는 화면이 꺼지지 않게 합니다', sw(st.wakeLock, v => setS('wakeLock', v), '화면 꺼짐 방지'))),
+      row('화면 꺼짐 방지', '안내 중에는 화면이 꺼지지 않게 합니다', sw(st.wakeLock, v => setS('wakeLock', v), '화면 꺼짐 방지')),
+      row('안내 중 전체 화면', '안내를 시작하면 주소창과 상태 표시줄을 숨겨 지도를 넓게 봅니다', sw(st.fullscreen, v => setS('fullscreen', v), '안내 중 전체 화면'))),
     h('section', { class: 'group' }, h('h2', { text: '내 차' }),
       row('연비', 'km/L — 경로마다 유류비를 계산합니다', num('fuelEff', 3, 40, 0.5, 'fuelEff')),
       row('휘발유·경유 가격', '원/L', num('fuelPrice', 800, 3500, 10, 'fuelPrice')),
