@@ -226,7 +226,9 @@ function searchSheet() {
   if (S.results && !S.searching) {
     const r = S.results;
     out.push(h('div', { class: 'sec-head' }, h('h2', { text: r.items.length ? `‘${S.lastQuery}’ 검색 결과 ${r.items.length}곳` : `‘${S.lastQuery}’ 검색 결과가 없습니다` })));
-    if (!r.items.length) out.push(h('p', { class: 'empty', text: r.errors.length ? '검색 서버에 연결하지 못했습니다. 인터넷 연결을 확인한 뒤 다시 시도하세요.' : '이름을 줄이거나(예: ‘서울역’), 도로명 주소(예: ‘세종대로 110’)로 찾아보세요. 지도를 길게 누르면 그 위치를 바로 고를 수도 있습니다.' }));
+    if (r.vwErr) out.push(h('p', { class: 'warnline', text: r.vwErr + ' (설정 → 주소·건물 검색)' }));
+    if (r.note) out.push(h('p', { class: 'recline', text: r.note }));
+    if (!r.items.length) out.push(h('p', { class: 'empty', text: r.errors.length ? '검색 서버에 연결하지 못했습니다. 인터넷 연결을 확인한 뒤 다시 시도하세요.' : `지도 자료(OpenStreetMap)에 없는 곳일 수 있습니다. 지도를 길게 누르면 그 위치를 바로 고를 수 있습니다.${vwKey() ? '' : ' 아파트·건물 이름과 도로명 주소까지 찾으려면 설정 → 주소·건물 검색에서 브이월드 인증키를 넣으세요.'}` }));
     const list = h('ul', { class: 'list' });
     r.items.forEach(p => list.append(placeItem(p, { onClick: () => openPlace(p) })));
     out.push(list);
@@ -240,7 +242,7 @@ function searchSheet() {
     out.push(list);
   }
   if (!out.length) out.push(h('p', { class: 'empty', text: '장소 이름이나 주소를 입력하고 검색을 누르세요.' }));
-  out.push(h('p', { class: 'note' }, '검색: Photon(komoot) · Nominatim(OpenStreetMap). 무료 서버라 입력할 때마다가 아니라 검색을 누를 때만 찾습니다.'));
+  out.push(h('p', { class: 'note' }, `검색: ${vwKey() ? '브이월드(국토교통부) · ' : ''}Photon(komoot) · Nominatim(OpenStreetMap). 무료 서버라 입력할 때마다가 아니라 검색을 누를 때만 찾습니다.`));
   return out;
 }
 

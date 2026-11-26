@@ -62,7 +62,7 @@ function nominatimToPlace(r) {
   let addr = nominatimAddr(r.address);
   if (!addr) addr = String(r.display_name || '').split(',').slice(1).map(s => s.trim())
     .filter(s => s && s !== '대한민국' && !/^\d{5}$/.test(s)).reverse().join(' ');
-  return { name, addr, lat, lon, cat: catLabel(r.type, r.category, r.addresstype), src: 'nominatim' };
+  return { name, addr, lat, lon, cat: catLabel(r.type, r.category, r.addresstype), src: 'nominatim', poi: !!r.name };
 }
 
 function looksLikeAddress(q) {
@@ -107,32 +107,89 @@ async function nominatimSearch(q, near, signal) {
   return (Array.isArray(data) ? data : []).map(nominatimToPlace).filter(Boolean);
 }
 
+// 붙여 쓴 아파트·건물 이름이나 번지까지 쓴 주소가 지도 자료(OSM)에 그대로 없을 때 차례로 줄여 다시 찾는다
+//  '가온누리타운2차아파트' → '가온누리타운2차' → '가온누리타운 2차' → '누리타운 2차' → '누리타운'(근처에서만)
+//  '서울 가상구 가온로3가길 7' → '서울 가상구 가온로3가길'(건물 번호 없이 길 위치)
+function queryVariants(q) {
+  const out = [];
+  const add = (s, kind) => { s = String(s).replace(/\s+/g, ' ').trim(); if (s.length >= 2 && !out.some(o => o.q === s)) out.push({ q: s, kind }); };
+  add(q, 'same');
+  if (looksLikeAddress(q)) {
+    const street = q.replace(/\s*(?:산\s*)?\d+(?:-\d+)?(?:\s*번지)?\s*$/, '');
+    if (street !== q && /[가-힣]/.test(street)) add(street, 'street');
+    return out;
+  }
+  const noApt = q.replace(/\s*(아파트|APT)$/i, '');
+  add(noApt, 'name');
+  const spaced = noApt.replace(/([가-힣])(\d)/g, '$1 $2');
+  add(spaced, 'name');
+  const words = spaced.split(' ');
+  if (/^[가-힣]{5,}$/.test(words[0])) {                  // 앞의 동네 이름(두 글자)을 뗀다: 가온누리타운 → 누리타운(근처에서만)
+    const rest = [words[0].slice(2), ...words.slice(1)];
+    add(rest.join(' '), 'short');
+    if (rest.length > 1) add(rest[0], 'core');
+  }
+  return out;
+}
+const LOCAL_KINDS = new Set(['short', 'core']);   // 이름을 줄여 흔해진 검색어: 근처 결과만 쓴다
+
+const normName = s => String(s || '').replace(/\s+|아파트|APT/gi, '');
+
+// 한 가지 검색어로: 브이월드(인증키가 있으면) → Photon → (주소이거나 결과가 적으면) Nominatim
+async function searchOnce(v, near, signal, errs) {
+  const addressy = looksLikeAddress(v.q);
+  let vw = [], osm = [];
+  if (vwKey()) {
+    try { vw = await vworldSearch(v.q, near, signal, { local: LOCAL_KINDS.has(v.kind) }); }
+    catch (e) { if (signal && signal.aborted) throw e; errs.vw = errs.vw || vwErrText(e); }
+  }
+  try { osm = await photonSearch(v.q, near, signal); } catch (e) { if (signal && signal.aborted) throw e; errs.list.add('Photon'); }
+  if (addressy || (v.kind === 'same' && vw.length + osm.length < 3)) {
+    try {
+      const more = await nominatimSearch(v.q, near, signal);
+      osm = addressy ? [...more, ...osm] : [...osm, ...more];
+    } catch (e) { if (signal && signal.aborted) throw e; errs.list.add('Nominatim'); }
+  }
+  if (LOCAL_KINDS.has(v.kind) && near) {
+    const close = it => hav([near.lon, near.lat], [it.lon, it.lat]) < 50000;
+    vw = vw.filter(close); osm = osm.filter(close);
+  }
+  // 중복 제거: 50m 안의 같은 이름, 또는 브이월드 결과와 40m 안에서 이름이 겹치는 OSM 결과
+  const out = [];
+  for (const it of [...vw, ...osm]) {
+    const dup = out.some(o => {
+      const d = hav([o.lon, o.lat], [it.lon, it.lat]);
+      if (o.name === it.name && d < 50) return true;
+      const a = normName(o.name), b = normName(it.name);
+      return o.src === 'vworld' && d < 40 && a && b && (a.includes(b) || b.includes(a));
+    });
+    if (!dup) out.push(it);
+  }
+  return out;
+}
+
 // 검색: 엔터/검색 버튼을 눌렀을 때만 호출(입력 중 자동 호출 없음)
 async function searchPlaces(q, near, signal) {
   q = q.trim().replace(/\s+/g, ' ');
   if (!q) return { items: [], errors: [] };
-  const key = 'ko|' + q + '|' + (near ? near.lat.toFixed(1) + ',' + near.lon.toFixed(1) : '');   // 'ko|': v1.7 이전(영문 섞인) 캐시는 쓰지 않음
-  const cached = cacheGet(key);
-  if (cached) return { items: withDistance(cached, near), errors: [], cached: true };
+  // 'ko|': v1.7 이전(영문 섞인) 캐시는 쓰지 않음, 'v|': 브이월드를 쓴 결과
+  const key = 'ko|' + (vwKey() ? 'v|' : '') + q + '|' + (near ? near.lat.toFixed(1) + ',' + near.lon.toFixed(1) : '');
+  const hit = cacheGet(key);
+  if (hit) { const c = Array.isArray(hit) ? { items: hit } : hit; return { ...c, items: withDistance(c.items, near), errors: [], cached: true }; }
 
-  const errors = [];
-  let items = [];
-  const addressy = looksLikeAddress(q);
-  try { items = await photonSearch(q, near, signal); } catch (e) { if (signal && signal.aborted) throw e; errors.push('Photon'); }
-  if (addressy || items.length < 3) {
-    try {
-      const more = await nominatimSearch(q, near, signal);
-      items = addressy ? [...more, ...items] : [...items, ...more];
-    } catch (e) { if (signal && signal.aborted) throw e; errors.push('Nominatim'); }
+  const errs = { list: new Set(), vw: '' };
+  let items = [], used = null;
+  for (const v of queryVariants(q)) {
+    items = await searchOnce(v, near, signal, errs);
+    if (items.length) { if (v.kind !== 'same') used = v; break; }
+    if (v.kind === 'same' && errs.list.size >= 2 && !vwKey()) break;   // 검색 서버에 닿지 않으면 줄여 봐야 소용없다
   }
-  // 같은 장소 중복 제거(50m 이내 같은 이름)
-  const out = [];
-  for (const it of items) {
-    if (out.some(o => o.name === it.name && hav([o.lon, o.lat], [it.lon, it.lat]) < 50)) continue;
-    out.push(it);
-  }
-  if (out.length) cachePut(key, out);
-  return { items: withDistance(out, near), errors };
+  const note = !used ? '' : used.kind === 'street'
+    ? `‘${q}’의 건물 번호가 지도 자료(OpenStreetMap)에 없어 ‘${used.q}’ 길 위치를 보여 줍니다.`
+    : `‘${q}’ 그대로는 찾지 못해 ‘${used.q}’${josa(used.q, '으로/로').slice(used.q.length)} 찾은 결과입니다${LOCAL_KINDS.has(used.kind) ? '(근처만)' : ''}.`;
+  const res = { items, note, used: used && used.q };
+  if (items.length) cachePut(key, res);
+  return { ...res, items: withDistance(items, near), errors: [...errs.list], vwErr: errs.vw };
 }
 
 function withDistance(items, near) {
@@ -141,9 +198,12 @@ function withDistance(items, near) {
 
 const revCache = new Map();
 async function reversePlace(lon, lat, signal) {
-  const key = lat.toFixed(4) + ',' + lon.toFixed(4);
+  const key = (vwKey() ? 'v' : '') + lat.toFixed(4) + ',' + lon.toFixed(4);
   if (revCache.has(key)) return revCache.get(key);
-  let place = null;
+  let place = null, vw = null;
+  if (vwKey()) {   // 국가 주소(도로명)를 먼저: OSM 에 건물 번호가 없는 곳이 많다
+    try { vw = await vworldReverse(lon, lat, signal); } catch (e) { if (signal && signal.aborted) throw e; }
+  }
   try {
     const u = new URL(NOMINATIM + '/reverse');
     u.searchParams.set('lat', lat.toFixed(6)); u.searchParams.set('lon', lon.toFixed(6));
@@ -161,6 +221,7 @@ async function reversePlace(lon, lat, signal) {
       if (d.features && d.features[0]) place = photonToPlace(d.features[0]);
     } catch (e) { if (signal && signal.aborted) throw e; }
   }
+  if (vw) place = place && place.poi ? { ...place, addr: vw.addr } : { ...vw, cat: place ? place.cat : '' };
   const res = place ? { ...place, lat, lon } : { name: '선택한 위치', addr: `${lat.toFixed(5)}, ${lon.toFixed(5)}`, lat, lon, cat: '' };
   revCache.set(key, res);
   return res;

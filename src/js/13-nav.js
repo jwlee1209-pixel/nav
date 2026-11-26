@@ -357,6 +357,7 @@ function openSettings() {
       row('운전하기 쉬운 길 우선', '‘추천’에서 빠른 길이 기준 시간 이상 빠르지 않으면 회전이 적고 큰길 위주인 길을 추천합니다. 빠른 길보다 25%(짧은 길은 1.5km) 넘게 멀거나 없던 유료도로·페리가 생기는 길은 추천하지 않습니다', sw(st.easyPrefer, v => setS('easyPrefer', v), '운전하기 쉬운 길 우선')),
       row('기준 시간', '빠른 길이 이만큼 이상 빨라야 빠른 길을 추천합니다. 짧은 길(25분 미만)에서는 빠른 길 소요 시간의 40%(최소 3분)까지만 늦어도 됩니다', seg([[5, '5분'], [10, '10분'], [15, '15분'], [20, '20분']], st.easyMin, k => setS('easyMin', k), '기준 시간')),
       row('경로 엔진', '자동: Valhalla로 찾고 응답이 없으면 OSRM', seg([['auto', '자동'], ['valhalla', 'Valhalla'], ['osrm', 'OSRM']], st.engine, k => setS('engine', k), '경로 엔진'))),
+    vworldGroup(st),
     h('section', { class: 'group' }, h('h2', { text: '음성 안내' }),
       row('음성 안내', null, sw(st.voice, v => setS('voice', v), '음성 안내')),
       row('목소리', Voice.ok ? (Voice.voices.length ? '이 기기에 있는 한국어 음성' : '한국어 음성을 찾는 중이거나 없습니다') : '이 브라우저는 음성 합성을 지원하지 않습니다', voiceSel),
@@ -394,9 +395,33 @@ function openSettings() {
       h('p', null, '지도: ', h('a', { href: 'https://openfreemap.org', target: '_blank', rel: 'noopener', text: 'OpenFreeMap' }), ' · ', h('a', { href: 'https://www.openmaptiles.org/', target: '_blank', rel: 'noopener', text: 'OpenMapTiles' }), ' · 지도 데이터 ', h('a', { href: 'https://www.openstreetmap.org/copyright', target: '_blank', rel: 'noopener', text: '© OpenStreetMap 기여자' })),
       h('p', null, '경로: ', h('a', { href: 'https://valhalla.github.io/valhalla/', target: '_blank', rel: 'noopener', text: 'Valhalla' }), ' · ', h('a', { href: 'https://routing.openstreetmap.de/about.html', target: '_blank', rel: 'noopener', text: 'OSRM' }), ' (FOSSGIS 공개 서버, 초당 1회 이하·가벼운 개인 사용)'),
       h('p', null, '검색: ', h('a', { href: 'https://photon.komoot.io', target: '_blank', rel: 'noopener', text: 'Photon(komoot)' }), ' · Nominatim — ', h('a', { href: 'https://operations.osmfoundation.org/policies/nominatim/', target: '_blank', rel: 'noopener', text: 'Nominatim 이용 정책' }), '(자동완성 금지, 초당 1회 이하, 결과 저장 후 재사용)을 지키도록 검색 버튼을 눌렀을 때만 요청하고 결과를 이 기기에 7일간 보관합니다.'),
+      h('p', null, '주소·건물 검색(인증키를 넣은 경우): ', h('a', { href: 'https://www.vworld.kr', target: '_blank', rel: 'noopener', text: '브이월드(국토교통부 공간정보 오픈플랫폼)' }), ' 검색·지오코더 API'),
       h('p', null, '단속 카메라: 경찰청·지방자치단체 「전국무인교통단속카메라표준데이터」(', h('a', { href: 'https://www.data.go.kr/data/15028200/standard.do', target: '_blank', rel: 'noopener', text: '공공데이터포털' }), ')'),
       h('p', null, '실시간 교통 정보와 이동식 단속 정보는 없습니다. 안내는 참고용이며 실제 도로 표지와 교통 법규를 따르세요. 운전 중에는 화면을 조작하지 마세요.')),
   ]);
+}
+
+// 주소·건물 검색: 브이월드 인증키(무료). 없으면 OpenStreetMap 검색만 쓴다
+function vworldGroup(st) {
+  const msg = h('span', { class: 'muted', style: 'font-size:12.5px;display:block', 'aria-live': 'polite', text: st.vworldKey ? '인증키가 저장되어 있습니다.' : '' });
+  const inp = h('input', { class: 'field', type: 'text', id: 'vworldKey', autocomplete: 'off', autocapitalize: 'off', spellcheck: 'false', placeholder: '인증키 붙여넣기', value: st.vworldKey, 'aria-label': '브이월드 인증키',
+    onchange: e => { setS('vworldKey', e.target.value.trim()); e.target.value = store.settings.vworldKey; store.scache = []; revCache.clear(); msg.textContent = store.settings.vworldKey ? '저장했습니다. ‘시험’으로 확인해 보세요.' : '인증키를 지웠습니다. OpenStreetMap 검색만 씁니다.'; } });
+  const test = h('button', { class: 'btn btn--sm', type: 'button', text: '시험', onclick: async () => {
+    if (inp.value.trim() !== store.settings.vworldKey) { setS('vworldKey', inp.value.trim()); store.scache = []; revCache.clear(); }
+    if (!vwKey()) { msg.textContent = '먼저 인증키를 넣으세요.'; return; }
+    msg.textContent = '확인하는 중…';
+    const r = await vworldTest();
+    msg.textContent = r.msg;
+  } });
+  inp.classList.add('field--wide');
+  return h('section', { class: 'group' }, h('h2', { text: '주소·건물 검색' }),
+    h('div', { class: 'row' },
+      h('div', { class: 'row__label' }, h('b', { text: '브이월드 인증키' }),
+        h('span', null, '지도 자료(OpenStreetMap)에 없는 아파트·건물 이름과 도로명 주소를 국토교통부 자료로 찾습니다. ',
+          h('a', { href: 'https://www.vworld.kr', target: '_blank', rel: 'noopener', text: '브이월드' }),
+          `에서 무료로 발급받고, 서비스 URL 에 ${vwDomain()} 를 적으세요. 인증키는 이 기기에만 저장됩니다.`)),
+      h('div', { style: 'flex:1 1 100%;display:flex;gap:8px;align-items:center' }, inp, test),
+      h('div', { style: 'flex:1 1 100%;margin-top:-6px' }, msg)));
 }
 
 function exportFile() {

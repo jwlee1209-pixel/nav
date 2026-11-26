@@ -118,7 +118,7 @@ function boot() {
       toast('저장된 장소 이름·주소를 한글로 바꿨습니다');
     }).catch(() => { /* 다음에 다시 */ });
   }, 4000);
-  window.__navi = { S, store, MV, Voice, navFix, startTrip, finishNav, applyTheme, openSettings, openPlaces, onPos };
+  window.__navi = { S, store, MV, Voice, navFix, startTrip, finishNav, applyTheme, openSettings, openPlaces, onPos, reversePlace, searchPlaces };
 }
 
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();

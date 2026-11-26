@@ -9,18 +9,27 @@ const F = require('./fixtures');
 
 const OUT = path.join(__dirname, 'out');
 fs.mkdirSync(OUT, { recursive: true });
-const FILE = 'file://' + path.join(__dirname, '..', 'dist', 'index.html');
+// 파일(file://)로 열면 크로미엄이 다시 열 때 가끔 빈 저장소를 주므로, 앱 주소(https)로 올린 것처럼 연다
+const WEB = path.join(__dirname, '..', 'dist', 'web', 'navi');
+const FILE = 'https://jwlee1209-pixel.github.io/nav/';
+const TYPES = { html: 'text/html; charset=utf-8', json: 'application/json', js: 'application/javascript', png: 'image/png' };
 let fails = 0;
 const t = (name, fn) => { try { fn(); console.log('  ok  ', name); } catch (e) { fails++; console.log('  FAIL', name, '-', e.message); } };
 
 (async () => {
   const browser = await chromium.launch({ args: ['--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });
-  const context = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 1, hasTouch: true, geolocation: { latitude: F.P.A[1], longitude: F.P.A[0], accuracy: 8 }, permissions: ['geolocation'], locale: 'ko-KR', timezoneId: 'Asia/Seoul' });
+  const context = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 1, hasTouch: true, geolocation: { latitude: F.P.A[1], longitude: F.P.A[0], accuracy: 8 }, permissions: ['geolocation'], locale: 'ko-KR', timezoneId: 'Asia/Seoul', serviceWorkers: 'block' });
+  await context.route(/^https:\/\/jwlee1209-pixel\.github\.io\/nav\/.*/, r => {
+    const f = new URL(r.request().url()).pathname.replace('/nav/', '') || 'index.html';
+    const fp = path.join(WEB, f);
+    if (!fs.existsSync(fp)) return r.fulfill({ status: 404, body: 'nf' });
+    r.fulfill({ status: 200, headers: { 'content-type': TYPES[f.split('.').pop()] || 'application/octet-stream' }, body: fs.readFileSync(fp) });
+  });
   const log = await mock.install(context, {});
   const now = Date.now();
   await context.addInitScript(seed => {
-    if (sessionStorage.getItem('seeded')) return;      // 다시 불러올 때는 고친 상태를 그대로 둔다
-    sessionStorage.setItem('seeded', '1');
+    if (localStorage.getItem('__seeded')) return;      // 다시 불러올 때는 고친 상태를 그대로 둔다
+    localStorage.setItem('__seeded', '1');
     localStorage.setItem('gilnavi.v1', JSON.stringify(seed));
   }, {
     settings: { theme: 'night' },
@@ -65,6 +74,7 @@ const t = (name, fn) => { try { fn(); console.log('  ok  ', name); } catch (e) {
   t('검색 결과 이름·주소가 한국어', () => { assert(res.length >= 3); res.forEach(x => assert(!/Daehak|Jongno|Seoul/.test(x), x)); assert(res[0].includes('서울 종로구 대학로 101'), res[0]); });
 
   // 다시 열어도 정리는 한 번만
+  await page.waitForTimeout(800);
   const before = log.length;
   await page.goto(FILE);
   await page.waitForFunction(() => !document.getElementById('boot'), null, { timeout: 15000 });

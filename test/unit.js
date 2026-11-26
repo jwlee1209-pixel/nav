@@ -1,7 +1,7 @@
 const assert = require('assert');
 const load = require('./load');
 const F = require('./fixtures');
-const X = load(['00-util', '01-geo', '02-store', '03-sun', '04-search', '05-route', '06-phrase', '07-guide', '07b-cams', '09-sim']);
+const X = load(['00-util', '01-geo', '02-store', '03-sun', '04-search', '04b-vworld', '05-route', '06-phrase', '07-guide', '07b-cams', '09-sim']);
 
 let fails = 0;
 const t = (name, fn) => { try { fn(); console.log('  ok  ', name); } catch (e) { fails++; console.log('  FAIL', name, '\n       ', e.message); } };
@@ -250,5 +250,24 @@ process.exitCode = fails ? 1 : 0;
   t('어린이 보호구역 안내', () => assert(said.some(s => s.startsWith('어린이 보호구역, '))));
   t('제한속도 초과 경고(54km/h로 50 구간 통과)', () => { assert(overSeen); assert(said.includes('제한속도를 넘었습니다. 속도를 줄이세요')); });
   console.log(fails ? `\n${fails}개 실패` : '\n카메라 통과');
+  process.exitCode = fails ? 1 : 0;
+}
+
+// ── 검색어 줄이기 · 브이월드 응답 읽기 ──
+{
+  console.log('검색어 줄이기 · 브이월드');
+  const qs = q => X.queryVariants(q).map(v => v.q + (v.kind === 'same' ? '' : ':' + v.kind)).join(' | ');
+  t('붙여 쓴 아파트 이름', () => assert.strictEqual(qs('가온누리타운2차아파트'), '가온누리타운2차아파트 | 가온누리타운2차:name | 가온누리타운 2차:name | 누리타운 2차:short | 누리타운:core'));
+  t('번지까지 쓴 주소 → 길 이름', () => assert.strictEqual(qs('서울 가상구 가온로3가길 7'), '서울 가상구 가온로3가길 7 | 서울 가상구 가온로3가길:street'));
+  t('지번 주소 → 동', () => assert.strictEqual(qs('가온동 170'), '가온동 170 | 가온동:street'));
+  t('짧은 이름은 그대로', () => { assert.strictEqual(qs('서울역'), '서울역'); assert.strictEqual(qs('래미안 1단지'), '래미안 1단지'); assert.strictEqual(qs('가상구청'), '가상구청'); });
+  t('주소 끝 줄이기', () => { assert.strictEqual(X.tailAddr('서울특별시 가상구 가온로3가길 7'), '가온로3가길 7'); assert.strictEqual(X.tailAddr('서울특별시 가상구 가온동 170'), '가온동 170'); assert.strictEqual(X.tailAddr('경기도 과천시 경마공원대로 107'), '경마공원대로 107'); assert.strictEqual(X.tailAddr('서울특별시 중구 세종대로 110-1'), '세종대로 110-1'); });
+  const place = X.vwItem({ title: '가온2차누리타운', category: '주거시설 > 아파트', address: { road: '서울특별시 가상구 가온로3가길 7', parcel: '서울특별시 가상구 가온동 170' }, point: { x: '126.9901', y: '37.5601' } }, 'place');
+  t('장소 결과', () => { assert.strictEqual(place.name, '가온2차누리타운'); assert.strictEqual(place.addr, '서울특별시 가상구 가온로3가길 7'); assert.strictEqual(place.cat, '아파트'); assert(Math.abs(place.lat - 37.5601) < 1e-9 && Math.abs(place.lon - 126.9901) < 1e-9); });
+  const road = X.vwItem({ address: { road: '서울특별시 가상구 가온로3가길 7', parcel: '서울특별시 가상구 가온동 170', bldnm: '' }, point: { x: 126.9901, y: 37.5601 } }, 'road');
+  t('주소 결과(건물 이름 없음)', () => { assert.strictEqual(road.name, '가온로3가길 7'); assert.strictEqual(road.cat, '주소'); });
+  t('좌표 없는 결과는 버림', () => { assert.strictEqual(X.vwItem({ title: 'x', point: { x: '', y: '' } }, 'place'), null); assert.strictEqual(X.vwItem({ title: 'x' }, 'place'), null); });
+  t('이름 비교용 정리', () => assert.strictEqual(X.normName('가온 누리타운 아파트'), '가온누리타운'));
+  console.log(fails ? `\n${fails}개 실패` : '\n검색어·브이월드 통과');
   process.exitCode = fails ? 1 : 0;
 }

@@ -23,6 +23,7 @@ const DEFAULT_SETTINGS = {
   camSignal: true,       // 신호 단속 카메라도 안내
   overWarn: true,        // 제한속도 초과 경고
   fullscreen: true,      // 안내 중 전체 화면
+  vworldKey: '',         // 브이월드(국토교통부) 인증키 — 아파트·건물 이름, 도로명 주소 검색
 };
 
 const store = {

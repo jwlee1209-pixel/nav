@@ -9,7 +9,7 @@
 <meta name="apple-mobile-web-app-title" content="&#xae38;&#xc7a1;&#xc774; &#xb0b4;&#xbe44;">
 <meta name="description" content="&#xbb34;&#xb8cc; &#xc9c0;&#xb3c4;(OpenStreetMap)&#xb85c; &#xae38;&#xc744; &#xcc3e;&#xace0; &#xd55c;&#xad6d;&#xc5b4; &#xc74c;&#xc131;&#xc73c;&#xb85c; &#xc548;&#xb0b4;&#xd558;&#xb294; &#xac1c;&#xc778;&#xc6a9; &#xcc28;&#xb7c9; &#xb0b4;&#xbe44;&#xac8c;&#xc774;&#xc158;">
 <title>&#xae38;&#xc7a1;&#xc774; &#xb0b4;&#xbe44;</title>
-<meta name="generator" content="&#xae38;&#xc7a1;&#xc774; &#xb0b4;&#xbe44; v1.7">
+<meta name="generator" content="&#xae38;&#xc7a1;&#xc774; &#xb0b4;&#xbe44; v1.8">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230B5CAD'/%3E%3Cpath d='M11 25V15.5a3.5 3.5 0 0 1 3.5-3.5H20' fill='none' stroke='%23fff' stroke-width='3.4' stroke-linecap='round'/%3E%3Cpath d='M19 7.2 25.5 12 19 16.8z' fill='%23fff'/%3E%3C/svg%3E">
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
@@ -464,7 +464,7 @@ return maplibregl$1;
 </script>
 <script>(function () {
 'use strict';
-const APP_VERSION = '1.7';
+const APP_VERSION = '1.8';
 // ===== 00-util.js =====
 // \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 \uacf5\ud1b5 \ub3c4\uad6c \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
 const $ = (s, r = document) => r.querySelector(s);
@@ -768,6 +768,7 @@ const DEFAULT_SETTINGS = {
   camSignal: true,       // \uc2e0\ud638 \ub2e8\uc18d \uce74\uba54\ub77c\ub3c4 \uc548\ub0b4
   overWarn: true,        // \uc81c\ud55c\uc18d\ub3c4 \ucd08\uacfc \uacbd\uace0
   fullscreen: true,      // \uc548\ub0b4 \uc911 \uc804\uccb4 \ud654\uba74
+  vworldKey: '',         // \ube0c\uc774\uc6d4\ub4dc(\uad6d\ud1a0\uad50\ud1b5\ubd80) \uc778\uc99d\ud0a4 \u2014 \uc544\ud30c\ud2b8\u00b7\uac74\ubb3c \uc774\ub984, \ub3c4\ub85c\uba85 \uc8fc\uc18c \uac80\uc0c9
 };
 
 const store = {
@@ -1032,7 +1033,7 @@ function nominatimToPlace(r) {
   let addr = nominatimAddr(r.address);
   if (!addr) addr = String(r.display_name || '').split(',').slice(1).map(s => s.trim())
     .filter(s => s && s !== '\ub300\ud55c\ubbfc\uad6d' && !/^\d{5}$/.test(s)).reverse().join(' ');
-  return { name, addr, lat, lon, cat: catLabel(r.type, r.category, r.addresstype), src: 'nominatim' };
+  return { name, addr, lat, lon, cat: catLabel(r.type, r.category, r.addresstype), src: 'nominatim', poi: !!r.name };
 }
 
 function looksLikeAddress(q) {
@@ -1077,32 +1078,89 @@ async function nominatimSearch(q, near, signal) {
   return (Array.isArray(data) ? data : []).map(nominatimToPlace).filter(Boolean);
 }
 
+// \ubd99\uc5ec \uc4f4 \uc544\ud30c\ud2b8\u00b7\uac74\ubb3c \uc774\ub984\uc774\ub098 \ubc88\uc9c0\uae4c\uc9c0 \uc4f4 \uc8fc\uc18c\uac00 \uc9c0\ub3c4 \uc790\ub8cc(OSM)\uc5d0 \uadf8\ub300\ub85c \uc5c6\uc744 \ub54c \ucc28\ub840\ub85c \uc904\uc5ec \ub2e4\uc2dc \ucc3e\ub294\ub2e4
+//  '\uac00\uc628\ub204\ub9ac\ud0c0\uc6b42\ucc28\uc544\ud30c\ud2b8' \u2192 '\uac00\uc628\ub204\ub9ac\ud0c0\uc6b42\ucc28' \u2192 '\uac00\uc628\ub204\ub9ac\ud0c0\uc6b4 2\ucc28' \u2192 '\ub204\ub9ac\ud0c0\uc6b4 2\ucc28' \u2192 '\ub204\ub9ac\ud0c0\uc6b4'(\uadfc\ucc98\uc5d0\uc11c\ub9cc)
+//  '\uc11c\uc6b8 \uac00\uc0c1\uad6c \uac00\uc628\ub85c3\uac00\uae38 7' \u2192 '\uc11c\uc6b8 \uac00\uc0c1\uad6c \uac00\uc628\ub85c3\uac00\uae38'(\uac74\ubb3c \ubc88\ud638 \uc5c6\uc774 \uae38 \uc704\uce58)
+function queryVariants(q) {
+  const out = [];
+  const add = (s, kind) => { s = String(s).replace(/\s+/g, ' ').trim(); if (s.length >= 2 && !out.some(o => o.q === s)) out.push({ q: s, kind }); };
+  add(q, 'same');
+  if (looksLikeAddress(q)) {
+    const street = q.replace(/\s*(?:\uc0b0\s*)?\d+(?:-\d+)?(?:\s*\ubc88\uc9c0)?\s*$/, '');
+    if (street !== q && /[\uac00-\ud7a3]/.test(street)) add(street, 'street');
+    return out;
+  }
+  const noApt = q.replace(/\s*(\uc544\ud30c\ud2b8|APT)$/i, '');
+  add(noApt, 'name');
+  const spaced = noApt.replace(/([\uac00-\ud7a3])(\d)/g, '$1 $2');
+  add(spaced, 'name');
+  const words = spaced.split(' ');
+  if (/^[\uac00-\ud7a3]{5,}$/.test(words[0])) {                  // \uc55e\uc758 \ub3d9\ub124 \uc774\ub984(\ub450 \uae00\uc790)\uc744 \ub5c0\ub2e4: \uac00\uc628\ub204\ub9ac\ud0c0\uc6b4 \u2192 \ub204\ub9ac\ud0c0\uc6b4(\uadfc\ucc98\uc5d0\uc11c\ub9cc)
+    const rest = [words[0].slice(2), ...words.slice(1)];
+    add(rest.join(' '), 'short');
+    if (rest.length > 1) add(rest[0], 'core');
+  }
+  return out;
+}
+const LOCAL_KINDS = new Set(['short', 'core']);   // \uc774\ub984\uc744 \uc904\uc5ec \ud754\ud574\uc9c4 \uac80\uc0c9\uc5b4: \uadfc\ucc98 \uacb0\uacfc\ub9cc \uc4f4\ub2e4
+
+const normName = s => String(s || '').replace(/\s+|\uc544\ud30c\ud2b8|APT/gi, '');
+
+// \ud55c \uac00\uc9c0 \uac80\uc0c9\uc5b4\ub85c: \ube0c\uc774\uc6d4\ub4dc(\uc778\uc99d\ud0a4\uac00 \uc788\uc73c\uba74) \u2192 Photon \u2192 (\uc8fc\uc18c\uc774\uac70\ub098 \uacb0\uacfc\uac00 \uc801\uc73c\uba74) Nominatim
+async function searchOnce(v, near, signal, errs) {
+  const addressy = looksLikeAddress(v.q);
+  let vw = [], osm = [];
+  if (vwKey()) {
+    try { vw = await vworldSearch(v.q, near, signal, { local: LOCAL_KINDS.has(v.kind) }); }
+    catch (e) { if (signal && signal.aborted) throw e; errs.vw = errs.vw || vwErrText(e); }
+  }
+  try { osm = await photonSearch(v.q, near, signal); } catch (e) { if (signal && signal.aborted) throw e; errs.list.add('Photon'); }
+  if (addressy || (v.kind === 'same' && vw.length + osm.length < 3)) {
+    try {
+      const more = await nominatimSearch(v.q, near, signal);
+      osm = addressy ? [...more, ...osm] : [...osm, ...more];
+    } catch (e) { if (signal && signal.aborted) throw e; errs.list.add('Nominatim'); }
+  }
+  if (LOCAL_KINDS.has(v.kind) && near) {
+    const close = it => hav([near.lon, near.lat], [it.lon, it.lat]) < 50000;
+    vw = vw.filter(close); osm = osm.filter(close);
+  }
+  // \uc911\ubcf5 \uc81c\uac70: 50m \uc548\uc758 \uac19\uc740 \uc774\ub984, \ub610\ub294 \ube0c\uc774\uc6d4\ub4dc \uacb0\uacfc\uc640 40m \uc548\uc5d0\uc11c \uc774\ub984\uc774 \uacb9\uce58\ub294 OSM \uacb0\uacfc
+  const out = [];
+  for (const it of [...vw, ...osm]) {
+    const dup = out.some(o => {
+      const d = hav([o.lon, o.lat], [it.lon, it.lat]);
+      if (o.name === it.name && d < 50) return true;
+      const a = normName(o.name), b = normName(it.name);
+      return o.src === 'vworld' && d < 40 && a && b && (a.includes(b) || b.includes(a));
+    });
+    if (!dup) out.push(it);
+  }
+  return out;
+}
+
 // \uac80\uc0c9: \uc5d4\ud130/\uac80\uc0c9 \ubc84\ud2bc\uc744 \ub20c\ub800\uc744 \ub54c\ub9cc \ud638\ucd9c(\uc785\ub825 \uc911 \uc790\ub3d9 \ud638\ucd9c \uc5c6\uc74c)
 async function searchPlaces(q, near, signal) {
   q = q.trim().replace(/\s+/g, ' ');
   if (!q) return { items: [], errors: [] };
-  const key = 'ko|' + q + '|' + (near ? near.lat.toFixed(1) + ',' + near.lon.toFixed(1) : '');   // 'ko|': v1.7 \uc774\uc804(\uc601\ubb38 \uc11e\uc778) \uce90\uc2dc\ub294 \uc4f0\uc9c0 \uc54a\uc74c
-  const cached = cacheGet(key);
-  if (cached) return { items: withDistance(cached, near), errors: [], cached: true };
+  // 'ko|': v1.7 \uc774\uc804(\uc601\ubb38 \uc11e\uc778) \uce90\uc2dc\ub294 \uc4f0\uc9c0 \uc54a\uc74c, 'v|': \ube0c\uc774\uc6d4\ub4dc\ub97c \uc4f4 \uacb0\uacfc
+  const key = 'ko|' + (vwKey() ? 'v|' : '') + q + '|' + (near ? near.lat.toFixed(1) + ',' + near.lon.toFixed(1) : '');
+  const hit = cacheGet(key);
+  if (hit) { const c = Array.isArray(hit) ? { items: hit } : hit; return { ...c, items: withDistance(c.items, near), errors: [], cached: true }; }
 
-  const errors = [];
-  let items = [];
-  const addressy = looksLikeAddress(q);
-  try { items = await photonSearch(q, near, signal); } catch (e) { if (signal && signal.aborted) throw e; errors.push('Photon'); }
-  if (addressy || items.length < 3) {
-    try {
-      const more = await nominatimSearch(q, near, signal);
-      items = addressy ? [...more, ...items] : [...items, ...more];
-    } catch (e) { if (signal && signal.aborted) throw e; errors.push('Nominatim'); }
+  const errs = { list: new Set(), vw: '' };
+  let items = [], used = null;
+  for (const v of queryVariants(q)) {
+    items = await searchOnce(v, near, signal, errs);
+    if (items.length) { if (v.kind !== 'same') used = v; break; }
+    if (v.kind === 'same' && errs.list.size >= 2 && !vwKey()) break;   // \uac80\uc0c9 \uc11c\ubc84\uc5d0 \ub2ff\uc9c0 \uc54a\uc73c\uba74 \uc904\uc5ec \ubd10\uc57c \uc18c\uc6a9\uc5c6\ub2e4
   }
-  // \uac19\uc740 \uc7a5\uc18c \uc911\ubcf5 \uc81c\uac70(50m \uc774\ub0b4 \uac19\uc740 \uc774\ub984)
-  const out = [];
-  for (const it of items) {
-    if (out.some(o => o.name === it.name && hav([o.lon, o.lat], [it.lon, it.lat]) < 50)) continue;
-    out.push(it);
-  }
-  if (out.length) cachePut(key, out);
-  return { items: withDistance(out, near), errors };
+  const note = !used ? '' : used.kind === 'street'
+    ? `\u2018${q}\u2019\uc758 \uac74\ubb3c \ubc88\ud638\uac00 \uc9c0\ub3c4 \uc790\ub8cc(OpenStreetMap)\uc5d0 \uc5c6\uc5b4 \u2018${used.q}\u2019 \uae38 \uc704\uce58\ub97c \ubcf4\uc5ec \uc90d\ub2c8\ub2e4.`
+    : `\u2018${q}\u2019 \uadf8\ub300\ub85c\ub294 \ucc3e\uc9c0 \ubabb\ud574 \u2018${used.q}\u2019${josa(used.q, '\uc73c\ub85c/\ub85c').slice(used.q.length)} \ucc3e\uc740 \uacb0\uacfc\uc785\ub2c8\ub2e4${LOCAL_KINDS.has(used.kind) ? '(\uadfc\ucc98\ub9cc)' : ''}.`;
+  const res = { items, note, used: used && used.q };
+  if (items.length) cachePut(key, res);
+  return { ...res, items: withDistance(items, near), errors: [...errs.list], vwErr: errs.vw };
 }
 
 function withDistance(items, near) {
@@ -1111,9 +1169,12 @@ function withDistance(items, near) {
 
 const revCache = new Map();
 async function reversePlace(lon, lat, signal) {
-  const key = lat.toFixed(4) + ',' + lon.toFixed(4);
+  const key = (vwKey() ? 'v' : '') + lat.toFixed(4) + ',' + lon.toFixed(4);
   if (revCache.has(key)) return revCache.get(key);
-  let place = null;
+  let place = null, vw = null;
+  if (vwKey()) {   // \uad6d\uac00 \uc8fc\uc18c(\ub3c4\ub85c\uba85)\ub97c \uba3c\uc800: OSM \uc5d0 \uac74\ubb3c \ubc88\ud638\uac00 \uc5c6\ub294 \uacf3\uc774 \ub9ce\ub2e4
+    try { vw = await vworldReverse(lon, lat, signal); } catch (e) { if (signal && signal.aborted) throw e; }
+  }
   try {
     const u = new URL(NOMINATIM + '/reverse');
     u.searchParams.set('lat', lat.toFixed(6)); u.searchParams.set('lon', lon.toFixed(6));
@@ -1131,6 +1192,7 @@ async function reversePlace(lon, lat, signal) {
       if (d.features && d.features[0]) place = photonToPlace(d.features[0]);
     } catch (e) { if (signal && signal.aborted) throw e; }
   }
+  if (vw) place = place && place.poi ? { ...place, addr: vw.addr } : { ...vw, cat: place ? place.cat : '' };
   const res = place ? { ...place, lat, lon } : { name: '\uc120\ud0dd\ud55c \uc704\uce58', addr: `${lat.toFixed(5)}, ${lon.toFixed(5)}`, lat, lon, cat: '' };
   revCache.set(key, res);
   return res;
@@ -1182,6 +1244,133 @@ async function fixSavedNames() {
   if (!failed) store.meta.ko = 1;     // \ub124\ud2b8\uc6cc\ud06c \uc624\ub958\ub85c \ubabb \uace0\uce5c \uac83\uc774 \uc788\uc73c\uba74 \ub2e4\uc74c\uc5d0 \ub2e4\uc2dc
   saveStore(true);
   return changed;
+}
+
+// ===== 04b-vworld.js =====
+// \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 \ud55c\uad6d \uc8fc\uc18c\u00b7\uac74\ubb3c \uac80\uc0c9(\uad6d\ud1a0\uad50\ud1b5\ubd80 \ube0c\uc774\uc6d4\ub4dc, \ubb34\ub8cc \uc778\uc99d\ud0a4) \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
+// OpenStreetMap \uc5d0 \uc5c6\ub294 \uc544\ud30c\ud2b8\u00b7\uac74\ubb3c \uc774\ub984\uacfc \ub3c4\ub85c\uba85 \uc8fc\uc18c\ub97c \uad6d\uac00 \uc790\ub8cc\ub85c \ucc3e\ub294\ub2e4. \uc778\uc99d\ud0a4\uac00 \uc788\uc744 \ub54c\ub9cc \uc4f4\ub2e4.
+// \uc778\uc99d\ud0a4: \ube0c\uc774\uc6d4\ub4dc(vworld.kr)\uc5d0\uc11c \ubb34\ub8cc \ubc1c\uae09 \u2014 \uc11c\ube44\uc2a4 URL \uc5d0 \uc774 \uc571\uc758 \uc8fc\uc18c(https://jwlee1209-pixel.github.io)\ub97c \ub4f1\ub85d.
+//  \u00b7 \uac80\uc0c9 API 2.0  https://api.vworld.kr/req/search  (type=place \uc7a5\uc18c\u00b7\uac74\ubb3c \uc774\ub984, type=address \ub3c4\ub85c\uba85\u00b7\uc9c0\ubc88 \uc8fc\uc18c)
+//  \u00b7 \uc9c0\uc624\ucf54\ub354 2.0  https://api.vworld.kr/req/address (request=getAddress \uc88c\ud45c \u2192 \uc8fc\uc18c)
+// \ube0c\ub77c\uc6b0\uc800\uc5d0\uc11c \ubc14\ub85c \ubd80\ub97c \uc218 \uc788\ub3c4\ub85d JSONP(callback)\ub85c \uc694\uccad\ud55c\ub2e4.
+const VWORLD = 'https://api.vworld.kr/req/';
+const vworldPace = pacer(250);
+const vwKey = () => String((store.settings && store.settings.vworldKey) || '').trim();
+// \uc778\uc99d\ud0a4\ub97c \ubc1b\uc744 \ub54c \ub4f1\ub85d\ud55c \uc11c\ube44\uc2a4 \uc8fc\uc18c. \uc571 \uc8fc\uc18c(https)\ub85c \uc5f4\uba74 \uadf8 \uc8fc\uc18c, \ud30c\uc77c\ub85c \uc5f4\uba74 \uae30\ubcf8 \uc571 \uc8fc\uc18c
+const vwDomain = () => (typeof location !== 'undefined' && location.protocol === 'https:' ? location.origin : 'https://jwlee1209-pixel.github.io');
+
+let _jsonpN = 0;
+function jsonp(url, { timeout = 10000, signal } = {}) {
+  return new Promise((resolve, reject) => {
+    const cb = '__gilnaviVw' + (++_jsonpN) + Date.now().toString(36);
+    const s = document.createElement('script');
+    let done = false, timer = 0;
+    const fail = kind => { const e = new Error(kind); e.kind = kind; return e; };
+    const finish = (err, data) => {
+      if (done) return;
+      done = true;
+      clearTimeout(timer);
+      if (signal) signal.removeEventListener('abort', onAbort);
+      window[cb] = () => {};                          // \ub2a6\uac8c \ub3c4\ucc29\ud55c \uc751\ub2f5\uc740 \ubc84\ub9b0\ub2e4
+      setTimeout(() => { try { delete window[cb]; } catch (e) { window[cb] = undefined; } }, 60000);
+      s.remove();
+      if (err) reject(err); else resolve(data);
+    };
+    const onAbort = () => finish(fail('aborted'));
+    if (signal) { if (signal.aborted) { onAbort(); return; } signal.addEventListener('abort', onAbort); }
+    timer = setTimeout(() => finish(fail('timeout')), timeout);
+    window[cb] = data => finish(null, data);
+    s.async = true;
+    s.onerror = () => finish(fail('network'));
+    s.onload = () => setTimeout(() => finish(fail('bad')), 0);   // \uc2a4\ud06c\ub9bd\ud2b8\ub294 \uc654\ub294\ub370 callback \uc744 \uc548 \ubd88\ub800\ub2e4(\ud0a4 \uc624\ub958 \uc751\ub2f5 \ub4f1)
+    s.src = url + (url.includes('?') ? '&' : '?') + 'callback=' + cb;
+    document.head.appendChild(s);
+  });
+}
+
+function vwURL(path, params) {
+  const u = new URL(VWORLD + path);
+  for (const k in params) if (params[k] != null && params[k] !== '') u.searchParams.set(k, params[k]);
+  u.searchParams.set('format', 'json');
+  u.searchParams.set('errorformat', 'json');
+  u.searchParams.set('key', vwKey());
+  u.searchParams.set('domain', vwDomain());
+  return u.toString();
+}
+
+// \uc751\ub2f5: {response: {status: OK | NOT_FOUND | ERROR, result: \u2026, error: {code, text}}}
+async function vwCall(path, params, signal) {
+  const data = await vworldPace(() => jsonp(vwURL(path, params), { timeout: 10000, signal }));
+  const r = data && data.response;
+  if (!r) { const e = new Error('\uc751\ub2f5 \ud615\uc2dd\uc774 \ub2e4\ub985\ub2c8\ub2e4'); e.kind = 'vworld'; throw e; }
+  if (r.status === 'NOT_FOUND') return null;
+  if (r.status !== 'OK') {
+    const e = new Error(String((r.error && (r.error.text || r.error.code)) || r.status || '\uc624\ub958'));
+    e.kind = 'vworld'; e.code = r.error && r.error.code;
+    throw e;
+  }
+  return r.result || null;
+}
+
+// '\uc11c\uc6b8\ud2b9\ubcc4\uc2dc \uac00\uc0c1\uad6c \uac00\uc628\ub85c3\uac00\uae38 7' \u2192 '\uac00\uc628\ub85c3\uac00\uae38 7', '\uc11c\uc6b8\ud2b9\ubcc4\uc2dc \uac00\uc0c1\uad6c \uac00\uc628\ub3d9 170' \u2192 '\uac00\uc628\ub3d9 170'
+function tailAddr(s) {
+  s = String(s || '').trim();
+  const m = s.match(/(\S+(?:\ub85c|\uae38|\ub3d9|\ub9ac|\uac00)\s*(?:\uc0b0\s*)?\d+(?:-\d+)?)$/);
+  return m ? m[1] : s.split(' ').slice(-2).join(' ');
+}
+const vwCat = c => String(c || '').split('>').map(x => x.trim()).filter(Boolean).pop() || '';
+
+// \uac80\uc0c9 \uacb0\uacfc \ud55c \uac74 \u2192 \uc571\uc758 \uc7a5\uc18c \ud615\uc2dd
+function vwItem(it, kind) {
+  const pt = it && it.point;
+  const lon = pt ? +pt.x : NaN, lat = pt ? +pt.y : NaN;
+  if (!isFinite(lat) || !isFinite(lon) || Math.abs(lat) < 1) return null;
+  const a = it.address || {};
+  const road = String(a.road || '').trim(), parcel = String(a.parcel || '').trim();
+  if (kind === 'place') {
+    const name = String(it.title || '').trim() || tailAddr(road || parcel);
+    return { name, addr: road || parcel, lat, lon, cat: vwCat(it.category), src: 'vworld' };
+  }
+  const main = kind === 'road' ? (road || parcel) : (parcel || road);
+  const bld = String(a.bldnm || '').trim();
+  return { name: bld || tailAddr(main), addr: main, lat, lon, cat: bld ? '\uac74\ubb3c' : '\uc8fc\uc18c', src: 'vworld' };
+}
+
+// \uac80\uc0c9: \uc8fc\uc18c\ucc98\ub7fc \ubcf4\uc774\uba74 \ub3c4\ub85c\uba85 \u2192 \uc9c0\ubc88 \uc8fc\uc18c, \uc544\ub2c8\uba74(\ub610\ub294 \uc8fc\uc18c\ub85c \ubabb \ucc3e\uc73c\uba74) \uc7a5\uc18c \uc774\ub984
+async function vworldSearch(q, near, signal, { local = false } = {}) {
+  const base = { service: 'search', request: 'search', version: '2.0', crs: 'EPSG:4326', size: 15, page: 1, query: q };
+  if (local && near) base.bbox = [near.lon - 0.25, near.lat - 0.2, near.lon + 0.25, near.lat + 0.2].map(v => (+v).toFixed(4)).join(',');
+  const out = [];
+  const add = (res, kind) => { for (const it of (res && res.items) || []) { const p = vwItem(it, kind); if (p) out.push(p); } };
+  if (looksLikeAddress(q)) {
+    add(await vwCall('search', { ...base, type: 'address', category: 'road' }, signal), 'road');
+    if (!out.length) add(await vwCall('search', { ...base, type: 'address', category: 'parcel' }, signal), 'parcel');
+  }
+  if (!out.length) add(await vwCall('search', { ...base, type: 'place' }, signal), 'place');
+  return out;
+}
+
+// \uc88c\ud45c \u2192 \ub3c4\ub85c\uba85 \uc8fc\uc18c(\uc5c6\uc73c\uba74 \uc9c0\ubc88)
+async function vworldReverse(lon, lat, signal) {
+  const res = await vwCall('address', { service: 'address', request: 'getAddress', version: '2.0', crs: 'EPSG:4326', point: `${(+lon).toFixed(6)},${(+lat).toFixed(6)}`, type: 'both' }, signal);
+  const list = Array.isArray(res) ? res : res ? [res] : [];
+  const pick = list.find(x => x && x.type === 'road' && x.text) || list.find(x => x && x.text);
+  return pick ? { name: tailAddr(pick.text), addr: String(pick.text).trim(), cat: '', src: 'vworld' } : null;
+}
+
+// \uc124\uc815 \ud654\uba74\uc758 '\uc2dc\ud5d8': \uc778\uc99d\ud0a4\u00b7\uc11c\ube44\uc2a4 \uc8fc\uc18c\uac00 \ub9de\ub294\uc9c0 \uc2e4\uc81c\ub85c \ud55c \ubc88 \ucc3e\uc544 \ubcf8\ub2e4
+async function vworldTest() {
+  try {
+    const r = await vworldSearch('\uc138\uc885\ub300\ub85c 110', null);
+    return r.length ? { ok: true, msg: `\uc815\uc0c1\uc785\ub2c8\ub2e4 \u2014 \u2018\uc138\uc885\ub300\ub85c 110\u2019 \u2192 ${r[0].name}` } : { ok: true, msg: '\uc5f0\uacb0\uc740 \ub418\uc9c0\ub9cc \uacb0\uacfc\uac00 \uc5c6\uc2b5\ub2c8\ub2e4' };
+  } catch (e) {
+    return { ok: false, msg: vwErrText(e) };
+  }
+}
+function vwErrText(e) {
+  if (e.kind === 'vworld') return `\ube0c\uc774\uc6d4\ub4dc \uc751\ub2f5: ${e.message}`;
+  if (e.kind === 'bad') return '\ube0c\uc774\uc6d4\ub4dc\uac00 \uc54c \uc218 \uc5c6\ub294 \uc751\ub2f5\uc744 \ubcf4\ub0c8\uc2b5\ub2c8\ub2e4. \uc778\uc99d\ud0a4\uc640 \ub4f1\ub85d\ud55c \uc11c\ube44\uc2a4 \uc8fc\uc18c\ub97c \ud655\uc778\ud558\uc138\uc694';
+  return '\ube0c\uc774\uc6d4\ub4dc \uc11c\ubc84\uc5d0 \uc5f0\uacb0\ud558\uc9c0 \ubabb\ud588\uc2b5\ub2c8\ub2e4. \uc778\uc99d\ud0a4\u00b7\uc11c\ube44\uc2a4 \uc8fc\uc18c\u00b7\uc778\ud130\ub137 \uc5f0\uacb0\uc744 \ud655\uc778\ud558\uc138\uc694';
 }
 
 // ===== 05-route.js =====
@@ -2800,7 +2989,9 @@ function searchSheet() {
   if (S.results && !S.searching) {
     const r = S.results;
     out.push(h('div', { class: 'sec-head' }, h('h2', { text: r.items.length ? `\u2018${S.lastQuery}\u2019 \uac80\uc0c9 \uacb0\uacfc ${r.items.length}\uacf3` : `\u2018${S.lastQuery}\u2019 \uac80\uc0c9 \uacb0\uacfc\uac00 \uc5c6\uc2b5\ub2c8\ub2e4` })));
-    if (!r.items.length) out.push(h('p', { class: 'empty', text: r.errors.length ? '\uac80\uc0c9 \uc11c\ubc84\uc5d0 \uc5f0\uacb0\ud558\uc9c0 \ubabb\ud588\uc2b5\ub2c8\ub2e4. \uc778\ud130\ub137 \uc5f0\uacb0\uc744 \ud655\uc778\ud55c \ub4a4 \ub2e4\uc2dc \uc2dc\ub3c4\ud558\uc138\uc694.' : '\uc774\ub984\uc744 \uc904\uc774\uac70\ub098(\uc608: \u2018\uc11c\uc6b8\uc5ed\u2019), \ub3c4\ub85c\uba85 \uc8fc\uc18c(\uc608: \u2018\uc138\uc885\ub300\ub85c 110\u2019)\ub85c \ucc3e\uc544\ubcf4\uc138\uc694. \uc9c0\ub3c4\ub97c \uae38\uac8c \ub204\ub974\uba74 \uadf8 \uc704\uce58\ub97c \ubc14\ub85c \uace0\ub97c \uc218\ub3c4 \uc788\uc2b5\ub2c8\ub2e4.' }));
+    if (r.vwErr) out.push(h('p', { class: 'warnline', text: r.vwErr + ' (\uc124\uc815 \u2192 \uc8fc\uc18c\u00b7\uac74\ubb3c \uac80\uc0c9)' }));
+    if (r.note) out.push(h('p', { class: 'recline', text: r.note }));
+    if (!r.items.length) out.push(h('p', { class: 'empty', text: r.errors.length ? '\uac80\uc0c9 \uc11c\ubc84\uc5d0 \uc5f0\uacb0\ud558\uc9c0 \ubabb\ud588\uc2b5\ub2c8\ub2e4. \uc778\ud130\ub137 \uc5f0\uacb0\uc744 \ud655\uc778\ud55c \ub4a4 \ub2e4\uc2dc \uc2dc\ub3c4\ud558\uc138\uc694.' : `\uc9c0\ub3c4 \uc790\ub8cc(OpenStreetMap)\uc5d0 \uc5c6\ub294 \uacf3\uc77c \uc218 \uc788\uc2b5\ub2c8\ub2e4. \uc9c0\ub3c4\ub97c \uae38\uac8c \ub204\ub974\uba74 \uadf8 \uc704\uce58\ub97c \ubc14\ub85c \uace0\ub97c \uc218 \uc788\uc2b5\ub2c8\ub2e4.${vwKey() ? '' : ' \uc544\ud30c\ud2b8\u00b7\uac74\ubb3c \uc774\ub984\uacfc \ub3c4\ub85c\uba85 \uc8fc\uc18c\uae4c\uc9c0 \ucc3e\uc73c\ub824\uba74 \uc124\uc815 \u2192 \uc8fc\uc18c\u00b7\uac74\ubb3c \uac80\uc0c9\uc5d0\uc11c \ube0c\uc774\uc6d4\ub4dc \uc778\uc99d\ud0a4\ub97c \ub123\uc73c\uc138\uc694.'}` }));
     const list = h('ul', { class: 'list' });
     r.items.forEach(p => list.append(placeItem(p, { onClick: () => openPlace(p) })));
     out.push(list);
@@ -2814,7 +3005,7 @@ function searchSheet() {
     out.push(list);
   }
   if (!out.length) out.push(h('p', { class: 'empty', text: '\uc7a5\uc18c \uc774\ub984\uc774\ub098 \uc8fc\uc18c\ub97c \uc785\ub825\ud558\uace0 \uac80\uc0c9\uc744 \ub204\ub974\uc138\uc694.' }));
-  out.push(h('p', { class: 'note' }, '\uac80\uc0c9: Photon(komoot) \u00b7 Nominatim(OpenStreetMap). \ubb34\ub8cc \uc11c\ubc84\ub77c \uc785\ub825\ud560 \ub54c\ub9c8\ub2e4\uac00 \uc544\ub2c8\ub77c \uac80\uc0c9\uc744 \ub204\ub97c \ub54c\ub9cc \ucc3e\uc2b5\ub2c8\ub2e4.'));
+  out.push(h('p', { class: 'note' }, `\uac80\uc0c9: ${vwKey() ? '\ube0c\uc774\uc6d4\ub4dc(\uad6d\ud1a0\uad50\ud1b5\ubd80) \u00b7 ' : ''}Photon(komoot) \u00b7 Nominatim(OpenStreetMap). \ubb34\ub8cc \uc11c\ubc84\ub77c \uc785\ub825\ud560 \ub54c\ub9c8\ub2e4\uac00 \uc544\ub2c8\ub77c \uac80\uc0c9\uc744 \ub204\ub97c \ub54c\ub9cc \ucc3e\uc2b5\ub2c8\ub2e4.`));
   return out;
 }
 
@@ -3449,6 +3640,7 @@ function openSettings() {
       row('\uc6b4\uc804\ud558\uae30 \uc26c\uc6b4 \uae38 \uc6b0\uc120', '\u2018\ucd94\ucc9c\u2019\uc5d0\uc11c \ube60\ub978 \uae38\uc774 \uae30\uc900 \uc2dc\uac04 \uc774\uc0c1 \ube60\ub974\uc9c0 \uc54a\uc73c\uba74 \ud68c\uc804\uc774 \uc801\uace0 \ud070\uae38 \uc704\uc8fc\uc778 \uae38\uc744 \ucd94\ucc9c\ud569\ub2c8\ub2e4. \ube60\ub978 \uae38\ubcf4\ub2e4 25%(\uc9e7\uc740 \uae38\uc740 1.5km) \ub118\uac8c \uba40\uac70\ub098 \uc5c6\ub358 \uc720\ub8cc\ub3c4\ub85c\u00b7\ud398\ub9ac\uac00 \uc0dd\uae30\ub294 \uae38\uc740 \ucd94\ucc9c\ud558\uc9c0 \uc54a\uc2b5\ub2c8\ub2e4', sw(st.easyPrefer, v => setS('easyPrefer', v), '\uc6b4\uc804\ud558\uae30 \uc26c\uc6b4 \uae38 \uc6b0\uc120')),
       row('\uae30\uc900 \uc2dc\uac04', '\ube60\ub978 \uae38\uc774 \uc774\ub9cc\ud07c \uc774\uc0c1 \ube68\ub77c\uc57c \ube60\ub978 \uae38\uc744 \ucd94\ucc9c\ud569\ub2c8\ub2e4. \uc9e7\uc740 \uae38(25\ubd84 \ubbf8\ub9cc)\uc5d0\uc11c\ub294 \ube60\ub978 \uae38 \uc18c\uc694 \uc2dc\uac04\uc758 40%(\ucd5c\uc18c 3\ubd84)\uae4c\uc9c0\ub9cc \ub2a6\uc5b4\ub3c4 \ub429\ub2c8\ub2e4', seg([[5, '5\ubd84'], [10, '10\ubd84'], [15, '15\ubd84'], [20, '20\ubd84']], st.easyMin, k => setS('easyMin', k), '\uae30\uc900 \uc2dc\uac04')),
       row('\uacbd\ub85c \uc5d4\uc9c4', '\uc790\ub3d9: Valhalla\ub85c \ucc3e\uace0 \uc751\ub2f5\uc774 \uc5c6\uc73c\uba74 OSRM', seg([['auto', '\uc790\ub3d9'], ['valhalla', 'Valhalla'], ['osrm', 'OSRM']], st.engine, k => setS('engine', k), '\uacbd\ub85c \uc5d4\uc9c4'))),
+    vworldGroup(st),
     h('section', { class: 'group' }, h('h2', { text: '\uc74c\uc131 \uc548\ub0b4' }),
       row('\uc74c\uc131 \uc548\ub0b4', null, sw(st.voice, v => setS('voice', v), '\uc74c\uc131 \uc548\ub0b4')),
       row('\ubaa9\uc18c\ub9ac', Voice.ok ? (Voice.voices.length ? '\uc774 \uae30\uae30\uc5d0 \uc788\ub294 \ud55c\uad6d\uc5b4 \uc74c\uc131' : '\ud55c\uad6d\uc5b4 \uc74c\uc131\uc744 \ucc3e\ub294 \uc911\uc774\uac70\ub098 \uc5c6\uc2b5\ub2c8\ub2e4') : '\uc774 \ube0c\ub77c\uc6b0\uc800\ub294 \uc74c\uc131 \ud569\uc131\uc744 \uc9c0\uc6d0\ud558\uc9c0 \uc54a\uc2b5\ub2c8\ub2e4', voiceSel),
@@ -3486,9 +3678,33 @@ function openSettings() {
       h('p', null, '\uc9c0\ub3c4: ', h('a', { href: 'https://openfreemap.org', target: '_blank', rel: 'noopener', text: 'OpenFreeMap' }), ' \u00b7 ', h('a', { href: 'https://www.openmaptiles.org/', target: '_blank', rel: 'noopener', text: 'OpenMapTiles' }), ' \u00b7 \uc9c0\ub3c4 \ub370\uc774\ud130 ', h('a', { href: 'https://www.openstreetmap.org/copyright', target: '_blank', rel: 'noopener', text: '\u00a9 OpenStreetMap \uae30\uc5ec\uc790' })),
       h('p', null, '\uacbd\ub85c: ', h('a', { href: 'https://valhalla.github.io/valhalla/', target: '_blank', rel: 'noopener', text: 'Valhalla' }), ' \u00b7 ', h('a', { href: 'https://routing.openstreetmap.de/about.html', target: '_blank', rel: 'noopener', text: 'OSRM' }), ' (FOSSGIS \uacf5\uac1c \uc11c\ubc84, \ucd08\ub2f9 1\ud68c \uc774\ud558\u00b7\uac00\ubcbc\uc6b4 \uac1c\uc778 \uc0ac\uc6a9)'),
       h('p', null, '\uac80\uc0c9: ', h('a', { href: 'https://photon.komoot.io', target: '_blank', rel: 'noopener', text: 'Photon(komoot)' }), ' \u00b7 Nominatim \u2014 ', h('a', { href: 'https://operations.osmfoundation.org/policies/nominatim/', target: '_blank', rel: 'noopener', text: 'Nominatim \uc774\uc6a9 \uc815\ucc45' }), '(\uc790\ub3d9\uc644\uc131 \uae08\uc9c0, \ucd08\ub2f9 1\ud68c \uc774\ud558, \uacb0\uacfc \uc800\uc7a5 \ud6c4 \uc7ac\uc0ac\uc6a9)\uc744 \uc9c0\ud0a4\ub3c4\ub85d \uac80\uc0c9 \ubc84\ud2bc\uc744 \ub20c\ub800\uc744 \ub54c\ub9cc \uc694\uccad\ud558\uace0 \uacb0\uacfc\ub97c \uc774 \uae30\uae30\uc5d0 7\uc77c\uac04 \ubcf4\uad00\ud569\ub2c8\ub2e4.'),
+      h('p', null, '\uc8fc\uc18c\u00b7\uac74\ubb3c \uac80\uc0c9(\uc778\uc99d\ud0a4\ub97c \ub123\uc740 \uacbd\uc6b0): ', h('a', { href: 'https://www.vworld.kr', target: '_blank', rel: 'noopener', text: '\ube0c\uc774\uc6d4\ub4dc(\uad6d\ud1a0\uad50\ud1b5\ubd80 \uacf5\uac04\uc815\ubcf4 \uc624\ud508\ud50c\ub7ab\ud3fc)' }), ' \uac80\uc0c9\u00b7\uc9c0\uc624\ucf54\ub354 API'),
       h('p', null, '\ub2e8\uc18d \uce74\uba54\ub77c: \uacbd\ucc30\uccad\u00b7\uc9c0\ubc29\uc790\uce58\ub2e8\uccb4 \u300c\uc804\uad6d\ubb34\uc778\uad50\ud1b5\ub2e8\uc18d\uce74\uba54\ub77c\ud45c\uc900\ub370\uc774\ud130\u300d(', h('a', { href: 'https://www.data.go.kr/data/15028200/standard.do', target: '_blank', rel: 'noopener', text: '\uacf5\uacf5\ub370\uc774\ud130\ud3ec\ud138' }), ')'),
       h('p', null, '\uc2e4\uc2dc\uac04 \uad50\ud1b5 \uc815\ubcf4\uc640 \uc774\ub3d9\uc2dd \ub2e8\uc18d \uc815\ubcf4\ub294 \uc5c6\uc2b5\ub2c8\ub2e4. \uc548\ub0b4\ub294 \ucc38\uace0\uc6a9\uc774\uba70 \uc2e4\uc81c \ub3c4\ub85c \ud45c\uc9c0\uc640 \uad50\ud1b5 \ubc95\uaddc\ub97c \ub530\ub974\uc138\uc694. \uc6b4\uc804 \uc911\uc5d0\ub294 \ud654\uba74\uc744 \uc870\uc791\ud558\uc9c0 \ub9c8\uc138\uc694.')),
   ]);
+}
+
+// \uc8fc\uc18c\u00b7\uac74\ubb3c \uac80\uc0c9: \ube0c\uc774\uc6d4\ub4dc \uc778\uc99d\ud0a4(\ubb34\ub8cc). \uc5c6\uc73c\uba74 OpenStreetMap \uac80\uc0c9\ub9cc \uc4f4\ub2e4
+function vworldGroup(st) {
+  const msg = h('span', { class: 'muted', style: 'font-size:12.5px;display:block', 'aria-live': 'polite', text: st.vworldKey ? '\uc778\uc99d\ud0a4\uac00 \uc800\uc7a5\ub418\uc5b4 \uc788\uc2b5\ub2c8\ub2e4.' : '' });
+  const inp = h('input', { class: 'field', type: 'text', id: 'vworldKey', autocomplete: 'off', autocapitalize: 'off', spellcheck: 'false', placeholder: '\uc778\uc99d\ud0a4 \ubd99\uc5ec\ub123\uae30', value: st.vworldKey, 'aria-label': '\ube0c\uc774\uc6d4\ub4dc \uc778\uc99d\ud0a4',
+    onchange: e => { setS('vworldKey', e.target.value.trim()); e.target.value = store.settings.vworldKey; store.scache = []; revCache.clear(); msg.textContent = store.settings.vworldKey ? '\uc800\uc7a5\ud588\uc2b5\ub2c8\ub2e4. \u2018\uc2dc\ud5d8\u2019\uc73c\ub85c \ud655\uc778\ud574 \ubcf4\uc138\uc694.' : '\uc778\uc99d\ud0a4\ub97c \uc9c0\uc6e0\uc2b5\ub2c8\ub2e4. OpenStreetMap \uac80\uc0c9\ub9cc \uc501\ub2c8\ub2e4.'; } });
+  const test = h('button', { class: 'btn btn--sm', type: 'button', text: '\uc2dc\ud5d8', onclick: async () => {
+    if (inp.value.trim() !== store.settings.vworldKey) { setS('vworldKey', inp.value.trim()); store.scache = []; revCache.clear(); }
+    if (!vwKey()) { msg.textContent = '\uba3c\uc800 \uc778\uc99d\ud0a4\ub97c \ub123\uc73c\uc138\uc694.'; return; }
+    msg.textContent = '\ud655\uc778\ud558\ub294 \uc911\u2026';
+    const r = await vworldTest();
+    msg.textContent = r.msg;
+  } });
+  inp.classList.add('field--wide');
+  return h('section', { class: 'group' }, h('h2', { text: '\uc8fc\uc18c\u00b7\uac74\ubb3c \uac80\uc0c9' }),
+    h('div', { class: 'row' },
+      h('div', { class: 'row__label' }, h('b', { text: '\ube0c\uc774\uc6d4\ub4dc \uc778\uc99d\ud0a4' }),
+        h('span', null, '\uc9c0\ub3c4 \uc790\ub8cc(OpenStreetMap)\uc5d0 \uc5c6\ub294 \uc544\ud30c\ud2b8\u00b7\uac74\ubb3c \uc774\ub984\uacfc \ub3c4\ub85c\uba85 \uc8fc\uc18c\ub97c \uad6d\ud1a0\uad50\ud1b5\ubd80 \uc790\ub8cc\ub85c \ucc3e\uc2b5\ub2c8\ub2e4. ',
+          h('a', { href: 'https://www.vworld.kr', target: '_blank', rel: 'noopener', text: '\ube0c\uc774\uc6d4\ub4dc' }),
+          `\uc5d0\uc11c \ubb34\ub8cc\ub85c \ubc1c\uae09\ubc1b\uace0, \uc11c\ube44\uc2a4 URL \uc5d0 ${vwDomain()} \ub97c \uc801\uc73c\uc138\uc694. \uc778\uc99d\ud0a4\ub294 \uc774 \uae30\uae30\uc5d0\ub9cc \uc800\uc7a5\ub429\ub2c8\ub2e4.`)),
+      h('div', { style: 'flex:1 1 100%;display:flex;gap:8px;align-items:center' }, inp, test),
+      h('div', { style: 'flex:1 1 100%;margin-top:-6px' }, msg)));
 }
 
 function exportFile() {
@@ -3665,7 +3881,7 @@ function boot() {
       toast('\uc800\uc7a5\ub41c \uc7a5\uc18c \uc774\ub984\u00b7\uc8fc\uc18c\ub97c \ud55c\uae00\ub85c \ubc14\uafe8\uc2b5\ub2c8\ub2e4');
     }).catch(() => { /* \ub2e4\uc74c\uc5d0 \ub2e4\uc2dc */ });
   }, 4000);
-  window.__navi = { S, store, MV, Voice, navFix, startTrip, finishNav, applyTheme, openSettings, openPlaces, onPos };
+  window.__navi = { S, store, MV, Voice, navFix, startTrip, finishNav, applyTheme, openSettings, openPlaces, onPos, reversePlace, searchPlaces };
 }
 
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();
