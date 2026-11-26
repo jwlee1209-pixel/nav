@@ -1,0 +1,453 @@
+// ───────────────────────── 화면: 공통 · 홈 · 검색 · 장소 · 경로 미리보기 ─────────────────────────
+const IC = {
+  search: '<circle cx="11" cy="11" r="7"/><path d="m20 20-4.2-4.2"/>',
+  close: '<path d="M6 6l12 12M18 6 6 18"/>',
+  gear: '<circle cx="12" cy="12" r="3.2"/><path d="M12 2.8v2.4M12 18.8v2.4M2.8 12h2.4M18.8 12h2.4M5.5 5.5l1.7 1.7M16.8 16.8l1.7 1.7M5.5 18.5l1.7-1.7M16.8 7.2l1.7-1.7"/>',
+  locate: '<circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3"/>',
+  north: '<path d="M12 3.5l5.5 16-5.5-3.4-5.5 3.4z"/>',
+  home: '<path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 10v9.5h13V10"/><path d="M10 19.5v-5h4v5"/>',
+  work: '<rect x="3" y="7.5" width="18" height="12" rx="2"/><path d="M8.5 7.5V5.5A1.5 1.5 0 0 1 10 4h4a1.5 1.5 0 0 1 1.5 1.5v2M3 13h18"/>',
+  star: '<path d="m12 3.5 2.6 5.4 5.9.8-4.3 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8-4.3-4.1 5.9-.8z"/>',
+  clock: '<circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/>',
+  pin: '<path d="M12 21s-7-6.2-7-11.5a7 7 0 0 1 14 0C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/>',
+  plus: '<path d="M12 5v14M5 12h14"/>',
+  swap: '<path d="M8 4v15M4.5 7.5 8 4l3.5 3.5M16 20V5M12.5 16.5 16 20l3.5-3.5"/>',
+  back: '<path d="M15 5l-7 7 7 7"/>',
+  vol: '<path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z"/><path d="M15.5 9a4 4 0 0 1 0 6M18 6.5a7.5 7.5 0 0 1 0 11"/>',
+  mute: '<path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z"/><path d="m16 9.5 5 5M21 9.5l-5 5"/>',
+  overview: '<path d="M5 19c3-1 3-6 7-7s4-6 7-7"/><circle cx="5" cy="19" r="2"/><circle cx="19" cy="5" r="2"/>',
+  play: '<path d="M7 5v14l12-7z"/>',
+  pause: '<path d="M8 5v14M16 5v14"/>',
+  trash: '<path d="M4 7h16M9 7V4.5h6V7M6.5 7l1 13h9l1-13"/>',
+  edit: '<path d="M4 20h4L19 9l-4-4L4 16z"/>',
+  down: '<path d="M12 4v11M7 10.5l5 5 5-5M5 20h14"/>',
+  up: '<path d="M12 16V5M7 9.5l5-5 5 5M5 20h14"/>',
+  spark: '<path d="M12 3.5 13.8 10.2 20.5 12 13.8 13.8 12 20.5 10.2 13.8 3.5 12 10.2 10.2z"/>',
+  car: '<path d="M5 16.5V12l2-5h10l2 5v4.5"/><path d="M3.5 16.5h17M6.5 19.5v-3M17.5 19.5v-3"/><circle cx="7.5" cy="13.5" r="1"/><circle cx="16.5" cy="13.5" r="1"/>',
+  nav: '<path d="M12 3 19 20l-7-4-7 4z"/>',
+};
+const ic = (n, size = 22, fill = false) => `<svg viewBox="0 0 24 24" width="${size}" height="${size}" fill="${fill ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${IC[n]}</svg>`;
+
+const S = {
+  screen: 'home', me: null, gps: 'idle', night: false,
+  place: null, pick: null, results: null, searching: false, lastQuery: '',
+  homeTab: 'recent', trip: null, nav: null,
+  searchCtl: null, routeCtl: null, followHome: false,
+};
+
+// ── 알림·확인 창 ──
+let _toastT = 0;
+function toast(msg, ms = 2600) {
+  const t = $('#toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(_toastT);
+  _toastT = setTimeout(() => t.classList.remove('show'), ms);
+}
+function ask(msg, { ok = '확인', cancel = '취소', danger = false } = {}) {
+  return new Promise(res => {
+    const box = $('#dialog');
+    const done = v => { box.hidden = true; box.replaceChildren(); res(v); };
+    box.replaceChildren(h('div', { class: 'dialog__box', role: 'dialog', 'aria-modal': 'true' },
+      h('p', { text: msg }),
+      h('div', { class: 'dialog__btns' },
+        h('button', { class: 'btn', type: 'button', text: cancel, onclick: () => done(false) }),
+        h('button', { class: 'btn ' + (danger ? 'btn--danger' : 'btn--primary'), type: 'button', text: ok, onclick: () => done(true) }))));
+    box.hidden = false;
+    box.onclick = e => { if (e.target === box) done(false); };
+    box.querySelector('.btn--primary, .btn--danger').focus();
+  });
+}
+function banner(text) {
+  const b = $('#banner');
+  if (!text) { b.hidden = true; return; }
+  b.textContent = text; b.hidden = false;
+}
+
+// ── 화면 전환 ──
+function go(screen) {
+  const prev = S.screen;
+  S.screen = screen;
+  $('#app').dataset.screen = screen;
+  if (screen !== 'place' && screen !== 'search') { MV.setPlaceMark(null); MV.setHits(null); }
+  if (screen === 'home') { S.pick = null; $('#q').value = ''; $('#q').placeholder = '어디로 갈까요?'; $('#q').blur(); }
+  $('#qClear').hidden = !(screen === 'search' || screen === 'place');
+  renderSheet();
+  if (screen === 'home') renderChips();
+  if (screen === 'preview') renderPlan();
+  if (prev === 'home' && screen !== 'home' && !S.pushed) { try { history.pushState({ nv: 1 }, ''); S.pushed = true; } catch (e) { /* 무시 */ } }
+  requestAnimationFrame(measure);
+}
+function back() {
+  if (!$('#overlay').hidden) { closeOverlay(); return; }
+  if (S.screen === 'guide') { $('#gEnd').click(); return; }
+  if (S.screen === 'place') { if (S.results) go('search'); else if (S.pick && S.trip) go('preview'); else go('home'); return; }
+  if (S.screen === 'search') { if (S.pick && S.trip && S.pick !== 'home' && S.pick !== 'work') { S.pick = null; go('preview'); } else go('home'); return; }
+  if (S.screen === 'preview') { cancelTrip(); return; }
+}
+window.addEventListener('popstate', () => {
+  S.pushed = false;
+  back();
+  if (S.screen !== 'home') { try { history.pushState({ nv: 1 }, ''); S.pushed = true; } catch (e) { /* 무시 */ } }
+});
+
+// 떠 있는 요소 높이를 CSS 변수로(버튼·지도 여백 계산용)
+function measure() {
+  const app = $('#app'), sheet = $('#sheet');
+  const sh = getComputedStyle(sheet).display === 'none' || innerWidth >= 760 ? 0 : sheet.offsetHeight;
+  app.style.setProperty('--sheet-h', sh + 'px');
+  app.style.setProperty('--mp-h', ($('#mpanel').offsetHeight || 0) + 'px');
+  app.style.setProperty('--gbar-h', ($('#gbar').offsetHeight || 0) + 'px');
+  app.style.setProperty('--plan-h', ($('#plan').offsetHeight || 0) + 'px');
+}
+const _ro = new ResizeObserver(() => measure());
+_ro.observe(document.body);
+['#sheet', '#mpanel', '#gbar', '#plan'].forEach(sel => { const el = document.querySelector(sel); if (el) _ro.observe(el); });
+
+function setSheetSize(size) { $('#sheet').dataset.size = size; requestAnimationFrame(measure); setTimeout(measure, 300); }
+
+function renderSheet() {
+  const body = $('#sheetBody');
+  const scr = S.screen;
+  if (scr === 'home') { setSheetSize('peek'); body.replaceChildren(...homeSheet()); }
+  else if (scr === 'search') { setSheetSize('full'); body.replaceChildren(...searchSheet()); }
+  else if (scr === 'place') { setSheetSize('peek'); body.replaceChildren(...placeSheet()); }
+  else if (scr === 'preview') { setSheetSize('peek'); body.replaceChildren(...previewSheet()); }
+  body.scrollTop = 0;
+}
+
+// ── 공통 목록 항목 ──
+function placeItem(p, { kind = 'pin', onClick, right } = {}) {
+  const icName = { home: 'home', work: 'work', fav: 'star', recent: 'clock', pin: 'pin', suggest: 'spark' }[kind] || 'pin';
+  const d = S.me ? hav([S.me.lon, S.me.lat], [p.lon, p.lat]) : p.dist;
+  return h('li', { class: 'item', tabindex: '0', role: 'button', onclick: onClick, onkeydown: e => { if (e.key === 'Enter') onClick(e); } },
+    h('span', { class: 'item__ic item__ic--' + kind, svg: ic(icName, 20, kind === 'fav') }),
+    h('span', { class: 'item__txt' },
+      h('div', { class: 'item__name', text: p.label || p.name }),
+      h('div', { class: 'item__addr', text: [p.cat, p.label ? p.name : '', p.addr].filter(Boolean).join(' · ') || ' ' })),
+    right || (d != null ? h('span', { class: 'item__dist num', text: fmtDistStr(d) }) : null));
+}
+
+// ── 홈 ──
+function renderChips() {
+  const box = $('#chips');
+  const here = S.me;
+  const kids = [];
+  for (const sg of suggestions(here)) {
+    kids.push(h('button', { class: 'chip chip--suggest', type: 'button', title: sg.why, onclick: () => startTrip(sg) }, h('span', { svg: ic('spark', 16, true) }), sg.name));
+  }
+  const fixed = [['home', '집', store.home], ['work', '회사', store.work]];
+  for (const [k, label, p] of fixed) {
+    kids.push(h('button', { class: 'chip chip--' + k, type: 'button', onclick: () => p ? startTrip({ ...p, label }) : beginPick(k) },
+      h('span', { svg: ic(k, 17) }), p ? label : label + ' 등록'));
+  }
+  for (const f of store.favs.slice(0, 8)) kids.push(h('button', { class: 'chip chip--fav', type: 'button', onclick: () => startTrip(f) }, h('span', { svg: ic('star', 16, true) }), f.name));
+  box.replaceChildren(...kids);
+}
+
+function homeSheet() {
+  const tabs = h('div', { class: 'seg', role: 'tablist' },
+    ...[['recent', '최근 목적지'], ['fav', '즐겨찾기']].map(([k, label]) => h('button', { type: 'button', role: 'tab', 'aria-pressed': S.homeTab === k ? 'true' : 'false', text: label, onclick: () => { S.homeTab = k; renderSheet(); } })));
+  const list = h('ul', { class: 'list' });
+  const items = S.homeTab === 'recent' ? store.recents : store.favs;
+  if (!items.length) {
+    list.append(h('li', { class: 'empty', text: S.homeTab === 'recent' ? '아직 다녀온 곳이 없습니다. 위에서 목적지를 검색해 보세요.' : '자주 가는 곳을 즐겨찾기에 넣으면 여기와 지도 위에 표시됩니다.' }));
+  } else {
+    for (const p of items.slice(0, 20)) list.append(placeItem(p, { kind: S.homeTab === 'recent' ? 'recent' : 'fav', onClick: () => openPlace(p) }));
+  }
+  const manage = h('div', { class: 'sec-head', style: 'margin-top:8px' },
+    h('button', { class: 'btn btn--sm btn--ghost', type: 'button', onclick: openPlaces }, h('span', { svg: ic('star', 16) }), '내 장소 관리'),
+    gpsNote());
+  return [h('div', { class: 'sec-head' }, tabs), list, manage];
+}
+
+function gpsNote() {
+  const msg = { idle: '', wait: '위치 찾는 중…', ok: '', denied: '위치 권한이 꺼져 있습니다', off: '이 브라우저는 위치를 지원하지 않습니다', insecure: '위치는 https 주소에서만 쓸 수 있습니다', unavail: '위치를 찾을 수 없습니다' }[S.gps] || '';
+  return msg ? h('span', { class: 'muted', style: 'font-size:12.5px', text: msg }) : h('span');
+}
+
+// ── 검색 ──
+function beginPick(kind) {
+  S.pick = kind;
+  const ph = { home: '집 주소나 장소를 검색하세요', work: '회사 주소나 장소를 검색하세요', origin: '출발지를 검색하세요', stop: '경유지를 검색하세요', dest: '도착지를 검색하세요' }[kind] || '어디로 갈까요?';
+  S.results = null;
+  go('search');
+  const q = $('#q');
+  q.value = ''; q.placeholder = ph;
+  setTimeout(() => q.focus(), 50);
+}
+
+function localMatches(q) {
+  q = q.trim().toLowerCase();
+  const all = [];
+  if (store.home) all.push({ ...store.home, label: '집', _k: 'home' });
+  if (store.work) all.push({ ...store.work, label: '회사', _k: 'work' });
+  store.favs.forEach(f => all.push({ ...f, _k: 'fav' }));
+  store.recents.forEach(r => all.push({ ...r, _k: 'recent' }));
+  const seen = new Set(), out = [];
+  for (const p of all) {
+    const k = placeKey(p);
+    if (seen.has(k)) continue;
+    if (q && !((p.label || '') + ' ' + p.name + ' ' + (p.addr || '')).toLowerCase().includes(q)) continue;
+    seen.add(k); out.push(p);
+  }
+  return out.slice(0, q ? 8 : 12);
+}
+
+function searchSheet() {
+  const q = $('#q').value;
+  const out = [];
+  if (S.searching) out.push(h('div', { class: 'loading' }, h('span', { class: 'spinner' }), '검색하는 중…'));
+  if (S.results && !S.searching) {
+    const r = S.results;
+    out.push(h('div', { class: 'sec-head' }, h('h2', { text: r.items.length ? `‘${S.lastQuery}’ 검색 결과 ${r.items.length}곳` : `‘${S.lastQuery}’ 검색 결과가 없습니다` })));
+    if (!r.items.length) out.push(h('p', { class: 'empty', text: r.errors.length ? '검색 서버에 연결하지 못했습니다. 인터넷 연결을 확인한 뒤 다시 시도하세요.' : '이름을 줄이거나(예: ‘서울역’), 도로명 주소(예: ‘세종대로 110’)로 찾아보세요. 지도를 길게 누르면 그 위치를 바로 고를 수도 있습니다.' }));
+    const list = h('ul', { class: 'list' });
+    r.items.forEach(p => list.append(placeItem(p, { onClick: () => openPlace(p) })));
+    out.push(list);
+    if (r.items.length && r.errors.length) out.push(h('p', { class: 'note', text: `${r.errors.join('·')} 검색 서버가 응답하지 않아 일부 결과만 보여 줍니다.` }));
+  }
+  const loc = localMatches(q);
+  if (loc.length && !(S.results && q.trim() === S.lastQuery && S.results.items.length)) {
+    out.push(h('div', { class: 'sec-head' }, h('h2', { text: q.trim() ? '내 장소에서 찾음' : '내 장소 · 최근' })));
+    const list = h('ul', { class: 'list' });
+    loc.forEach(p => list.append(placeItem(p, { kind: p._k, onClick: () => openPlace(p) })));
+    out.push(list);
+  }
+  if (!out.length) out.push(h('p', { class: 'empty', text: '장소 이름이나 주소를 입력하고 검색을 누르세요.' }));
+  out.push(h('p', { class: 'note' }, '검색: Photon(komoot) · Nominatim(OpenStreetMap). 무료 서버라 입력할 때마다가 아니라 검색을 누를 때만 찾습니다.'));
+  return out;
+}
+
+async function doSearch() {
+  const q = $('#q').value.trim();
+  if (!q) return;
+  if (S.searchCtl) S.searchCtl.abort();
+  const ctl = S.searchCtl = new AbortController();
+  S.searching = true; S.lastQuery = q;
+  if (S.screen !== 'search') go('search'); else renderSheet();
+  const near = S.me || (MV.map ? { lat: MV.map.getCenter().lat, lon: MV.map.getCenter().lng } : null);
+  try {
+    S.results = await searchPlaces(q, near, ctl.signal);
+  } catch (e) {
+    if (ctl.signal.aborted) return;
+    S.results = { items: [], errors: ['검색'] };
+  }
+  S.searching = false;
+  $('#q').blur();
+  if (S.screen === 'search') renderSheet();
+  MV.setHits(S.results.items);
+  if (S.results.items.length) {
+    MV.fit(S.results.items.slice(0, 8).map(p => [p.lon, p.lat]), { padding: { top: 120, bottom: innerWidth >= 760 ? 60 : Math.min(innerHeight * 0.55, innerHeight - 260), left: innerWidth >= 760 ? 440 : 40, right: 40 } });
+  }
+}
+
+// ── 장소 카드 ──
+function openPlace(p) {
+  S.place = p;
+  go('place');
+  MV.setPlaceMark(p);
+  // 카드에 가리지 않도록 화면 중심을 살짝 옮긴다(지도 여백 설정은 남기지 않음)
+  const offset = innerWidth >= 760 ? [210, 0] : [0, -Math.round((Math.min(innerHeight * 0.45, 360) - 90) / 2)];
+  MV.follow = false;
+  MV.map.easeTo({ center: [p.lon, p.lat], zoom: Math.max(MV.map.getZoom(), 15), offset, duration: 600 });
+}
+
+function placeSheet() {
+  const p = S.place;
+  if (!p) return [];
+  const d = S.me ? hav([S.me.lon, S.me.lat], [p.lon, p.lat]) : null;
+  const meta = [p.cat, p.addr].filter(Boolean).join(' · ');
+  const out = [
+    h('div', { class: 'place__name', text: p.label ? `${p.label} · ${p.name}` : p.name }),
+    h('div', { class: 'place__meta' }, meta || '주소 정보 없음', d != null ? h('span', { class: 'num', text: ` · 여기서 ${fmtDistStr(d)}` }) : null),
+  ];
+  const acts = h('div', { class: 'place__acts' });
+  const pk = S.pick;
+  if (pk === 'home' || pk === 'work') {
+    acts.append(h('button', { class: 'btn btn--primary', type: 'button', onclick: () => setMyPlace(pk, p) }, h('span', { svg: ic(pk, 20) }), pk === 'home' ? '집으로 등록' : '회사로 등록'));
+  } else if (pk === 'origin' && S.trip) {
+    acts.append(h('button', { class: 'btn btn--primary', type: 'button', onclick: () => { S.trip.origin = p; S.pick = null; S.results = null; go('preview'); computeRoutes(); } }, '출발지로 설정'));
+  } else if (pk === 'stop' && S.trip) {
+    acts.append(h('button', { class: 'btn btn--primary', type: 'button', onclick: () => { S.trip.stops.push(p); S.pick = null; S.results = null; go('preview'); computeRoutes(); } }, h('span', { svg: ic('plus', 20) }), '경유지로 추가'));
+  } else {
+    acts.append(h('button', { class: 'btn btn--primary', type: 'button', onclick: () => { if (S.trip && pk === 'dest') { S.trip.dest = p; S.pick = null; S.results = null; go('preview'); computeRoutes(); } else startTrip(p); } }, h('span', { svg: ic('nav', 20, true) }), '여기로 길 안내'));
+    if (S.trip && S.trip.stops.length < 3 && pk !== 'dest') acts.append(h('button', { class: 'btn', type: 'button', onclick: () => { S.trip.stops.push(p); S.results = null; go('preview'); computeRoutes(); } }, '경유지로'));
+  }
+  const fav = isFav(p);
+  acts.append(h('button', { class: 'btn', type: 'button', 'aria-pressed': fav ? 'true' : 'false', 'aria-label': fav ? '즐겨찾기에서 빼기' : '즐겨찾기에 넣기',
+    onclick: e => { const on = toggleFav(p); e.currentTarget.replaceChildren(h('span', { svg: ic('star', 20, on) }), on ? '저장됨' : '저장'); toast(on ? '즐겨찾기에 넣었습니다' : '즐겨찾기에서 뺐습니다'); refreshPts(); } },
+    h('span', { svg: ic('star', 20, fav) }), fav ? '저장됨' : '저장'));
+  out.push(acts);
+  if (!pk) {
+    out.push(h('div', { class: 'place__more' },
+      h('button', { class: 'btn btn--sm btn--ghost', type: 'button', onclick: () => setMyPlace('home', p) }, h('span', { svg: ic('home', 16) }), '집으로 등록'),
+      h('button', { class: 'btn btn--sm btn--ghost', type: 'button', onclick: () => setMyPlace('work', p) }, h('span', { svg: ic('work', 16) }), '회사로 등록')));
+  }
+  return out;
+}
+
+function setMyPlace(kind, p) {
+  const c = cleanPlace(p);
+  store[kind] = c;
+  saveStore();
+  refreshPts();
+  toast(`${c.name}을(를) ${kind === 'home' ? '집' : '회사'}으로 등록했습니다`);
+  S.results = null;
+  go('home');
+}
+
+function refreshPts() {
+  const pts = [];
+  if (store.home) pts.push({ ...store.home, kind: 'home', label: '집' });
+  if (store.work) pts.push({ ...store.work, kind: 'work', label: '회사' });
+  store.favs.forEach(f => pts.push({ ...f, kind: 'fav' }));
+  MV.setPts(pts);
+  if (S.screen === 'home') renderChips();
+}
+
+// ── 경로 미리보기 ──
+function startTrip(dest) {
+  if (S.nav) return;
+  S.trip = { origin: null, stops: [], dest: cleanPlace(dest) && { ...cleanPlace(dest), label: dest.label }, pref: store.settings.pref, routes: [], sel: 0, loading: false, err: '', warn: '' };
+  S.pick = null; S.results = null;
+  go('preview');
+  computeRoutes();
+}
+function cancelTrip() {
+  if (S.routeCtl) S.routeCtl.abort();
+  S.trip = null;
+  MV.clearRoutes();
+  MV.setTripMarks(null, [], null);
+  go('home');
+}
+
+function tripPoints() {
+  const t = S.trip;
+  const o = t.origin || (S.me ? { lat: S.me.lat, lon: S.me.lon, name: '현재 위치' } : null);
+  if (!o) return null;
+  return [o, ...t.stops, t.dest];
+}
+
+function renderPlan() {
+  const t = S.trip;
+  if (!t) return;
+  const box = $('#plan');
+  const row = (cls, dot, label, value, onClick, extra) => h('div', { class: 'plan__row' },
+    h('span', { class: 'plan__dot ' + cls }, dot),
+    h('button', { class: 'plan__field', type: 'button', onclick: onClick }, h('small', { text: label }), value),
+    extra || null);
+  const rows = [
+    h('div', { class: 'plan__row' },
+      h('button', { class: 'icon-btn', type: 'button', 'aria-label': '뒤로', svg: ic('back', 22), onclick: cancelTrip }),
+      h('div', { style: 'flex:1;font-weight:800;font-size:16px', text: '경로 설정' }),
+      h('button', { class: 'icon-btn', type: 'button', 'aria-label': '출발지와 도착지 바꾸기', svg: ic('swap', 22), onclick: swapTrip })),
+    row('', h('i'), '출발', t.origin ? t.origin.name : '현재 위치', () => beginPick('origin'),
+      t.origin ? h('button', { class: 'icon-btn', type: 'button', 'aria-label': '출발지를 현재 위치로', svg: ic('locate', 20), onclick: () => { t.origin = null; renderPlan(); computeRoutes(); } }) : null),
+    ...t.stops.map((s, i) => row('', h('b', { text: String(i + 1) }), '경유', s.name, () => openPlace(s),
+      h('button', { class: 'icon-btn', type: 'button', 'aria-label': '경유지 빼기', svg: ic('close', 20), onclick: () => { t.stops.splice(i, 1); renderPlan(); computeRoutes(); } }))),
+    row('plan__dot--dest', h('i'), '도착', t.dest.label || t.dest.name, () => beginPick('dest')),
+  ];
+  const tools = h('div', { class: 'plan__tools' },
+    t.stops.length < 3 ? h('button', { class: 'btn btn--sm btn--ghost', type: 'button', onclick: () => beginPick('stop') }, h('span', { svg: ic('plus', 16) }), '경유지 추가') : null);
+  const prefs = h('div', { class: 'prefs', role: 'group', 'aria-label': '경로 옵션' },
+    ...Object.entries(PREF_KO).map(([k, label]) => h('button', { type: 'button', 'aria-pressed': t.pref === k ? 'true' : 'false', text: label, onclick: () => { t.pref = k; renderPlan(); computeRoutes(); } })));
+  box.replaceChildren(...rows, tools, prefs);
+  requestAnimationFrame(measure);
+}
+
+function swapTrip() {
+  const t = S.trip;
+  const curOrigin = t.origin || (S.me ? { name: '현재 위치', lat: S.me.lat, lon: S.me.lon } : null);
+  if (!curOrigin) { toast('현재 위치를 아직 찾지 못해 바꿀 수 없습니다'); return; }
+  const newOrigin = t.dest;
+  t.dest = curOrigin;
+  t.origin = newOrigin;
+  t.stops.reverse();
+  renderPlan();
+  computeRoutes();
+}
+
+async function computeRoutes() {
+  const t = S.trip;
+  if (!t) return;
+  if (S.routeCtl) S.routeCtl.abort();
+  const pts = tripPoints();
+  MV.setTripMarks(t.origin, t.stops, t.dest);
+  if (!pts) {
+    t.loading = false; t.routes = []; t.err = S.gps === 'denied' ? '위치 권한이 없어 현재 위치에서 출발할 수 없습니다. ‘출발’을 눌러 출발지를 직접 고르세요.' : '현재 위치를 찾는 중입니다. 잠시 뒤 다시 시도하거나 출발지를 직접 고르세요.';
+    renderSheet();
+    MV.fit([[t.dest.lon, t.dest.lat]]);
+    return;
+  }
+  if (hav([pts[0].lon, pts[0].lat], [t.dest.lon, t.dest.lat]) < 30 && !t.stops.length) {
+    t.loading = false; t.routes = []; t.err = '출발지와 도착지가 너무 가깝습니다.';
+    renderSheet(); return;
+  }
+  const ctl = S.routeCtl = new AbortController();
+  t.loading = true; t.err = ''; t.warn = ''; t.routes = [];
+  MV.clearRoutes();
+  renderSheet();
+  MV.fit(pts.map(p => [p.lon, p.lat]));
+  const heading = !t.origin && S.me && Date.now() - S.me.t < 10000 && S.me.speed > 2 && S.me.heading != null ? S.me.heading : null;
+  try {
+    const r = await findRoutes(pts, { pref: t.pref, heading, engine: store.settings.engine, signal: ctl.signal });
+    if (ctl.signal.aborted || S.trip !== t) return;
+    t.routes = r.routes.slice(0, 3); t.sel = 0; t.warn = r.warn || ''; t.engine = r.engine;
+  } catch (e) {
+    if (ctl.signal.aborted || S.trip !== t) return;
+    t.err = e.noPath ? '이 조건으로 갈 수 있는 길을 찾지 못했습니다. 경로 옵션을 바꾸거나 출발·도착 위치를 도로 가까이로 옮겨 보세요.' : '경로 서버에 연결하지 못했습니다. 인터넷 연결을 확인한 뒤 다시 시도하세요.';
+  }
+  t.loading = false;
+  if (S.screen === 'preview') renderSheet();
+  if (t.routes.length) {
+    MV.setRoutes(t.routes, t.sel);
+    MV.fit(t.routes.flatMap(r => [r.coords[0], ...r.coords.filter((_, i) => i % 20 === 0), r.coords[r.coords.length - 1]]));
+  }
+}
+
+function fuelCost(m) { return m / 1000 / Math.max(1, store.settings.fuelEff) * store.settings.fuelPrice; }
+
+function previewSheet() {
+  const t = S.trip;
+  if (!t) return [];
+  const out = [];
+  if (t.loading) out.push(h('div', { class: 'loading' }, h('span', { class: 'spinner' }), `${PREF_KO[t.pref]} 경로를 찾는 중…`));
+  if (t.err) out.push(h('p', { class: 'empty', text: t.err }), h('button', { class: 'btn', type: 'button', onclick: computeRoutes, text: '다시 찾기' }));
+  if (t.routes.length) {
+    const ef = etaFactor();
+    const list = h('div', { class: 'routes', role: 'radiogroup', 'aria-label': '경로 후보' });
+    t.routes.forEach((r, i) => {
+      const dur = r.duration * ef.k;
+      const tags = [];
+      if (r.hasToll) tags.push(h('span', { class: 'tag tag--toll', text: '유료도로' }));
+      if (r.hasHwy) tags.push(h('span', { class: 'tag tag--hwy', text: '고속도로' }));
+      if (r.hasFerry) tags.push(h('span', { class: 'tag', text: '페리' }));
+      list.append(h('button', { class: 'rcard', type: 'button', role: 'radio', 'aria-pressed': i === t.sel ? 'true' : 'false', 'aria-checked': i === t.sel ? 'true' : 'false',
+        onclick: () => selectRoute(i) },
+        h('span', { class: 'rcard__radio' }),
+        h('span', { class: 'rcard__time num', text: fmtDur(dur) }),
+        h('span', { class: 'rcard__eta num', text: fmtClock(Date.now() + dur * 1000) + ' 도착' }),
+        h('span', { class: 'rcard__info num' }, fmtDistStr(r.distance),
+          store.settings.showFuel ? h('span', { text: '· 유류비 약 ' + fmtWon(fuelCost(r.distance)) }) : null, ...tags),
+        r.roads.length ? h('span', { class: 'rcard__via', text: r.roads.join(' · ') + ' 경유' }) : null));
+    });
+    out.push(list);
+    const notes = [];
+    if (ef.n) notes.push(`도착 시간은 내 주행 기록 ${ef.n}회로 보정했습니다(×${ef.k.toFixed(2)}${ef.band ? ', ' + BAND_KO[ef.band] : ''}).`);
+    else notes.push('실시간 교통 정보가 없는 무료 지도라, 막히는 시간에는 실제보다 짧게 나올 수 있습니다. 안내를 몇 번 끝까지 받으면 내 기록으로 자동 보정됩니다.');
+    if (t.warn) out.push(h('p', { class: 'warnline', text: t.warn }));
+    out.push(h('div', { class: 'go' },
+      h('button', { class: 'btn', type: 'button', onclick: () => startNav(true) }, h('span', { svg: ic('play', 18, true) }), '모의 주행'),
+      h('button', { class: 'btn btn--primary', type: 'button', id: 'btnStart', onclick: () => startNav(false) }, h('span', { svg: ic('nav', 20, true) }), '안내 시작')));
+    out.push(h('p', { class: 'note', text: notes.join(' ') + ` 경로: ${ROUTE_ENGINES[t.engine] ? ROUTE_ENGINES[t.engine].label : ''}(FOSSGIS) · OpenStreetMap` }));
+  }
+  return out;
+}
+
+function selectRoute(i) {
+  const t = S.trip;
+  t.sel = i;
+  MV.setRoutes(t.routes, i);
+  $$('.rcard').forEach((b, k) => { b.setAttribute('aria-pressed', k === i ? 'true' : 'false'); b.setAttribute('aria-checked', k === i ? 'true' : 'false'); });
+}
