@@ -420,7 +420,18 @@ async function computeRoutes() {
   try {
     const r = await findRoutes(pts, { pref: t.pref, heading, engine: store.settings.engine, signal: ctl.signal });
     if (ctl.signal.aborted || S.trip !== t) return;
-    t.routes = r.routes.slice(0, 3); t.sel = 0; t.warn = r.warn || ''; t.engine = r.engine;
+    let all = r.routes;
+    // '추천'일 때는 운전하기 쉬운 길도 따로 찾아 함께 비교(Valhalla 만 지원)
+    if (t.pref === 'fast' && store.settings.easyPrefer && r.engine === 'valhalla') {
+      try {
+        const e = await findRoutes(pts, { pref: 'easy', heading, engine: 'valhalla', noFallback: true, signal: ctl.signal });
+        e.routes.forEach(x => { x.easyReq = true; });
+        all = all.concat(e.routes);
+      } catch (err) { if (ctl.signal.aborted) return; }
+      if (S.trip !== t) return;
+    }
+    const ranked = rankRoutes(all, { pref: t.pref, easyPrefer: store.settings.easyPrefer, easyMin: store.settings.easyMin });
+    t.routes = ranked.routes; t.info = ranked.info; t.sel = 0; t.warn = r.warn || ''; t.engine = r.engine;
   } catch (e) {
     if (ctl.signal.aborted || S.trip !== t) return;
     t.err = e.noPath ? '이 조건으로 갈 수 있는 길을 찾지 못했습니다. 경로 옵션을 바꾸거나 출발·도착 위치를 도로 가까이로 옮겨 보세요.' : '경로 서버에 연결하지 못했습니다. 인터넷 연결을 확인한 뒤 다시 시도하세요.';
@@ -443,10 +454,21 @@ function previewSheet() {
   if (t.err) out.push(h('p', { class: 'empty', text: t.err }), h('button', { class: 'btn', type: 'button', onclick: computeRoutes, text: '다시 찾기' }));
   if (t.routes.length) {
     const ef = etaFactor();
+    const info = t.info;
+    // 추천 이유 한 줄
+    if (info && info.why === 'easy') {
+      const m = Math.max(1, Math.round(info.slowerMin));
+      out.push(h('p', { class: 'recline', text: `가장 빠른 길보다 약 ${m}분 늦지만 회전이 ${Math.max(0, info.turnDiff)}번 적고 큰길 위주라 이 길을 추천합니다 (기준 ${info.easyMin}분).` }));
+    } else if (info && info.why === 'fast' && info.easiest !== info.fastest && info.slowerMin >= info.easyMin && info.gain >= 2) {
+      out.push(h('p', { class: 'recline', text: `운전하기 쉬운 길은 ${Math.round(info.slowerMin)}분 더 걸려(기준 ${info.easyMin}분 이상) 빠른 길을 추천합니다.` }));
+    }
     const list = h('div', { class: 'routes', role: 'radiogroup', 'aria-label': '경로 후보' });
     t.routes.forEach((r, i) => {
-      const dur = r.duration * ef.k;
+      const dur = r.p ? r.p.dur : r.duration * ef.k;
       const tags = [];
+      const TAG = { rec: ['tag--rec', '추천'], fast: ['tag--fast', '가장 빠름'], easy: ['tag--easy', '운전 쉬움'] };
+      (r.tags || []).forEach(k => tags.push(h('span', { class: 'tag ' + TAG[k][0], text: TAG[k][1] })));
+      if (r.p && r.p.learnedShare >= 0.2) tags.push(h('span', { class: 'tag tag--me', text: '내 기록 반영' }));
       if (r.hasToll) tags.push(h('span', { class: 'tag tag--toll', text: '유료도로' }));
       if (r.hasHwy) tags.push(h('span', { class: 'tag tag--hwy', text: '고속도로' }));
       if (r.hasFerry) tags.push(h('span', { class: 'tag', text: '페리' }));
@@ -456,13 +478,16 @@ function previewSheet() {
         h('span', { class: 'rcard__time num', text: fmtDur(dur) }),
         h('span', { class: 'rcard__eta num', text: fmtClock(Date.now() + dur * 1000) + ' 도착' }),
         h('span', { class: 'rcard__info num' }, fmtDistStr(r.distance),
-          store.settings.showFuel ? h('span', { text: '· 유류비 약 ' + fmtWon(fuelCost(r.distance)) }) : null, ...tags),
+          store.settings.showFuel ? h('span', { text: '· 유류비 약 ' + fmtWon(fuelCost(r.distance)) }) : null),
+        r.ease ? h('span', { class: 'rcard__ease num', text: `회전 ${r.ease.turns}번${r.ease.left + r.ease.uturn ? ` (좌회전·유턴 ${r.ease.left + r.ease.uturn})` : ''} · 큰길 ${Math.round((1 - r.ease.smallShare) * 100)}%` }) : null,
+        tags.length ? h('span', { class: 'rcard__tags' }, ...tags) : null,
         r.roads.length ? h('span', { class: 'rcard__via', text: r.roads.join(' · ') + ' 경유' }) : null));
     });
     out.push(list);
     const notes = [];
-    if (ef.n) notes.push(`도착 시간은 내 주행 기록 ${ef.n}회로 보정했습니다(×${ef.k.toFixed(2)}${ef.band ? ', ' + BAND_KO[ef.band] : ''}).`);
-    else notes.push('실시간 교통 정보가 없는 무료 지도라, 막히는 시간에는 실제보다 짧게 나올 수 있습니다. 안내를 몇 번 끝까지 받으면 내 기록으로 자동 보정됩니다.');
+    const nRoads = Object.keys(store.roads).length;
+    if (ef.n || nRoads) notes.push(`도착 시간은 내 주행 기록으로 보정했습니다${ef.n ? `(전체 ×${ef.k.toFixed(2)}, ${ef.n}회${ef.band ? ', ' + BAND_KO[ef.band] : ''})` : ''}${nRoads ? ` · 도로별 학습 ${nRoads}건` : ''}.`);
+    else notes.push('실시간 교통 정보가 없는 무료 지도라, 막히는 시간에는 실제보다 짧게 나올 수 있습니다. 안내를 받으며 달린 도로는 시간대별 실제 속도를 배워 다음부터 경로 선택과 도착 시간에 반영합니다.');
     if (t.warn) out.push(h('p', { class: 'warnline', text: t.warn }));
     out.push(h('div', { class: 'go' },
       h('button', { class: 'btn', type: 'button', onclick: () => startNav(true) }, h('span', { svg: ic('play', 18, true) }), '모의 주행'),

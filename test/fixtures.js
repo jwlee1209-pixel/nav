@@ -76,4 +76,11 @@ function osrmResponse(opt = {}) {
   return { code: 'Ok', routes: [{ distance: total, duration: total / v, legs: [{ steps, distance: total, duration: total / v }] }], waypoints: [] };
 }
 
-module.exports = { P, LEGS, build, valhallaResponse, osrmResponse, densify };
+// '운전 쉬운 길' 요청에 돌려줄 가짜 경로: 세종대로로 더 올라가 율곡로 한 번 우회전, 대학로 우회전(회전 2번, 조금 느림)
+function easyResponse() {
+  const pts = { ...P, B2: [126.97800, 37.57450], F2: [126.99950, 37.57450] };
+  const legs = [['A', 'B2', '세종대로', false], ['B2', 'F2', '율곡로', false], ['F2', 'G', '대학로', false]];
+  return valhallaResponse({ legs, pts, vtypes: [1, 10, 10], noAlt: true, speed: 34 });
+}
+
+module.exports = { P, LEGS, build, valhallaResponse, osrmResponse, densify, easyResponse };

@@ -52,7 +52,8 @@ t('아이콘 SVG', () => S.forEach(s => assert(/^<svg/.test(X.iconFor(s)))));
 console.log('안내 엔진(가상 주행)');
 function drive(route, { factor = 1, offAt = null, every = 1 } = {}) {
   const said = [], events = [];
-  const g = new X.Guide(route, { speak: (txt) => said.push(txt), event: (n) => events.push(n), settings: () => ({ verbosity: 'normal' }), corr: 1, destName: '테스트 목적지' });
+  const segs = [];
+  const g = new X.Guide(route, { speak: (txt) => said.push(txt), event: (n, d) => { events.push(n); if (n === 'segment') segs.push(d); }, settings: () => ({ verbosity: 'normal' }), corr: 1, destName: '테스트 목적지' });
   g.intro();
   const sim = new X.Sim(route, { onFix: () => {} });
   let tm = 0, st;
@@ -70,7 +71,7 @@ function drive(route, { factor = 1, offAt = null, every = 1 } = {}) {
     if (sim.d >= sim.total) sim.ended = true;
     if (events.includes('offroute')) break;
   }
-  return { said, events, st };
+  return { said, events, st, segs };
 }
 const run = drive(rv);
 console.log('    음성:', run.said.join(' / '));
@@ -127,5 +128,46 @@ process.exitCode = fails ? 1 : 0;
   t('출구 2km·1km·500m 단계', () => ['2킬로미터', '1킬로미터', '500미터'].forEach(k => assert(g.said.some(s => s.startsWith(k + ' 앞에서 오른쪽 방향, 판교IC 판교 방면 출구')), k)));
   t('도착', () => assert(g.events.includes('arrive')));
   console.log(fails ? `\n${fails}개 실패` : '\n고속도로 시나리오 통과');
+  process.exitCode = fails ? 1 : 0;
+}
+
+// ── 운전하기 쉬운 길 추천 · 도로별 학습 ──
+{
+  console.log('운전 쉬운 길 · 도로별 학습');
+  const ez = X.routeEase(rv);
+  t('난이도: 회전 4번(좌회전 1), 작은 길 0%', () => { assert.strictEqual(ez.turns, 4); assert.strictEqual(ez.left, 1); assert.strictEqual(ez.smallShare, 0); assert(Math.abs(ez.score - 4.2) < 1e-9, ez.score); });
+  const mk = (id, dur, turns, lefts, dist = 9000) => {
+    const steps = [{ kind: 'depart', voice: false, dur: 0, len: 0, name: '출발로' }];
+    for (let i = 0; i < turns; i++) steps.push({ kind: 'turn', mod: i < lefts ? 'left' : 'right', angle: i < lefts ? -90 : 90, voice: true, dur: dur / turns, len: dist / turns, name: '도로' + i });
+    steps.push({ kind: 'arrive', voice: true, dur: 0, len: 0 });
+    return { id, distance: dist + id.length * 300, duration: dur, stepDur: dur, steps };
+  };
+  X.store.roads = {}; X.store.trips = [];
+  const ts = new Date('2026-11-24T14:00:00+09:00').getTime();
+  let r = X.rankRoutes([mk('fast', 1200, 8, 3), mk('easy-route', 1500, 3, 0)], { ts });
+  t('5분 늦지만 쉬운 길 → 쉬운 길 추천', () => { assert.strictEqual(r.routes[0].id, 'easy-route'); assert.strictEqual(r.info.why, 'easy'); assert.strictEqual(r.routes[0].tags.join(), 'rec,easy'); assert.strictEqual(r.routes[1].tags.join(), 'fast'); });
+  r = X.rankRoutes([mk('fast', 1200, 8, 3), mk('easy-route', 2100, 3, 0)], { ts });
+  t('15분 늦으면 빠른 길 추천', () => { assert.strictEqual(r.routes[0].id, 'fast'); assert.strictEqual(r.info.why, 'fast'); assert(r.info.slowerMin >= 10); });
+  r = X.rankRoutes([mk('fast', 1200, 8, 3), mk('easy-route', 1500, 3, 0)], { ts, easyMin: 5 });
+  t('기준 5분이면 빠른 길', () => assert.strictEqual(r.routes[0].id, 'fast'));
+  r = X.rankRoutes([mk('fast', 1200, 8, 3), mk('easy-route', 1500, 3, 0)], { ts, easyPrefer: false });
+  t('쉬운 길 우선을 끄면 빠른 길', () => assert.strictEqual(r.routes[0].id, 'fast'));
+  r = X.rankRoutes([mk('fast', 1200, 4, 1), mk('easy-route', 1260, 4, 0)], { ts });
+  t('차이가 작으면(좌회전 1번) 그대로 빠른 길', () => assert.strictEqual(r.routes[0].id, 'fast'));
+
+  // 도로별 학습: '도로0'이 이 시간대에 늘 2배 걸린다고 배우면, 그 도로를 많이 쓰는 경로가 느려진다
+  X.learnRoad('도로0', 'day', 3.0, ts); X.learnRoad('도로0', 'day', 3.0, ts);
+  t('도로별 비율 학습(2회 이상부터 사용)', () => assert(Math.abs(X.roadFactor('도로0', 'day') - 3.0) < 1e-9));
+  const a = mk('a', 1200, 2, 0), b = mk('bb', 1300, 2, 0);
+  b.steps.forEach(s => { if (s.name === '도로0') s.name = '다른길'; });
+  r = X.rankRoutes([a, b], { ts });
+  t('막히는 도로를 피하는 경로가 더 빨라짐', () => { assert.strictEqual(r.info.fastest.id, 'bb'); assert(r.routes.find(x => x.id === 'a').p.learnedShare > 0.4); });
+  X.store.roads = {};
+
+  // 안내 중 구간 통과 기록(도로명·실제 시간·예상 시간)
+  const seg = drive(rv).segs;
+  t('구간 기록: 300m 이상 이름 있는 도로 4곳', () => assert.strictEqual(seg.map(x => x.name).join(), '세종대로,종로,율곡로,대학로'));
+  t('구간 기록: 실제/예상 비율이 그럴듯함', () => seg.forEach(x => assert(x.act / x.pred > 0.5 && x.act / x.pred < 2, x.name + ' ' + (x.act / x.pred).toFixed(2))));
+  console.log(fails ? `\n${fails}개 실패` : '\n쉬운 길·학습 통과');
   process.exitCode = fails ? 1 : 0;
 }

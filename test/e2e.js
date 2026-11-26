@@ -55,6 +55,8 @@ const mode = process.argv[2] || 'phone';
   await page.waitForSelector('.rcard', { timeout: 8000 });
   await page.waitForTimeout(1300);
   await shot('4-preview');
+  console.log('[추천 줄]', await page.textContent('.recline').catch(() => '(없음)'));
+  console.log('[경로 카드]', (await page.$$eval('.rcard', a => a.map(x => x.textContent.replace(/\s+/g, ' ')))).join('\n            '));
 
   // 경로 옵션 바꾸기(무료도로)
   await page.click('.prefs >> text=무료도로');

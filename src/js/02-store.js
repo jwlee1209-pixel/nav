@@ -17,6 +17,8 @@ const DEFAULT_SETTINGS = {
   showFuel: true,
   etaLearn: true,
   suggest: true,
+  easyPrefer: true,      // 빠른 길이 기준 시간 이상 빠르지 않으면 운전하기 쉬운 길을 추천
+  easyMin: 10,           // 기준 시간(분)
 };
 
 const store = {
@@ -26,6 +28,7 @@ const store = {
   favs: [],              // [{id, name, addr, lat, lon, ts}]
   recents: [],           // [{name, addr, lat, lon, ts, n}]
   trips: [],             // 실제 주행 기록(모의 주행 제외)
+  roads: {},             // 도로별·시간대별 실제 통행 속도 학습 {'도로명|시간대': {r, n, t}}
   view: null,            // 마지막 지도 위치 {c:[lon,lat], z}
   scache: [],            // 검색 결과 캐시 [[key, ts, results]]
 };
@@ -47,6 +50,10 @@ function applyData(d) {
   store.favs = (Array.isArray(d.favs) ? d.favs : []).map(cleanPlace).filter(Boolean).slice(0, 100);
   store.recents = (Array.isArray(d.recents) ? d.recents : []).map(cleanPlace).filter(Boolean).slice(0, 30);
   store.trips = (Array.isArray(d.trips) ? d.trips : []).filter(t => t && isFinite(t.ts) && isFinite(t.pred) && isFinite(t.act)).slice(-300);
+  store.roads = {};
+  if (d.roads && typeof d.roads === 'object') {
+    for (const k in d.roads) { const v = d.roads[k]; if (v && isFinite(v.r) && isFinite(v.n) && k.length < 90) store.roads[k] = { r: +v.r, n: +v.n, t: +v.t || 0 }; }
+  }
   if (d.view && Array.isArray(d.view.c) && isFinite(d.view.z)) store.view = d.view;
   if (Array.isArray(d.scache)) store.scache = d.scache.slice(-40);
   return true;
@@ -96,12 +103,49 @@ function toggleFav(p) {
 // 시간대: 평일 출근(7–10시) · 평일 퇴근(17–20시) · 평일 기타 · 주말
 function timeBand(ts) {
   const d = new Date(ts), dow = d.getDay(), hr = d.getHours() + d.getMinutes() / 60;
+  if (hr >= 22 || hr < 6) return 'night';
   if (dow === 0 || dow === 6) return 'weekend';
   if (hr >= 7 && hr < 10) return 'am';
   if (hr >= 17 && hr < 20) return 'pm';
   return 'day';
 }
-const BAND_KO = { am: '평일 출근 시간', pm: '평일 퇴근 시간', day: '평일 낮·밤', weekend: '주말' };
+const BAND_KO = { am: '평일 출근 시간', pm: '평일 퇴근 시간', day: '평일 낮', night: '밤(22~6시)', weekend: '주말' };
+
+// ── 개인화 3: 도로별 최근 통행 속도(내가 실제로 달린 기록) ──
+// 안내 중 한 구간(회전과 회전 사이)을 지날 때마다 '실제 걸린 시간 ÷ 경로 엔진 예상 시간'을 도로명·시간대별로 모은다.
+// 최근 기록일수록 무게를 크게 둔다(지수 이동 평균). 다음에 그 도로를 지나는 경로의 시간을 이 비율로 고쳐 계산한다.
+function learnRoad(name, band, ratio, ts = Date.now()) {
+  if (!name || !isFinite(ratio)) return;
+  ratio = clamp(ratio, 0.5, 5);
+  const k = name + '|' + band;
+  const old = store.roads[k];
+  store.roads[k] = old ? { r: old.r * 0.7 + ratio * 0.3, n: old.n + 1, t: ts } : { r: ratio, n: 1, t: ts };
+  const keys = Object.keys(store.roads);
+  if (keys.length > 500) {       // 오래 안 쓴 도로부터 정리
+    keys.sort((a, b) => store.roads[a].t - store.roads[b].t).slice(0, keys.length - 500).forEach(x => delete store.roads[x]);
+  }
+  saveStore();
+}
+function roadFactor(name, band) {
+  const v = name && store.roads[name + '|' + band];
+  return v && v.n >= 2 && Date.now() - v.t < 120 * 86400000 ? v.r : null;
+}
+// 경로 소요 시간을 내 기록으로 다시 계산: 배운 도로는 그 도로의 비율, 나머지는 전체 보정 계수
+function personalize(route, ts = Date.now()) {
+  const band = timeBand(ts);
+  const g = etaFactor(ts).k;
+  const scale = route.stepDur > 0 ? route.duration / route.stepDur : 1;
+  let total = 0, learned = 0;
+  const f = route.steps.map(s => {
+    const rf = store.settings.etaLearn ? roadFactor(s.name, band) : null;
+    const k = rf != null ? rf : g;
+    const d = (s.dur || 0) * scale;
+    total += d * k;
+    if (rf != null) learned += d;
+    return k;
+  });
+  return { dur: total || route.duration * g, factors: f, learnedShare: route.duration > 0 ? learned / route.duration : 0 };
+}
 
 function median(a) {
   const s = a.slice().sort((x, y) => x - y), m = s.length >> 1;

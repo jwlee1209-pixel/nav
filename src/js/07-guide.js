@@ -26,7 +26,7 @@ class Guide {
     if (this.o.rerouted) { this.say('새 경로로 안내합니다'); return; }
     const corr = this.o.corr || 1;
     const dn = this.o.destName ? `${this.o.destName}까지 ` : '';
-    this.say(`${dn}경로 안내를 시작합니다. ${distWords(this.total)}, 약 ${fmtDur(this.r.duration * corr)} 걸립니다`);
+    this.say(`${dn}경로 안내를 시작합니다. ${distWords(this.total)}, 약 ${fmtDur(this.o.totalDur || this.r.duration * corr)} 걸립니다`);
   }
 
   match(p, hd, v) {
@@ -116,7 +116,25 @@ class Guide {
     const rem = Math.max(0, this.total - this.d);
     const frac = cur && cur.span > 0 ? clamp((this.d - cur.at) / cur.span, 0, 1) : 1;
     const durScale = this.r.stepDur > 0 ? this.r.duration / this.r.stepDur : 1;
-    const remDur = Math.max(0, (this.r.stepDur - ((cur ? cur.tAt : 0) + frac * (cur ? cur.dur || 0 : 0))) * durScale) * (this.o.corr || 1);
+    let remDur;
+    const fac = this.o.factors;
+    if (fac) {     // 도로별로 배운 비율을 남은 구간마다 적용
+      let sum = cur ? (1 - frac) * (cur.dur || 0) * (fac[ci] || 1) : 0;
+      for (let j = ci + 1; j < steps.length; j++) sum += (steps[j].dur || 0) * (fac[j] || 1);
+      remDur = sum * durScale;
+    } else remDur = Math.max(0, (this.r.stepDur - ((cur ? cur.tAt : 0) + frac * (cur ? cur.dur || 0 : 0))) * durScale) * (this.o.corr || 1);
+
+    // 구간(회전과 회전 사이) 통과 시간 기록 → 도로별 실제 속도 학습에 쓰임
+    if (this.segIdx !== ci) {
+      if (this.segIdx != null && ci === this.segIdx + 1 && this.segOk) {
+        const s = steps[this.segIdx];
+        const act = (now - this.segT0) / 1000, pred = (s.dur || 0) * durScale;
+        if (s.name && (s.span || 0) >= 300 && pred >= 20 && act > 0) this.ev('segment', { name: s.name, act, pred, t: this.segT0 });
+      }
+      this.segOk = on && (this.segIdx != null || this.d - (cur ? cur.at : 0) < 40);
+      this.segIdx = ci; this.segT0 = now;
+    }
+    if (!on || this.rerouting) this.segOk = false;
 
     // 경유지 통과
     for (let j = Math.max(0, this.ptr - 1); j < steps.length; j++) {

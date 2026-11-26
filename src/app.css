@@ -144,6 +144,14 @@ svg { display: block; flex: none; }
 .rcard__eta { font-size: 13px; color: var(--text-2); text-align: right; white-space: nowrap; }
 .rcard__info { grid-column: 2 / 4; font-size: 13.5px; color: var(--text-2); display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: center; }
 .rcard__via { grid-column: 2 / 4; font-size: 12.5px; color: var(--text-3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rcard__ease { grid-column: 2 / 4; font-size: 13px; color: var(--text-2); }
+.rcard__tags { grid-column: 2 / 4; display: flex; flex-wrap: wrap; gap: 4px; }
+.tag--rec { background: var(--accent); color: var(--accent-ink); }
+.tag--fast { background: var(--accent-soft); color: var(--accent); }
+.tag--easy { background: rgba(23, 134, 90, .14); color: var(--ok); }
+.tag--me { background: rgba(122, 86, 214, .14); color: #7A56D6; }
+:root[data-mode="night"] .tag--me { color: #B49BF0; }
+.recline { margin: 0 2px 10px; font-size: 13.5px; font-weight: 600; color: var(--text); background: var(--surface-2); padding: 9px 12px; border-radius: 10px; }
 .go { display: flex; gap: 8px; margin-top: 12px; }
 .go .btn { flex: 1; min-height: 54px; font-size: 16px; }
 .go .btn--primary { flex: 1.6; }

@@ -6,7 +6,7 @@ module.exports = function load(names, extra = {}) {
   const pick = files.filter(f => names.some(n => f.includes(n)));
   const ctx = vm.createContext({ console, setTimeout, clearTimeout, setInterval, clearInterval, Date, Math, URL, performance: { now: () => Date.now() }, localStorage: { getItem() { return null; }, setItem() {} }, ...extra });
   const src = pick.map(f => fs.readFileSync(path.join(dir, f), 'utf8')).join('\n;\n');
-  const exportsList = ['hav','brg','angDiff','offsetPt','decodePolyline','encodePolyline','cumDist','locate','pointAt','sliceLine','projSeg','normValhalla','normOsrm','finalizeRoute','sayStep','showStep','turnCore','distWords','iconFor','Guide','Sim','josa','fmtDist','fmtDur','etaFactor','suggestions','store','timeBand','sunAltitude','isNightAt','photonToPlace','nominatimToPlace','looksLikeAddress','clockOf'];
+  const exportsList = ['hav','brg','angDiff','offsetPt','decodePolyline','encodePolyline','cumDist','locate','pointAt','sliceLine','projSeg','normValhalla','normOsrm','finalizeRoute','sayStep','showStep','turnCore','distWords','iconFor','Guide','Sim','josa','fmtDist','fmtDur','etaFactor','suggestions','store','timeBand','sunAltitude','isNightAt','photonToPlace','nominatimToPlace','looksLikeAddress','clockOf','routeEase','rankRoutes','personalize','learnRoad','roadFactor','sameRoute'];
   vm.runInContext(src + '\n;globalThis.__x = {' + exportsList.map(n => `${n}: typeof ${n} !== 'undefined' ? ${n} : undefined`).join(',') + '};', ctx);
   return ctx.__x;
 };

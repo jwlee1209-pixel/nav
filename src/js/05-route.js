@@ -9,8 +9,9 @@ const routePace = pacer(1100);
 
 const VOICE_KINDS = new Set(['turn', 'uturn', 'ramp', 'exit', 'fork', 'merge', 'roundabout', 'ferry', 'waypoint', 'arrive']);
 
-async function findRoutes(points, { pref = 'fast', heading = null, engine = 'auto', signal } = {}) {
-  const order = engine === 'osrm' ? ['osrm', 'valhalla'] : ['valhalla', 'osrm'];
+async function findRoutes(points, { pref = 'fast', heading = null, engine = 'auto', signal, noFallback = false } = {}) {
+  let order = engine === 'osrm' ? ['osrm', 'valhalla'] : ['valhalla', 'osrm'];
+  if (noFallback) order = order.slice(0, 1);
   const errs = [];
   for (const eng of order) {
     try {
@@ -37,12 +38,14 @@ async function viaValhalla(points, pref, heading, signal) {
   if (pref === 'short') auto.shortest = true;
   if (pref === 'free') auto.use_tolls = 0;
   if (pref === 'nohwy') auto.use_highways = 0;
+  // 운전하기 쉬운 길: 길 이름이 바뀔 때(회전)마다 비용을 크게 매기고, 이면도로·생활도로·서비스도로를 피한다
+  if (pref === 'easy') Object.assign(auto, { maneuver_penalty: 45, service_penalty: 60, service_factor: 2, use_living_streets: 0, use_tracks: 0 });
   const locations = points.map((p, i) => {
     const o = { lat: +(+p.lat).toFixed(6), lon: +(+p.lon).toFixed(6), type: 'break' };
     if (i === 0 && heading != null) { o.heading = Math.round(heading) % 360; o.heading_tolerance = 50; }
     return o;
   });
-  const req = { locations, costing: 'auto', costing_options: { auto }, units: 'kilometers', language: 'en-US', directions_type: 'maneuvers', alternates: points.length === 2 ? 2 : 0 };
+  const req = { locations, costing: 'auto', costing_options: { auto }, units: 'kilometers', language: 'en-US', directions_type: 'maneuvers', alternates: points.length === 2 && pref !== 'easy' ? 2 : 0 };
   const url = ROUTE_ENGINES.valhalla.base + '?json=' + encodeURIComponent(JSON.stringify(req));
   const data = await routePace(() => fetchJSON(url, { timeout: 15000, signal }));
   const trips = [data.trip, ...(data.alternates || []).map(a => a && a.trip)].filter(Boolean);
@@ -234,5 +237,65 @@ function finalizeRoute(coords, steps, meta) {
     duration: meta.duration || t,
     stepDur: t,
     hasToll: meta.hasToll, hasHwy: meta.hasHwy, hasFerry: meta.hasFerry,
+  };
+}
+
+// ── 운전 난이도: 회전 수(좌회전·유턴 가중), 작은 길 비율 ──
+function routeEase(r) {
+  let turns = 0, left = 0, uturn = 0, w = 0, small = 0;
+  for (const s of r.steps) {
+    if (!s.voice || s.kind === 'arrive' || s.kind === 'waypoint') continue;
+    let wt = 1;
+    if (s.kind === 'uturn' || (s.kind === 'turn' && turnCore(s).uturn)) { wt = 2.5; uturn++; }
+    else if (s.kind === 'turn') {
+      const t = turnCore(s);
+      if (t.clock) wt = 0.6;
+      else if (sideOf(s) === 'left') { wt = 1.6; left++; }
+      if (t.sharp) wt += 0.4;
+    }
+    else if (s.kind === 'roundabout') wt = 1.3;
+    else if (s.kind === 'fork' || s.kind === 'ramp' || s.kind === 'exit') wt = 0.8;
+    else if (s.kind === 'merge') wt = 0.7;
+    turns++; w += wt;
+  }
+  // 경로 엔진이 시속 30km 미만으로 잡은 구간 = 골목·이면도로로 본다
+  for (const s of r.steps) {
+    const len = s.len || s.span || 0;
+    if (len > 0 && s.dur > 0 && len / s.dur * 3.6 < 30) small += len;
+  }
+  const smallShare = r.distance > 0 ? clamp(small / r.distance, 0, 1) : 0;
+  return { turns, left, uturn, smallShare, score: w + smallShare * 20 };
+}
+
+function sameRoute(a, b) {
+  return Math.abs(a.distance - b.distance) < Math.max(40, a.distance * 0.01) && Math.abs(a.duration - b.duration) < Math.max(20, a.duration * 0.02);
+}
+
+// 후보 경로 정리: 내 기록으로 시간 다시 계산 → 가장 빠른 길·가장 쉬운 길 → 추천 결정
+//  · '추천' 옵션에서, 가장 빠른 길이 쉬운 길보다 기준 시간(기본 10분) 이상 빠르지 않으면 쉬운 길을 추천
+function rankRoutes(list, { pref = 'fast', easyPrefer = true, easyMin = 10, ts = Date.now() } = {}) {
+  const uniq = [];
+  for (const r of list) {
+    const dup = uniq.find(u => sameRoute(u, r));
+    if (dup) { if (r.easyReq) dup.easyReq = true; continue; }
+    uniq.push(r);
+  }
+  for (const r of uniq) { r.p = personalize(r, ts); r.ease = routeEase(r); }
+  if (!uniq.length) return { routes: [], rec: null };
+  const fastest = uniq.reduce((a, b) => (b.p.dur < a.p.dur ? b : a));
+  const easiest = uniq.reduce((a, b) => (b.ease.score < a.ease.score ? b : a));
+  let rec = fastest, why = 'fast';
+  const slower = (easiest.p.dur - fastest.p.dur) / 60;
+  const gain = fastest.ease.score - easiest.ease.score;
+  const meaningful = gain >= Math.max(2, fastest.ease.score * 0.2);
+  if (pref === 'fast' && easyPrefer && easiest !== fastest && meaningful && slower < easyMin) { rec = easiest; why = 'easy'; }
+  if (pref !== 'fast') { rec = uniq[0]; why = pref; }
+  const rest = uniq.filter(r => r !== rec).sort((a, b) => a.p.dur - b.p.dur);
+  const routes = [rec, ...rest].slice(0, 3);
+  if (easiest !== rec && !routes.includes(easiest) && routes.length === 3) routes[2] = easiest;
+  for (const r of routes) r.tags = [r === rec ? 'rec' : '', r === fastest ? 'fast' : '', r === easiest && easiest !== fastest ? 'easy' : ''].filter(Boolean);
+  return {
+    routes, rec,
+    info: { why, slowerMin: slower, gain, fastest, easiest, easyMin, turnDiff: fastest.ease.turns - easiest.ease.turns },
   };
 }

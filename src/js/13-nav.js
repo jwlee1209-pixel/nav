@@ -111,11 +111,14 @@ async function startNav(sim) {
 }
 
 function makeGuide(route, rerouted) {
+  const p = route.p || (route.p = personalize(route));
   return new Guide(route, {
     speak: (txt, o) => Voice.say(txt, o),
     event: (n, d) => navEvent(n, d),
     settings: () => store.settings,
     corr: S.nav ? S.nav.corr : 1,
+    factors: p.factors,
+    totalDur: p.dur,
     lastReroute: rerouted ? Date.now() : 0,
     destName: S.nav && S.nav.dest ? (S.nav.dest.label || S.nav.dest.name) : '',
     rerouted,
@@ -186,6 +189,7 @@ function navEvent(name, data) {
   else if (name === 'backon') { if (n.rerouteCtl) n.rerouteCtl.abort(); banner(null); }
   else if (name === 'waypoint') { n.visited = Math.min(n.stops.length, n.visited + 1); MV.setTripMarks(null, n.stops.slice(n.visited), n.dest); }
   else if (name === 'arrive') setTimeout(() => finishNav(true), 3500);
+  else if (name === 'segment' && !n.sim) learnRoad(data.name, timeBand(data.t), data.act / data.pred, data.t);
 }
 
 async function reroute(at) {
@@ -198,6 +202,7 @@ async function reroute(at) {
     const r = await findRoutes(pts, { pref: n.trip.pref, heading: at.speed > 2 ? at.heading : null, engine: store.settings.engine, signal: ctl.signal });
     if (ctl.signal.aborted || S.nav !== n || n.ended) return;
     n.route = r.routes[0];
+    n.route.p = personalize(n.route);
     n.rr++;
     n.remDrawn = false;
     n.guide = makeGuide(n.route, true);
@@ -294,6 +299,8 @@ function openSettings() {
   openOverlay('설정', [
     h('section', { class: 'group' }, h('h2', { text: '경로' }),
       row('기본 경로 옵션', '목적지를 고르면 이 옵션으로 먼저 찾습니다', seg(Object.entries(PREF_KO), st.pref, k => setS('pref', k), '기본 경로 옵션')),
+      row('운전하기 쉬운 길 우선', '‘추천’에서 빠른 길이 기준 시간 이상 빠르지 않으면 회전이 적고 큰길 위주인 길을 추천합니다', sw(st.easyPrefer, v => setS('easyPrefer', v), '운전하기 쉬운 길 우선')),
+      row('기준 시간', '빠른 길이 이만큼 이상 빨라야 빠른 길을 추천합니다', seg([[5, '5분'], [10, '10분'], [15, '15분'], [20, '20분']], st.easyMin, k => setS('easyMin', k), '기준 시간')),
       row('경로 엔진', '자동: Valhalla로 찾고 응답이 없으면 OSRM', seg([['auto', '자동'], ['valhalla', 'Valhalla'], ['osrm', 'OSRM']], st.engine, k => setS('engine', k), '경로 엔진'))),
     h('section', { class: 'group' }, h('h2', { text: '음성 안내' }),
       row('음성 안내', null, sw(st.voice, v => setS('voice', v), '음성 안내')),
@@ -313,7 +320,8 @@ function openSettings() {
     h('section', { class: 'group' }, h('h2', { text: '나에게 맞추기' }),
       row('도착 시간 보정', ef.n ? `내 주행 기록으로 보정 중: ×${ef.k.toFixed(2)} (${ef.n}회, ${ef.band ? BAND_KO[ef.band] : '전체'})` : `실제 안내를 끝까지 3번 이상 받으면 시작합니다 (지금 ${realTrips.filter(t => t.arrived).length}회)`, sw(st.etaLearn, v => setS('etaLearn', v), '도착 시간 보정')),
       row('시간대별 목적지 추천', '요일·시간대가 비슷할 때 자주 간 곳을 첫 화면에 띄웁니다', sw(st.suggest, v => setS('suggest', v), '시간대별 추천')),
-      row('주행 기록 지우기', `저장된 기록 ${realTrips.length}건`, h('button', { class: 'btn btn--sm btn--ghost', type: 'button', text: '지우기', onclick: async () => { if (await ask('주행 기록을 모두 지울까요? 도착 시간 보정과 추천이 처음부터 다시 시작됩니다.', { ok: '지우기', danger: true })) { store.trips = []; saveStore(true); toast('주행 기록을 지웠습니다'); openSettings(); } } }))),
+      row('도로별 교통 학습', Object.keys(store.roads).length ? `안내 중 달린 도로의 시간대별 실제 속도 ${Object.keys(store.roads).length}건 — 최근 기록일수록 크게 반영해 경로 선택과 도착 시간에 씁니다` : '안내를 받으며 달리면 도로별·시간대별 실제 속도를 배워 다음 경로 선택에 씁니다', h('span')),
+      row('주행 기록 지우기', `주행 ${realTrips.length}건 · 도로 학습 ${Object.keys(store.roads).length}건`, h('button', { class: 'btn btn--sm btn--ghost', type: 'button', text: '지우기', onclick: async () => { if (await ask('주행 기록과 도로별 학습을 모두 지울까요? 도착 시간 보정과 추천이 처음부터 다시 시작됩니다.', { ok: '지우기', danger: true })) { store.trips = []; store.roads = {}; saveStore(true); toast('주행 기록을 지웠습니다'); openSettings(); } } }))),
     h('section', { class: 'group' }, h('h2', { text: '데이터' }),
       row('백업 파일로 저장', '집·회사·즐겨찾기·설정·기록을 이 기기에서 다른 기기로 옮길 때', h('button', { class: 'btn btn--sm', type: 'button', onclick: exportFile }, h('span', { svg: ic('down', 16) }), '저장')),
       row('백업 파일 불러오기', '지금 데이터는 백업 내용으로 바뀝니다', h('button', { class: 'btn btn--sm', type: 'button', onclick: importFile }, h('span', { svg: ic('up', 16) }), '불러오기')),

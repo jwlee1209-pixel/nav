@@ -9,7 +9,7 @@
 <meta name="apple-mobile-web-app-title" content="&#xae38;&#xc7a1;&#xc774; &#xb0b4;&#xbe44;">
 <meta name="description" content="&#xbb34;&#xb8cc; &#xc9c0;&#xb3c4;(OpenStreetMap)&#xb85c; &#xae38;&#xc744; &#xcc3e;&#xace0; &#xd55c;&#xad6d;&#xc5b4; &#xc74c;&#xc131;&#xc73c;&#xb85c; &#xc548;&#xb0b4;&#xd558;&#xb294; &#xac1c;&#xc778;&#xc6a9; &#xcc28;&#xb7c9; &#xb0b4;&#xbe44;&#xac8c;&#xc774;&#xc158;">
 <title>&#xae38;&#xc7a1;&#xc774; &#xb0b4;&#xbe44;</title>
-<meta name="generator" content="&#xae38;&#xc7a1;&#xc774; &#xb0b4;&#xbe44; v1.2">
+<meta name="generator" content="&#xae38;&#xc7a1;&#xc774; &#xb0b4;&#xbe44; v1.3">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230B5CAD'/%3E%3Cpath d='M11 25V15.5a3.5 3.5 0 0 1 3.5-3.5H20' fill='none' stroke='%23fff' stroke-width='3.4' stroke-linecap='round'/%3E%3Cpath d='M19 7.2 25.5 12 19 16.8z' fill='%23fff'/%3E%3C/svg%3E">
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
@@ -161,6 +161,14 @@ svg { display: block; flex: none; }
 .rcard__eta { font-size: 13px; color: var(--text-2); text-align: right; white-space: nowrap; }
 .rcard__info { grid-column: 2 / 4; font-size: 13.5px; color: var(--text-2); display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: center; }
 .rcard__via { grid-column: 2 / 4; font-size: 12.5px; color: var(--text-3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rcard__ease { grid-column: 2 / 4; font-size: 13px; color: var(--text-2); }
+.rcard__tags { grid-column: 2 / 4; display: flex; flex-wrap: wrap; gap: 4px; }
+.tag--rec { background: var(--accent); color: var(--accent-ink); }
+.tag--fast { background: var(--accent-soft); color: var(--accent); }
+.tag--easy { background: rgba(23, 134, 90, .14); color: var(--ok); }
+.tag--me { background: rgba(122, 86, 214, .14); color: #7A56D6; }
+:root[data-mode="night"] .tag--me { color: #B49BF0; }
+.recline { margin: 0 2px 10px; font-size: 13.5px; font-weight: 600; color: var(--text); background: var(--surface-2); padding: 9px 12px; border-radius: 10px; }
 .go { display: flex; gap: 8px; margin-top: 12px; }
 .go .btn { flex: 1; min-height: 54px; font-size: 16px; }
 .go .btn--primary { flex: 1.6; }
@@ -405,7 +413,7 @@ return maplibregl$1;
 </script>
 <script>(function () {
 'use strict';
-const APP_VERSION = '1.2';
+const APP_VERSION = '1.3';
 // ===== 00-util.js =====
 // \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 \uacf5\ud1b5 \ub3c4\uad6c \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
 const $ = (s, r = document) => r.querySelector(s);
@@ -696,6 +704,8 @@ const DEFAULT_SETTINGS = {
   showFuel: true,
   etaLearn: true,
   suggest: true,
+  easyPrefer: true,      // \ube60\ub978 \uae38\uc774 \uae30\uc900 \uc2dc\uac04 \uc774\uc0c1 \ube60\ub974\uc9c0 \uc54a\uc73c\uba74 \uc6b4\uc804\ud558\uae30 \uc26c\uc6b4 \uae38\uc744 \ucd94\ucc9c
+  easyMin: 10,           // \uae30\uc900 \uc2dc\uac04(\ubd84)
 };
 
 const store = {
@@ -705,6 +715,7 @@ const store = {
   favs: [],              // [{id, name, addr, lat, lon, ts}]
   recents: [],           // [{name, addr, lat, lon, ts, n}]
   trips: [],             // \uc2e4\uc81c \uc8fc\ud589 \uae30\ub85d(\ubaa8\uc758 \uc8fc\ud589 \uc81c\uc678)
+  roads: {},             // \ub3c4\ub85c\ubcc4\u00b7\uc2dc\uac04\ub300\ubcc4 \uc2e4\uc81c \ud1b5\ud589 \uc18d\ub3c4 \ud559\uc2b5 {'\ub3c4\ub85c\uba85|\uc2dc\uac04\ub300': {r, n, t}}
   view: null,            // \ub9c8\uc9c0\ub9c9 \uc9c0\ub3c4 \uc704\uce58 {c:[lon,lat], z}
   scache: [],            // \uac80\uc0c9 \uacb0\uacfc \uce90\uc2dc [[key, ts, results]]
 };
@@ -726,6 +737,10 @@ function applyData(d) {
   store.favs = (Array.isArray(d.favs) ? d.favs : []).map(cleanPlace).filter(Boolean).slice(0, 100);
   store.recents = (Array.isArray(d.recents) ? d.recents : []).map(cleanPlace).filter(Boolean).slice(0, 30);
   store.trips = (Array.isArray(d.trips) ? d.trips : []).filter(t => t && isFinite(t.ts) && isFinite(t.pred) && isFinite(t.act)).slice(-300);
+  store.roads = {};
+  if (d.roads && typeof d.roads === 'object') {
+    for (const k in d.roads) { const v = d.roads[k]; if (v && isFinite(v.r) && isFinite(v.n) && k.length < 90) store.roads[k] = { r: +v.r, n: +v.n, t: +v.t || 0 }; }
+  }
   if (d.view && Array.isArray(d.view.c) && isFinite(d.view.z)) store.view = d.view;
   if (Array.isArray(d.scache)) store.scache = d.scache.slice(-40);
   return true;
@@ -775,12 +790,49 @@ function toggleFav(p) {
 // \uc2dc\uac04\ub300: \ud3c9\uc77c \ucd9c\uadfc(7\u201310\uc2dc) \u00b7 \ud3c9\uc77c \ud1f4\uadfc(17\u201320\uc2dc) \u00b7 \ud3c9\uc77c \uae30\ud0c0 \u00b7 \uc8fc\ub9d0
 function timeBand(ts) {
   const d = new Date(ts), dow = d.getDay(), hr = d.getHours() + d.getMinutes() / 60;
+  if (hr >= 22 || hr < 6) return 'night';
   if (dow === 0 || dow === 6) return 'weekend';
   if (hr >= 7 && hr < 10) return 'am';
   if (hr >= 17 && hr < 20) return 'pm';
   return 'day';
 }
-const BAND_KO = { am: '\ud3c9\uc77c \ucd9c\uadfc \uc2dc\uac04', pm: '\ud3c9\uc77c \ud1f4\uadfc \uc2dc\uac04', day: '\ud3c9\uc77c \ub0ae\u00b7\ubc24', weekend: '\uc8fc\ub9d0' };
+const BAND_KO = { am: '\ud3c9\uc77c \ucd9c\uadfc \uc2dc\uac04', pm: '\ud3c9\uc77c \ud1f4\uadfc \uc2dc\uac04', day: '\ud3c9\uc77c \ub0ae', night: '\ubc24(22~6\uc2dc)', weekend: '\uc8fc\ub9d0' };
+
+// \u2500\u2500 \uac1c\uc778\ud654 3: \ub3c4\ub85c\ubcc4 \ucd5c\uadfc \ud1b5\ud589 \uc18d\ub3c4(\ub0b4\uac00 \uc2e4\uc81c\ub85c \ub2ec\ub9b0 \uae30\ub85d) \u2500\u2500
+// \uc548\ub0b4 \uc911 \ud55c \uad6c\uac04(\ud68c\uc804\uacfc \ud68c\uc804 \uc0ac\uc774)\uc744 \uc9c0\ub0a0 \ub54c\ub9c8\ub2e4 '\uc2e4\uc81c \uac78\ub9b0 \uc2dc\uac04 \u00f7 \uacbd\ub85c \uc5d4\uc9c4 \uc608\uc0c1 \uc2dc\uac04'\uc744 \ub3c4\ub85c\uba85\u00b7\uc2dc\uac04\ub300\ubcc4\ub85c \ubaa8\uc740\ub2e4.
+// \ucd5c\uadfc \uae30\ub85d\uc77c\uc218\ub85d \ubb34\uac8c\ub97c \ud06c\uac8c \ub454\ub2e4(\uc9c0\uc218 \uc774\ub3d9 \ud3c9\uade0). \ub2e4\uc74c\uc5d0 \uadf8 \ub3c4\ub85c\ub97c \uc9c0\ub098\ub294 \uacbd\ub85c\uc758 \uc2dc\uac04\uc744 \uc774 \ube44\uc728\ub85c \uace0\uccd0 \uacc4\uc0b0\ud55c\ub2e4.
+function learnRoad(name, band, ratio, ts = Date.now()) {
+  if (!name || !isFinite(ratio)) return;
+  ratio = clamp(ratio, 0.5, 5);
+  const k = name + '|' + band;
+  const old = store.roads[k];
+  store.roads[k] = old ? { r: old.r * 0.7 + ratio * 0.3, n: old.n + 1, t: ts } : { r: ratio, n: 1, t: ts };
+  const keys = Object.keys(store.roads);
+  if (keys.length > 500) {       // \uc624\ub798 \uc548 \uc4f4 \ub3c4\ub85c\ubd80\ud130 \uc815\ub9ac
+    keys.sort((a, b) => store.roads[a].t - store.roads[b].t).slice(0, keys.length - 500).forEach(x => delete store.roads[x]);
+  }
+  saveStore();
+}
+function roadFactor(name, band) {
+  const v = name && store.roads[name + '|' + band];
+  return v && v.n >= 2 && Date.now() - v.t < 120 * 86400000 ? v.r : null;
+}
+// \uacbd\ub85c \uc18c\uc694 \uc2dc\uac04\uc744 \ub0b4 \uae30\ub85d\uc73c\ub85c \ub2e4\uc2dc \uacc4\uc0b0: \ubc30\uc6b4 \ub3c4\ub85c\ub294 \uadf8 \ub3c4\ub85c\uc758 \ube44\uc728, \ub098\uba38\uc9c0\ub294 \uc804\uccb4 \ubcf4\uc815 \uacc4\uc218
+function personalize(route, ts = Date.now()) {
+  const band = timeBand(ts);
+  const g = etaFactor(ts).k;
+  const scale = route.stepDur > 0 ? route.duration / route.stepDur : 1;
+  let total = 0, learned = 0;
+  const f = route.steps.map(s => {
+    const rf = store.settings.etaLearn ? roadFactor(s.name, band) : null;
+    const k = rf != null ? rf : g;
+    const d = (s.dur || 0) * scale;
+    total += d * k;
+    if (rf != null) learned += d;
+    return k;
+  });
+  return { dur: total || route.duration * g, factors: f, learnedShare: route.duration > 0 ? learned / route.duration : 0 };
+}
 
 function median(a) {
   const s = a.slice().sort((x, y) => x - y), m = s.length >> 1;
@@ -1028,8 +1080,9 @@ const routePace = pacer(1100);
 
 const VOICE_KINDS = new Set(['turn', 'uturn', 'ramp', 'exit', 'fork', 'merge', 'roundabout', 'ferry', 'waypoint', 'arrive']);
 
-async function findRoutes(points, { pref = 'fast', heading = null, engine = 'auto', signal } = {}) {
-  const order = engine === 'osrm' ? ['osrm', 'valhalla'] : ['valhalla', 'osrm'];
+async function findRoutes(points, { pref = 'fast', heading = null, engine = 'auto', signal, noFallback = false } = {}) {
+  let order = engine === 'osrm' ? ['osrm', 'valhalla'] : ['valhalla', 'osrm'];
+  if (noFallback) order = order.slice(0, 1);
   const errs = [];
   for (const eng of order) {
     try {
@@ -1056,12 +1109,14 @@ async function viaValhalla(points, pref, heading, signal) {
   if (pref === 'short') auto.shortest = true;
   if (pref === 'free') auto.use_tolls = 0;
   if (pref === 'nohwy') auto.use_highways = 0;
+  // \uc6b4\uc804\ud558\uae30 \uc26c\uc6b4 \uae38: \uae38 \uc774\ub984\uc774 \ubc14\ub014 \ub54c(\ud68c\uc804)\ub9c8\ub2e4 \ube44\uc6a9\uc744 \ud06c\uac8c \ub9e4\uae30\uace0, \uc774\uba74\ub3c4\ub85c\u00b7\uc0dd\ud65c\ub3c4\ub85c\u00b7\uc11c\ube44\uc2a4\ub3c4\ub85c\ub97c \ud53c\ud55c\ub2e4
+  if (pref === 'easy') Object.assign(auto, { maneuver_penalty: 45, service_penalty: 60, service_factor: 2, use_living_streets: 0, use_tracks: 0 });
   const locations = points.map((p, i) => {
     const o = { lat: +(+p.lat).toFixed(6), lon: +(+p.lon).toFixed(6), type: 'break' };
     if (i === 0 && heading != null) { o.heading = Math.round(heading) % 360; o.heading_tolerance = 50; }
     return o;
   });
-  const req = { locations, costing: 'auto', costing_options: { auto }, units: 'kilometers', language: 'en-US', directions_type: 'maneuvers', alternates: points.length === 2 ? 2 : 0 };
+  const req = { locations, costing: 'auto', costing_options: { auto }, units: 'kilometers', language: 'en-US', directions_type: 'maneuvers', alternates: points.length === 2 && pref !== 'easy' ? 2 : 0 };
   const url = ROUTE_ENGINES.valhalla.base + '?json=' + encodeURIComponent(JSON.stringify(req));
   const data = await routePace(() => fetchJSON(url, { timeout: 15000, signal }));
   const trips = [data.trip, ...(data.alternates || []).map(a => a && a.trip)].filter(Boolean);
@@ -1253,6 +1308,66 @@ function finalizeRoute(coords, steps, meta) {
     duration: meta.duration || t,
     stepDur: t,
     hasToll: meta.hasToll, hasHwy: meta.hasHwy, hasFerry: meta.hasFerry,
+  };
+}
+
+// \u2500\u2500 \uc6b4\uc804 \ub09c\uc774\ub3c4: \ud68c\uc804 \uc218(\uc88c\ud68c\uc804\u00b7\uc720\ud134 \uac00\uc911), \uc791\uc740 \uae38 \ube44\uc728 \u2500\u2500
+function routeEase(r) {
+  let turns = 0, left = 0, uturn = 0, w = 0, small = 0;
+  for (const s of r.steps) {
+    if (!s.voice || s.kind === 'arrive' || s.kind === 'waypoint') continue;
+    let wt = 1;
+    if (s.kind === 'uturn' || (s.kind === 'turn' && turnCore(s).uturn)) { wt = 2.5; uturn++; }
+    else if (s.kind === 'turn') {
+      const t = turnCore(s);
+      if (t.clock) wt = 0.6;
+      else if (sideOf(s) === 'left') { wt = 1.6; left++; }
+      if (t.sharp) wt += 0.4;
+    }
+    else if (s.kind === 'roundabout') wt = 1.3;
+    else if (s.kind === 'fork' || s.kind === 'ramp' || s.kind === 'exit') wt = 0.8;
+    else if (s.kind === 'merge') wt = 0.7;
+    turns++; w += wt;
+  }
+  // \uacbd\ub85c \uc5d4\uc9c4\uc774 \uc2dc\uc18d 30km \ubbf8\ub9cc\uc73c\ub85c \uc7a1\uc740 \uad6c\uac04 = \uace8\ubaa9\u00b7\uc774\uba74\ub3c4\ub85c\ub85c \ubcf8\ub2e4
+  for (const s of r.steps) {
+    const len = s.len || s.span || 0;
+    if (len > 0 && s.dur > 0 && len / s.dur * 3.6 < 30) small += len;
+  }
+  const smallShare = r.distance > 0 ? clamp(small / r.distance, 0, 1) : 0;
+  return { turns, left, uturn, smallShare, score: w + smallShare * 20 };
+}
+
+function sameRoute(a, b) {
+  return Math.abs(a.distance - b.distance) < Math.max(40, a.distance * 0.01) && Math.abs(a.duration - b.duration) < Math.max(20, a.duration * 0.02);
+}
+
+// \ud6c4\ubcf4 \uacbd\ub85c \uc815\ub9ac: \ub0b4 \uae30\ub85d\uc73c\ub85c \uc2dc\uac04 \ub2e4\uc2dc \uacc4\uc0b0 \u2192 \uac00\uc7a5 \ube60\ub978 \uae38\u00b7\uac00\uc7a5 \uc26c\uc6b4 \uae38 \u2192 \ucd94\ucc9c \uacb0\uc815
+//  \u00b7 '\ucd94\ucc9c' \uc635\uc158\uc5d0\uc11c, \uac00\uc7a5 \ube60\ub978 \uae38\uc774 \uc26c\uc6b4 \uae38\ubcf4\ub2e4 \uae30\uc900 \uc2dc\uac04(\uae30\ubcf8 10\ubd84) \uc774\uc0c1 \ube60\ub974\uc9c0 \uc54a\uc73c\uba74 \uc26c\uc6b4 \uae38\uc744 \ucd94\ucc9c
+function rankRoutes(list, { pref = 'fast', easyPrefer = true, easyMin = 10, ts = Date.now() } = {}) {
+  const uniq = [];
+  for (const r of list) {
+    const dup = uniq.find(u => sameRoute(u, r));
+    if (dup) { if (r.easyReq) dup.easyReq = true; continue; }
+    uniq.push(r);
+  }
+  for (const r of uniq) { r.p = personalize(r, ts); r.ease = routeEase(r); }
+  if (!uniq.length) return { routes: [], rec: null };
+  const fastest = uniq.reduce((a, b) => (b.p.dur < a.p.dur ? b : a));
+  const easiest = uniq.reduce((a, b) => (b.ease.score < a.ease.score ? b : a));
+  let rec = fastest, why = 'fast';
+  const slower = (easiest.p.dur - fastest.p.dur) / 60;
+  const gain = fastest.ease.score - easiest.ease.score;
+  const meaningful = gain >= Math.max(2, fastest.ease.score * 0.2);
+  if (pref === 'fast' && easyPrefer && easiest !== fastest && meaningful && slower < easyMin) { rec = easiest; why = 'easy'; }
+  if (pref !== 'fast') { rec = uniq[0]; why = pref; }
+  const rest = uniq.filter(r => r !== rec).sort((a, b) => a.p.dur - b.p.dur);
+  const routes = [rec, ...rest].slice(0, 3);
+  if (easiest !== rec && !routes.includes(easiest) && routes.length === 3) routes[2] = easiest;
+  for (const r of routes) r.tags = [r === rec ? 'rec' : '', r === fastest ? 'fast' : '', r === easiest && easiest !== fastest ? 'easy' : ''].filter(Boolean);
+  return {
+    routes, rec,
+    info: { why, slowerMin: slower, gain, fastest, easiest, easyMin, turnDiff: fastest.ease.turns - easiest.ease.turns },
   };
 }
 
@@ -1465,7 +1580,7 @@ class Guide {
     if (this.o.rerouted) { this.say('\uc0c8 \uacbd\ub85c\ub85c \uc548\ub0b4\ud569\ub2c8\ub2e4'); return; }
     const corr = this.o.corr || 1;
     const dn = this.o.destName ? `${this.o.destName}\uae4c\uc9c0 ` : '';
-    this.say(`${dn}\uacbd\ub85c \uc548\ub0b4\ub97c \uc2dc\uc791\ud569\ub2c8\ub2e4. ${distWords(this.total)}, \uc57d ${fmtDur(this.r.duration * corr)} \uac78\ub9bd\ub2c8\ub2e4`);
+    this.say(`${dn}\uacbd\ub85c \uc548\ub0b4\ub97c \uc2dc\uc791\ud569\ub2c8\ub2e4. ${distWords(this.total)}, \uc57d ${fmtDur(this.o.totalDur || this.r.duration * corr)} \uac78\ub9bd\ub2c8\ub2e4`);
   }
 
   match(p, hd, v) {
@@ -1555,7 +1670,25 @@ class Guide {
     const rem = Math.max(0, this.total - this.d);
     const frac = cur && cur.span > 0 ? clamp((this.d - cur.at) / cur.span, 0, 1) : 1;
     const durScale = this.r.stepDur > 0 ? this.r.duration / this.r.stepDur : 1;
-    const remDur = Math.max(0, (this.r.stepDur - ((cur ? cur.tAt : 0) + frac * (cur ? cur.dur || 0 : 0))) * durScale) * (this.o.corr || 1);
+    let remDur;
+    const fac = this.o.factors;
+    if (fac) {     // \ub3c4\ub85c\ubcc4\ub85c \ubc30\uc6b4 \ube44\uc728\uc744 \ub0a8\uc740 \uad6c\uac04\ub9c8\ub2e4 \uc801\uc6a9
+      let sum = cur ? (1 - frac) * (cur.dur || 0) * (fac[ci] || 1) : 0;
+      for (let j = ci + 1; j < steps.length; j++) sum += (steps[j].dur || 0) * (fac[j] || 1);
+      remDur = sum * durScale;
+    } else remDur = Math.max(0, (this.r.stepDur - ((cur ? cur.tAt : 0) + frac * (cur ? cur.dur || 0 : 0))) * durScale) * (this.o.corr || 1);
+
+    // \uad6c\uac04(\ud68c\uc804\uacfc \ud68c\uc804 \uc0ac\uc774) \ud1b5\uacfc \uc2dc\uac04 \uae30\ub85d \u2192 \ub3c4\ub85c\ubcc4 \uc2e4\uc81c \uc18d\ub3c4 \ud559\uc2b5\uc5d0 \uc4f0\uc784
+    if (this.segIdx !== ci) {
+      if (this.segIdx != null && ci === this.segIdx + 1 && this.segOk) {
+        const s = steps[this.segIdx];
+        const act = (now - this.segT0) / 1000, pred = (s.dur || 0) * durScale;
+        if (s.name && (s.span || 0) >= 300 && pred >= 20 && act > 0) this.ev('segment', { name: s.name, act, pred, t: this.segT0 });
+      }
+      this.segOk = on && (this.segIdx != null || this.d - (cur ? cur.at : 0) < 40);
+      this.segIdx = ci; this.segT0 = now;
+    }
+    if (!on || this.rerouting) this.segOk = false;
 
     // \uacbd\uc720\uc9c0 \ud1b5\uacfc
     for (let j = Math.max(0, this.ptr - 1); j < steps.length; j++) {
@@ -2544,7 +2677,18 @@ async function computeRoutes() {
   try {
     const r = await findRoutes(pts, { pref: t.pref, heading, engine: store.settings.engine, signal: ctl.signal });
     if (ctl.signal.aborted || S.trip !== t) return;
-    t.routes = r.routes.slice(0, 3); t.sel = 0; t.warn = r.warn || ''; t.engine = r.engine;
+    let all = r.routes;
+    // '\ucd94\ucc9c'\uc77c \ub54c\ub294 \uc6b4\uc804\ud558\uae30 \uc26c\uc6b4 \uae38\ub3c4 \ub530\ub85c \ucc3e\uc544 \ud568\uaed8 \ube44\uad50(Valhalla \ub9cc \uc9c0\uc6d0)
+    if (t.pref === 'fast' && store.settings.easyPrefer && r.engine === 'valhalla') {
+      try {
+        const e = await findRoutes(pts, { pref: 'easy', heading, engine: 'valhalla', noFallback: true, signal: ctl.signal });
+        e.routes.forEach(x => { x.easyReq = true; });
+        all = all.concat(e.routes);
+      } catch (err) { if (ctl.signal.aborted) return; }
+      if (S.trip !== t) return;
+    }
+    const ranked = rankRoutes(all, { pref: t.pref, easyPrefer: store.settings.easyPrefer, easyMin: store.settings.easyMin });
+    t.routes = ranked.routes; t.info = ranked.info; t.sel = 0; t.warn = r.warn || ''; t.engine = r.engine;
   } catch (e) {
     if (ctl.signal.aborted || S.trip !== t) return;
     t.err = e.noPath ? '\uc774 \uc870\uac74\uc73c\ub85c \uac08 \uc218 \uc788\ub294 \uae38\uc744 \ucc3e\uc9c0 \ubabb\ud588\uc2b5\ub2c8\ub2e4. \uacbd\ub85c \uc635\uc158\uc744 \ubc14\uafb8\uac70\ub098 \ucd9c\ubc1c\u00b7\ub3c4\ucc29 \uc704\uce58\ub97c \ub3c4\ub85c \uac00\uae4c\uc774\ub85c \uc62e\uaca8 \ubcf4\uc138\uc694.' : '\uacbd\ub85c \uc11c\ubc84\uc5d0 \uc5f0\uacb0\ud558\uc9c0 \ubabb\ud588\uc2b5\ub2c8\ub2e4. \uc778\ud130\ub137 \uc5f0\uacb0\uc744 \ud655\uc778\ud55c \ub4a4 \ub2e4\uc2dc \uc2dc\ub3c4\ud558\uc138\uc694.';
@@ -2567,10 +2711,21 @@ function previewSheet() {
   if (t.err) out.push(h('p', { class: 'empty', text: t.err }), h('button', { class: 'btn', type: 'button', onclick: computeRoutes, text: '\ub2e4\uc2dc \ucc3e\uae30' }));
   if (t.routes.length) {
     const ef = etaFactor();
+    const info = t.info;
+    // \ucd94\ucc9c \uc774\uc720 \ud55c \uc904
+    if (info && info.why === 'easy') {
+      const m = Math.max(1, Math.round(info.slowerMin));
+      out.push(h('p', { class: 'recline', text: `\uac00\uc7a5 \ube60\ub978 \uae38\ubcf4\ub2e4 \uc57d ${m}\ubd84 \ub2a6\uc9c0\ub9cc \ud68c\uc804\uc774 ${Math.max(0, info.turnDiff)}\ubc88 \uc801\uace0 \ud070\uae38 \uc704\uc8fc\ub77c \uc774 \uae38\uc744 \ucd94\ucc9c\ud569\ub2c8\ub2e4 (\uae30\uc900 ${info.easyMin}\ubd84).` }));
+    } else if (info && info.why === 'fast' && info.easiest !== info.fastest && info.slowerMin >= info.easyMin && info.gain >= 2) {
+      out.push(h('p', { class: 'recline', text: `\uc6b4\uc804\ud558\uae30 \uc26c\uc6b4 \uae38\uc740 ${Math.round(info.slowerMin)}\ubd84 \ub354 \uac78\ub824(\uae30\uc900 ${info.easyMin}\ubd84 \uc774\uc0c1) \ube60\ub978 \uae38\uc744 \ucd94\ucc9c\ud569\ub2c8\ub2e4.` }));
+    }
     const list = h('div', { class: 'routes', role: 'radiogroup', 'aria-label': '\uacbd\ub85c \ud6c4\ubcf4' });
     t.routes.forEach((r, i) => {
-      const dur = r.duration * ef.k;
+      const dur = r.p ? r.p.dur : r.duration * ef.k;
       const tags = [];
+      const TAG = { rec: ['tag--rec', '\ucd94\ucc9c'], fast: ['tag--fast', '\uac00\uc7a5 \ube60\ub984'], easy: ['tag--easy', '\uc6b4\uc804 \uc26c\uc6c0'] };
+      (r.tags || []).forEach(k => tags.push(h('span', { class: 'tag ' + TAG[k][0], text: TAG[k][1] })));
+      if (r.p && r.p.learnedShare >= 0.2) tags.push(h('span', { class: 'tag tag--me', text: '\ub0b4 \uae30\ub85d \ubc18\uc601' }));
       if (r.hasToll) tags.push(h('span', { class: 'tag tag--toll', text: '\uc720\ub8cc\ub3c4\ub85c' }));
       if (r.hasHwy) tags.push(h('span', { class: 'tag tag--hwy', text: '\uace0\uc18d\ub3c4\ub85c' }));
       if (r.hasFerry) tags.push(h('span', { class: 'tag', text: '\ud398\ub9ac' }));
@@ -2580,13 +2735,16 @@ function previewSheet() {
         h('span', { class: 'rcard__time num', text: fmtDur(dur) }),
         h('span', { class: 'rcard__eta num', text: fmtClock(Date.now() + dur * 1000) + ' \ub3c4\ucc29' }),
         h('span', { class: 'rcard__info num' }, fmtDistStr(r.distance),
-          store.settings.showFuel ? h('span', { text: '\u00b7 \uc720\ub958\ube44 \uc57d ' + fmtWon(fuelCost(r.distance)) }) : null, ...tags),
+          store.settings.showFuel ? h('span', { text: '\u00b7 \uc720\ub958\ube44 \uc57d ' + fmtWon(fuelCost(r.distance)) }) : null),
+        r.ease ? h('span', { class: 'rcard__ease num', text: `\ud68c\uc804 ${r.ease.turns}\ubc88${r.ease.left + r.ease.uturn ? ` (\uc88c\ud68c\uc804\u00b7\uc720\ud134 ${r.ease.left + r.ease.uturn})` : ''} \u00b7 \ud070\uae38 ${Math.round((1 - r.ease.smallShare) * 100)}%` }) : null,
+        tags.length ? h('span', { class: 'rcard__tags' }, ...tags) : null,
         r.roads.length ? h('span', { class: 'rcard__via', text: r.roads.join(' \u00b7 ') + ' \uacbd\uc720' }) : null));
     });
     out.push(list);
     const notes = [];
-    if (ef.n) notes.push(`\ub3c4\ucc29 \uc2dc\uac04\uc740 \ub0b4 \uc8fc\ud589 \uae30\ub85d ${ef.n}\ud68c\ub85c \ubcf4\uc815\ud588\uc2b5\ub2c8\ub2e4(\u00d7${ef.k.toFixed(2)}${ef.band ? ', ' + BAND_KO[ef.band] : ''}).`);
-    else notes.push('\uc2e4\uc2dc\uac04 \uad50\ud1b5 \uc815\ubcf4\uac00 \uc5c6\ub294 \ubb34\ub8cc \uc9c0\ub3c4\ub77c, \ub9c9\ud788\ub294 \uc2dc\uac04\uc5d0\ub294 \uc2e4\uc81c\ubcf4\ub2e4 \uc9e7\uac8c \ub098\uc62c \uc218 \uc788\uc2b5\ub2c8\ub2e4. \uc548\ub0b4\ub97c \uba87 \ubc88 \ub05d\uae4c\uc9c0 \ubc1b\uc73c\uba74 \ub0b4 \uae30\ub85d\uc73c\ub85c \uc790\ub3d9 \ubcf4\uc815\ub429\ub2c8\ub2e4.');
+    const nRoads = Object.keys(store.roads).length;
+    if (ef.n || nRoads) notes.push(`\ub3c4\ucc29 \uc2dc\uac04\uc740 \ub0b4 \uc8fc\ud589 \uae30\ub85d\uc73c\ub85c \ubcf4\uc815\ud588\uc2b5\ub2c8\ub2e4${ef.n ? `(\uc804\uccb4 \u00d7${ef.k.toFixed(2)}, ${ef.n}\ud68c${ef.band ? ', ' + BAND_KO[ef.band] : ''})` : ''}${nRoads ? ` \u00b7 \ub3c4\ub85c\ubcc4 \ud559\uc2b5 ${nRoads}\uac74` : ''}.`);
+    else notes.push('\uc2e4\uc2dc\uac04 \uad50\ud1b5 \uc815\ubcf4\uac00 \uc5c6\ub294 \ubb34\ub8cc \uc9c0\ub3c4\ub77c, \ub9c9\ud788\ub294 \uc2dc\uac04\uc5d0\ub294 \uc2e4\uc81c\ubcf4\ub2e4 \uc9e7\uac8c \ub098\uc62c \uc218 \uc788\uc2b5\ub2c8\ub2e4. \uc548\ub0b4\ub97c \ubc1b\uc73c\uba70 \ub2ec\ub9b0 \ub3c4\ub85c\ub294 \uc2dc\uac04\ub300\ubcc4 \uc2e4\uc81c \uc18d\ub3c4\ub97c \ubc30\uc6cc \ub2e4\uc74c\ubd80\ud130 \uacbd\ub85c \uc120\ud0dd\uacfc \ub3c4\ucc29 \uc2dc\uac04\uc5d0 \ubc18\uc601\ud569\ub2c8\ub2e4.');
     if (t.warn) out.push(h('p', { class: 'warnline', text: t.warn }));
     out.push(h('div', { class: 'go' },
       h('button', { class: 'btn', type: 'button', onclick: () => startNav(true) }, h('span', { svg: ic('play', 18, true) }), '\ubaa8\uc758 \uc8fc\ud589'),
@@ -2717,11 +2875,14 @@ async function startNav(sim) {
 }
 
 function makeGuide(route, rerouted) {
+  const p = route.p || (route.p = personalize(route));
   return new Guide(route, {
     speak: (txt, o) => Voice.say(txt, o),
     event: (n, d) => navEvent(n, d),
     settings: () => store.settings,
     corr: S.nav ? S.nav.corr : 1,
+    factors: p.factors,
+    totalDur: p.dur,
     lastReroute: rerouted ? Date.now() : 0,
     destName: S.nav && S.nav.dest ? (S.nav.dest.label || S.nav.dest.name) : '',
     rerouted,
@@ -2792,6 +2953,7 @@ function navEvent(name, data) {
   else if (name === 'backon') { if (n.rerouteCtl) n.rerouteCtl.abort(); banner(null); }
   else if (name === 'waypoint') { n.visited = Math.min(n.stops.length, n.visited + 1); MV.setTripMarks(null, n.stops.slice(n.visited), n.dest); }
   else if (name === 'arrive') setTimeout(() => finishNav(true), 3500);
+  else if (name === 'segment' && !n.sim) learnRoad(data.name, timeBand(data.t), data.act / data.pred, data.t);
 }
 
 async function reroute(at) {
@@ -2804,6 +2966,7 @@ async function reroute(at) {
     const r = await findRoutes(pts, { pref: n.trip.pref, heading: at.speed > 2 ? at.heading : null, engine: store.settings.engine, signal: ctl.signal });
     if (ctl.signal.aborted || S.nav !== n || n.ended) return;
     n.route = r.routes[0];
+    n.route.p = personalize(n.route);
     n.rr++;
     n.remDrawn = false;
     n.guide = makeGuide(n.route, true);
@@ -2900,6 +3063,8 @@ function openSettings() {
   openOverlay('\uc124\uc815', [
     h('section', { class: 'group' }, h('h2', { text: '\uacbd\ub85c' }),
       row('\uae30\ubcf8 \uacbd\ub85c \uc635\uc158', '\ubaa9\uc801\uc9c0\ub97c \uace0\ub974\uba74 \uc774 \uc635\uc158\uc73c\ub85c \uba3c\uc800 \ucc3e\uc2b5\ub2c8\ub2e4', seg(Object.entries(PREF_KO), st.pref, k => setS('pref', k), '\uae30\ubcf8 \uacbd\ub85c \uc635\uc158')),
+      row('\uc6b4\uc804\ud558\uae30 \uc26c\uc6b4 \uae38 \uc6b0\uc120', '\u2018\ucd94\ucc9c\u2019\uc5d0\uc11c \ube60\ub978 \uae38\uc774 \uae30\uc900 \uc2dc\uac04 \uc774\uc0c1 \ube60\ub974\uc9c0 \uc54a\uc73c\uba74 \ud68c\uc804\uc774 \uc801\uace0 \ud070\uae38 \uc704\uc8fc\uc778 \uae38\uc744 \ucd94\ucc9c\ud569\ub2c8\ub2e4', sw(st.easyPrefer, v => setS('easyPrefer', v), '\uc6b4\uc804\ud558\uae30 \uc26c\uc6b4 \uae38 \uc6b0\uc120')),
+      row('\uae30\uc900 \uc2dc\uac04', '\ube60\ub978 \uae38\uc774 \uc774\ub9cc\ud07c \uc774\uc0c1 \ube68\ub77c\uc57c \ube60\ub978 \uae38\uc744 \ucd94\ucc9c\ud569\ub2c8\ub2e4', seg([[5, '5\ubd84'], [10, '10\ubd84'], [15, '15\ubd84'], [20, '20\ubd84']], st.easyMin, k => setS('easyMin', k), '\uae30\uc900 \uc2dc\uac04')),
       row('\uacbd\ub85c \uc5d4\uc9c4', '\uc790\ub3d9: Valhalla\ub85c \ucc3e\uace0 \uc751\ub2f5\uc774 \uc5c6\uc73c\uba74 OSRM', seg([['auto', '\uc790\ub3d9'], ['valhalla', 'Valhalla'], ['osrm', 'OSRM']], st.engine, k => setS('engine', k), '\uacbd\ub85c \uc5d4\uc9c4'))),
     h('section', { class: 'group' }, h('h2', { text: '\uc74c\uc131 \uc548\ub0b4' }),
       row('\uc74c\uc131 \uc548\ub0b4', null, sw(st.voice, v => setS('voice', v), '\uc74c\uc131 \uc548\ub0b4')),
@@ -2919,7 +3084,8 @@ function openSettings() {
     h('section', { class: 'group' }, h('h2', { text: '\ub098\uc5d0\uac8c \ub9de\ucd94\uae30' }),
       row('\ub3c4\ucc29 \uc2dc\uac04 \ubcf4\uc815', ef.n ? `\ub0b4 \uc8fc\ud589 \uae30\ub85d\uc73c\ub85c \ubcf4\uc815 \uc911: \u00d7${ef.k.toFixed(2)} (${ef.n}\ud68c, ${ef.band ? BAND_KO[ef.band] : '\uc804\uccb4'})` : `\uc2e4\uc81c \uc548\ub0b4\ub97c \ub05d\uae4c\uc9c0 3\ubc88 \uc774\uc0c1 \ubc1b\uc73c\uba74 \uc2dc\uc791\ud569\ub2c8\ub2e4 (\uc9c0\uae08 ${realTrips.filter(t => t.arrived).length}\ud68c)`, sw(st.etaLearn, v => setS('etaLearn', v), '\ub3c4\ucc29 \uc2dc\uac04 \ubcf4\uc815')),
       row('\uc2dc\uac04\ub300\ubcc4 \ubaa9\uc801\uc9c0 \ucd94\ucc9c', '\uc694\uc77c\u00b7\uc2dc\uac04\ub300\uac00 \ube44\uc2b7\ud560 \ub54c \uc790\uc8fc \uac04 \uacf3\uc744 \uccab \ud654\uba74\uc5d0 \ub744\uc6c1\ub2c8\ub2e4', sw(st.suggest, v => setS('suggest', v), '\uc2dc\uac04\ub300\ubcc4 \ucd94\ucc9c')),
-      row('\uc8fc\ud589 \uae30\ub85d \uc9c0\uc6b0\uae30', `\uc800\uc7a5\ub41c \uae30\ub85d ${realTrips.length}\uac74`, h('button', { class: 'btn btn--sm btn--ghost', type: 'button', text: '\uc9c0\uc6b0\uae30', onclick: async () => { if (await ask('\uc8fc\ud589 \uae30\ub85d\uc744 \ubaa8\ub450 \uc9c0\uc6b8\uae4c\uc694? \ub3c4\ucc29 \uc2dc\uac04 \ubcf4\uc815\uacfc \ucd94\ucc9c\uc774 \ucc98\uc74c\ubd80\ud130 \ub2e4\uc2dc \uc2dc\uc791\ub429\ub2c8\ub2e4.', { ok: '\uc9c0\uc6b0\uae30', danger: true })) { store.trips = []; saveStore(true); toast('\uc8fc\ud589 \uae30\ub85d\uc744 \uc9c0\uc6e0\uc2b5\ub2c8\ub2e4'); openSettings(); } } }))),
+      row('\ub3c4\ub85c\ubcc4 \uad50\ud1b5 \ud559\uc2b5', Object.keys(store.roads).length ? `\uc548\ub0b4 \uc911 \ub2ec\ub9b0 \ub3c4\ub85c\uc758 \uc2dc\uac04\ub300\ubcc4 \uc2e4\uc81c \uc18d\ub3c4 ${Object.keys(store.roads).length}\uac74 \u2014 \ucd5c\uadfc \uae30\ub85d\uc77c\uc218\ub85d \ud06c\uac8c \ubc18\uc601\ud574 \uacbd\ub85c \uc120\ud0dd\uacfc \ub3c4\ucc29 \uc2dc\uac04\uc5d0 \uc501\ub2c8\ub2e4` : '\uc548\ub0b4\ub97c \ubc1b\uc73c\uba70 \ub2ec\ub9ac\uba74 \ub3c4\ub85c\ubcc4\u00b7\uc2dc\uac04\ub300\ubcc4 \uc2e4\uc81c \uc18d\ub3c4\ub97c \ubc30\uc6cc \ub2e4\uc74c \uacbd\ub85c \uc120\ud0dd\uc5d0 \uc501\ub2c8\ub2e4', h('span')),
+      row('\uc8fc\ud589 \uae30\ub85d \uc9c0\uc6b0\uae30', `\uc8fc\ud589 ${realTrips.length}\uac74 \u00b7 \ub3c4\ub85c \ud559\uc2b5 ${Object.keys(store.roads).length}\uac74`, h('button', { class: 'btn btn--sm btn--ghost', type: 'button', text: '\uc9c0\uc6b0\uae30', onclick: async () => { if (await ask('\uc8fc\ud589 \uae30\ub85d\uacfc \ub3c4\ub85c\ubcc4 \ud559\uc2b5\uc744 \ubaa8\ub450 \uc9c0\uc6b8\uae4c\uc694? \ub3c4\ucc29 \uc2dc\uac04 \ubcf4\uc815\uacfc \ucd94\ucc9c\uc774 \ucc98\uc74c\ubd80\ud130 \ub2e4\uc2dc \uc2dc\uc791\ub429\ub2c8\ub2e4.', { ok: '\uc9c0\uc6b0\uae30', danger: true })) { store.trips = []; store.roads = {}; saveStore(true); toast('\uc8fc\ud589 \uae30\ub85d\uc744 \uc9c0\uc6e0\uc2b5\ub2c8\ub2e4'); openSettings(); } } }))),
     h('section', { class: 'group' }, h('h2', { text: '\ub370\uc774\ud130' }),
       row('\ubc31\uc5c5 \ud30c\uc77c\ub85c \uc800\uc7a5', '\uc9d1\u00b7\ud68c\uc0ac\u00b7\uc990\uaca8\ucc3e\uae30\u00b7\uc124\uc815\u00b7\uae30\ub85d\uc744 \uc774 \uae30\uae30\uc5d0\uc11c \ub2e4\ub978 \uae30\uae30\ub85c \uc62e\uae38 \ub54c', h('button', { class: 'btn btn--sm', type: 'button', onclick: exportFile }, h('span', { svg: ic('down', 16) }), '\uc800\uc7a5')),
       row('\ubc31\uc5c5 \ud30c\uc77c \ubd88\ub7ec\uc624\uae30', '\uc9c0\uae08 \ub370\uc774\ud130\ub294 \ubc31\uc5c5 \ub0b4\uc6a9\uc73c\ub85c \ubc14\ub01d\ub2c8\ub2e4', h('button', { class: 'btn btn--sm', type: 'button', onclick: importFile }, h('span', { svg: ic('up', 16) }), '\ubd88\ub7ec\uc624\uae30')),
