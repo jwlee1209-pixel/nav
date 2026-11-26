@@ -292,3 +292,42 @@ process.exitCode = fails ? 1 : 0;
   console.log(fails ? `\n${fails}개 실패` : '\n내 장소 찾기 통과');
   process.exitCode = fails ? 1 : 0;
 }
+
+// ── 도보 ──
+{
+  console.log('도보');
+  const wr = X.normValhalla(F.walkResponse().trip, 0);
+  wr.mode = 'walk';
+  t('계단 단계(Valhalla 40) 읽기', () => { const k = wr.steps.map(s => s.kind).join(); assert.strictEqual(k, 'depart,turn,turn,turn,steps,continue,turn,arrive'); assert(wr.steps.find(s => s.kind === 'steps').voice); });
+  t('계단·엘리베이터·건물 문구', () => {
+    assert.strictEqual(X.sayStep({ kind: 'steps' }, 100), '100미터 앞 계단입니다');
+    assert.strictEqual(X.sayStep({ kind: 'steps' }, 20, { soon: true }), '잠시 후 계단입니다');
+    assert.strictEqual(X.sayStep({ kind: 'elevator' }, 50), '50미터 앞 엘리베이터입니다');
+    assert.strictEqual(X.sayStep({ kind: 'building', mod: 'exit' }, 20, { soon: true }), '잠시 후 건물 밖으로 나갑니다');
+    assert.strictEqual(X.showStep({ kind: 'steps' }).title, '계단');
+    assert(/^<svg/.test(X.iconFor({ kind: 'steps' })));
+  });
+  t('걷는 시간(시속 4.5km)', () => assert(Math.abs(wr.distance / wr.duration * 3.6 - 4.5) < 0.05, wr.distance / wr.duration * 3.6));
+  const wk = drive(wr);
+  console.log('    음성:', wk.said.join(' / '));
+  t('도보 시작 안내', () => assert.match(wk.said[0], /^테스트 목적지까지 도보 안내를 시작합니다\. 3\.\d킬로미터, 걸어서 약 \d+분 걸립니다$/));
+  t('100m 앞 + 잠시 후(300m·1km 단계 없음)', () => {
+    assert(wk.said.some(s => s === '100미터 앞에서 종로로 우회전입니다'), '종로 100m');
+    assert(wk.said.filter(s => s.startsWith('잠시 후')).length >= 5);
+    assert(!wk.said.some(s => /^(300미터|1킬로미터|2킬로미터)/.test(s)));
+  });
+  t('계단 안내', () => { assert(wk.said.includes('100미터 앞 계단입니다')); assert(wk.said.includes('잠시 후 계단입니다')); });
+  t('긴 직진(400m 넘게)', () => { assert(wk.said.includes('세종대로를 따라 600미터 직진입니다')); assert(wk.said.includes('1.3킬로미터 직진입니다')); });
+  t('도착은 목적지 가까이에서', () => { assert(wk.events.includes('arrive')); assert(wk.st.rem < 15, wk.st.rem); assert(!wk.events.includes('offroute')); });
+  const wo = drive(wr, { offAt: 700 });
+  t('도보 경로 이탈(조금 더 기다렸다가)', () => assert(wo.events.includes('offroute')));
+  // 차량 기록은 도보 시간에 쓰지 않고, 도보 기록은 차량 보정에 쓰지 않는다
+  const ts0 = new Date('2026-11-24T14:00:00+09:00').getTime();
+  X.store.trips = [1, 2, 3].map(i => ({ ts: ts0 - i * 86400000, pred: 1000, act: 1500, dist: 5000, rr: 0, arrived: true }));
+  t('도보 경로는 차량 보정 없이', () => { const p = X.personalize(wr, ts0); assert.strictEqual(p.dur, wr.duration); assert.strictEqual(p.factors, null); });
+  X.store.trips = [1, 2, 3].map(i => ({ ts: ts0 - i * 86400000, pred: 1000, act: 1500, dist: 5000, rr: 0, arrived: true, mode: 'walk' }));
+  t('도보 기록은 차량 보정에 안 씀', () => assert.strictEqual(X.etaFactor(ts0).k, 1));
+  X.store.trips = [];
+  console.log(fails ? `\n${fails}개 실패` : '\n도보 통과');
+  process.exitCode = fails ? 1 : 0;
+}

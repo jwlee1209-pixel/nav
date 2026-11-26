@@ -25,6 +25,7 @@ const IC = {
   spark: '<path d="M12 3.5 13.8 10.2 20.5 12 13.8 13.8 12 20.5 10.2 13.8 3.5 12 10.2 10.2z"/>',
   car: '<path d="M5 16.5V12l2-5h10l2 5v4.5"/><path d="M3.5 16.5h17M6.5 19.5v-3M17.5 19.5v-3"/><circle cx="7.5" cy="13.5" r="1"/><circle cx="16.5" cy="13.5" r="1"/>',
   nav: '<path d="M12 3 19 20l-7-4-7 4z"/>',
+  walk: '<circle cx="13.5" cy="4.5" r="2"/><path d="M12.6 8.6 10.4 14l3.1 2.6-1 4.4M10.4 14 8 20.6M12 9.6l-3.2 3M12.6 8.6l2.6 3 3 .9"/>',
 };
 const ic = (n, size = 22, fill = false) => `<svg viewBox="0 0 24 24" width="${size}" height="${size}" fill="${fill ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${IC[n]}</svg>`;
 
@@ -351,7 +352,8 @@ function refreshPts() {
 // ── 경로 미리보기 ──
 function startTrip(dest) {
   if (S.nav) return;
-  S.trip = { origin: null, stops: [], dest: cleanPlace(dest) && { ...cleanPlace(dest), label: dest.label }, pref: store.settings.pref, routes: [], sel: 0, loading: false, err: '', warn: '' };
+  const mode = store.settings.mode === 'walk' ? 'walk' : 'car';
+  S.trip = { origin: null, stops: [], dest: cleanPlace(dest) && { ...cleanPlace(dest), label: dest.label }, mode, pref: mode === 'walk' ? 'fast' : store.settings.pref, routes: [], sel: 0, loading: false, err: '', warn: '' };
   S.pick = null; S.results = null;
   go('preview');
   computeRoutes();
@@ -379,10 +381,15 @@ function renderPlan() {
     h('span', { class: 'plan__dot ' + cls }, dot),
     h('button', { class: 'plan__field', type: 'button', onclick: onClick }, h('small', { text: label }), value),
     extra || null);
+  // 이동 방법(차량·도보)은 제목 줄에 작게 — 화면을 한 줄 더 차지하지 않도록
+  const modes = h('div', { class: 'modes', role: 'group', 'aria-label': '이동 방법' },
+    ...[['car', 'car', '차량'], ['walk', 'walk', '도보']].map(([k, icon, label]) => h('button', { type: 'button', id: 'mode-' + k, 'aria-pressed': (t.mode || 'car') === k ? 'true' : 'false',
+      onclick: () => { if ((t.mode || 'car') === k) return; t.mode = k; t.pref = k === 'walk' ? 'fast' : store.settings.pref; renderPlan(); computeRoutes(); } }, h('span', { svg: ic(icon, 16) }), label)));
   const rows = [
     h('div', { class: 'plan__row' },
       h('button', { class: 'icon-btn', type: 'button', 'aria-label': '뒤로', svg: ic('back', 22), onclick: cancelTrip }),
-      h('div', { style: 'flex:1;font-weight:800;font-size:16px', text: '경로 설정' }),
+      h('div', { style: 'flex:1;min-width:0;font-weight:800;font-size:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis', text: '경로 설정' }),
+      modes,
       h('button', { class: 'icon-btn', type: 'button', 'aria-label': '출발지와 도착지 바꾸기', svg: ic('swap', 22), onclick: swapTrip })),
     row('', h('i'), '출발', t.origin ? t.origin.name : '현재 위치', () => beginPick('origin'),
       t.origin ? h('button', { class: 'icon-btn', type: 'button', 'aria-label': '출발지를 현재 위치로', svg: ic('locate', 20), onclick: () => { t.origin = null; renderPlan(); computeRoutes(); } }) : null),
@@ -393,7 +400,7 @@ function renderPlan() {
   const tools = h('div', { class: 'plan__tools' },
     t.stops.length < 3 ? h('button', { class: 'btn btn--sm btn--ghost', type: 'button', onclick: () => beginPick('stop') }, h('span', { svg: ic('plus', 16) }), '경유지 추가') : null);
   const prefs = h('div', { class: 'prefs', role: 'group', 'aria-label': '경로 옵션' },
-    ...Object.entries(PREF_KO).map(([k, label]) => h('button', { type: 'button', 'aria-pressed': t.pref === k ? 'true' : 'false', text: label, onclick: () => { t.pref = k; renderPlan(); computeRoutes(); } })));
+    ...Object.entries(prefsOf(t.mode)).map(([k, label]) => h('button', { type: 'button', 'aria-pressed': t.pref === k ? 'true' : 'false', text: label, onclick: () => { t.pref = k; renderPlan(); computeRoutes(); } })));
   box.replaceChildren(...rows, tools, prefs);
   requestAnimationFrame(measure);
 }
@@ -433,13 +440,14 @@ async function computeRoutes() {
   MV.clearRoutes();
   renderSheet();
   MV.fit(pts.map(p => [p.lon, p.lat]));
-  const heading = !t.origin && S.me && Date.now() - S.me.t < 10000 && S.me.speed > 2 && S.me.heading != null ? S.me.heading : null;
+  const walk = t.mode === 'walk';
+  const heading = !walk && !t.origin && S.me && Date.now() - S.me.t < 10000 && S.me.speed > 2 && S.me.heading != null ? S.me.heading : null;
   try {
-    const r = await findRoutes(pts, { pref: t.pref, heading, engine: store.settings.engine, signal: ctl.signal });
+    const r = await findRoutes(pts, { pref: t.pref, mode: t.mode || 'car', heading, engine: store.settings.engine, signal: ctl.signal });
     if (ctl.signal.aborted || S.trip !== t) return;
     let all = r.routes;
-    // '추천'일 때는 운전하기 쉬운 길도 따로 찾아 함께 비교(Valhalla 만 지원)
-    if (t.pref === 'fast' && store.settings.easyPrefer && r.engine === 'valhalla') {
+    // '추천'일 때는 운전하기 쉬운 길도 따로 찾아 함께 비교(차량, Valhalla 만)
+    if (!walk && t.pref === 'fast' && store.settings.easyPrefer && r.engine === 'valhalla') {
       // 빠른 길에 유료도로·페리가 없으면 쉬운 길도 그것 없이 찾는다(통행료 내며 돌아가는 길이 '쉬운 길'로 나오지 않게)
       const f0 = all.reduce((a, b) => (personalize(b).dur < personalize(a).dur ? b : a));
       const costing = {};
@@ -452,29 +460,38 @@ async function computeRoutes() {
       } catch (err) { if (ctl.signal.aborted) return; }
       if (S.trip !== t) return;
     }
-    const ranked = rankRoutes(all, { pref: t.pref, easyPrefer: store.settings.easyPrefer, easyMin: store.settings.easyMin });
+    const ranked = rankRoutes(all, { pref: t.pref, easyPrefer: !walk && store.settings.easyPrefer, easyMin: store.settings.easyMin });
     t.routes = ranked.routes; t.info = ranked.info; t.sel = 0; t.warn = r.warn || ''; t.engine = r.engine;
-    attachCams(t.routes);
+    if (walk) t.routes.forEach(x => { x.tags = (x.tags || []).filter(k => k !== 'easy'); });
+    else attachCams(t.routes);
   } catch (e) {
     if (ctl.signal.aborted || S.trip !== t) return;
-    t.err = e.noPath ? '이 조건으로 갈 수 있는 길을 찾지 못했습니다. 경로 옵션을 바꾸거나 출발·도착 위치를 도로 가까이로 옮겨 보세요.' : '경로 서버에 연결하지 못했습니다. 인터넷 연결을 확인한 뒤 다시 시도하세요.';
+    t.err = e.noPath ? `이 조건으로 ${walk ? '걸어서 ' : ''}갈 수 있는 길을 찾지 못했습니다. 경로 옵션을 바꾸거나 출발·도착 위치를 ${walk ? '길' : '도로'} 가까이로 옮겨 보세요.` : '경로 서버에 연결하지 못했습니다. 인터넷 연결을 확인한 뒤 다시 시도하세요.';
   }
   t.loading = false;
   if (S.screen === 'preview') renderSheet();
   if (t.routes.length) {
     MV.setRoutes(t.routes, t.sel);
-    MV.setCams(t.routes[t.sel].cams);
+    MV.setCams(walk ? [] : t.routes[t.sel].cams);
     MV.fit(t.routes.flatMap(r => [r.coords[0], ...r.coords.filter((_, i) => i % 20 === 0), r.coords[r.coords.length - 1]]));
   }
 }
 
 function fuelCost(m) { return m / 1000 / Math.max(1, store.settings.fuelEff) * store.settings.fuelPrice; }
 
+// 도보 경로 카드 한 줄: 회전 수와 계단·엘리베이터
+function walkLine(r) {
+  const n = k => r.steps.filter(s => s.kind === k).length;
+  const turns = r.steps.filter(s => ['turn', 'uturn', 'roundabout', 'fork'].includes(s.kind)).length;
+  return [`회전 ${turns}번`, n('steps') ? `계단 ${n('steps')}곳` : '', n('elevator') ? `엘리베이터 ${n('elevator')}곳` : '', n('escalator') ? `에스컬레이터 ${n('escalator')}곳` : ''].filter(Boolean).join(' · ');
+}
+
 function previewSheet() {
   const t = S.trip;
   if (!t) return [];
   const out = [];
-  if (t.loading) out.push(h('div', { class: 'loading' }, h('span', { class: 'spinner' }), `${PREF_KO[t.pref]} 경로를 찾는 중…`));
+  const walk = t.mode === 'walk';
+  if (t.loading) out.push(h('div', { class: 'loading' }, h('span', { class: 'spinner' }), walk ? `도보 ${t.pref === 'fast' ? '' : prefLabel('walk', t.pref) + ' '}경로를 찾는 중…` : `${prefLabel('car', t.pref)} 경로를 찾는 중…`));
   if (t.err) out.push(h('p', { class: 'empty', text: t.err }), h('button', { class: 'btn', type: 'button', onclick: computeRoutes, text: '다시 찾기' }));
   if (t.routes.length) {
     const ef = etaFactor();
@@ -484,7 +501,7 @@ function previewSheet() {
     if (line) out.push(h('p', { class: 'recline', text: line }));
     const list = h('div', { class: 'routes', role: 'radiogroup', 'aria-label': '경로 후보' });
     t.routes.forEach((r, i) => {
-      const dur = r.p ? r.p.dur : r.duration * ef.k;
+      const dur = r.p ? r.p.dur : r.duration * (walk ? 1 : ef.k);
       const tags = [];
       const TAG = { rec: ['tag--rec', '추천'], fast: ['tag--fast', '가장 빠름'], easy: ['tag--easy', '운전 쉬움'] };
       (r.tags || []).forEach(k => tags.push(h('span', { class: 'tag ' + TAG[k][0], text: TAG[k][1] })));
@@ -498,19 +515,22 @@ function previewSheet() {
         h('span', { class: 'rcard__time num', text: fmtDur(dur) }),
         h('span', { class: 'rcard__eta num', text: fmtClock(Date.now() + dur * 1000) + ' 도착' }),
         h('span', { class: 'rcard__info num' }, fmtDistStr(r.distance),
-          store.settings.showFuel ? h('span', { text: '· 유류비 약 ' + fmtWon(fuelCost(r.distance)) }) : null),
-        r.ease ? h('span', { class: 'rcard__ease num', text: `회전 ${r.ease.turns}번${r.ease.left + r.ease.uturn ? ` (좌회전·유턴 ${r.ease.left + r.ease.uturn})` : ''} · 큰길 ${Math.round((1 - r.ease.smallShare) * 100)}%${r.cams ? ` · 단속 카메라 ${camCount(r.cams)}곳` : ''}` }) : null,
+          walk ? h('span', { text: `· 약 ${Math.round(r.distance / 0.7).toLocaleString('ko-KR')}걸음` })
+            : store.settings.showFuel ? h('span', { text: '· 유류비 약 ' + fmtWon(fuelCost(r.distance)) }) : null),
+        walk ? h('span', { class: 'rcard__ease num', text: walkLine(r) })
+          : r.ease ? h('span', { class: 'rcard__ease num', text: `회전 ${r.ease.turns}번${r.ease.left + r.ease.uturn ? ` (좌회전·유턴 ${r.ease.left + r.ease.uturn})` : ''} · 큰길 ${Math.round((1 - r.ease.smallShare) * 100)}%${r.cams ? ` · 단속 카메라 ${camCount(r.cams)}곳` : ''}` }) : null,
         tags.length ? h('span', { class: 'rcard__tags' }, ...tags) : null,
         r.roads.length ? h('span', { class: 'rcard__via', text: r.roads.join(' · ') + ' 경유' }) : null));
     });
     out.push(list);
     const notes = [];
     const nRoads = Object.keys(store.roads).length;
-    if (ef.n || nRoads) notes.push(`도착 시간은 내 주행 기록으로 보정했습니다${ef.n ? `(전체 ×${ef.k.toFixed(2)}, ${ef.n}회${ef.band ? ', ' + BAND_KO[ef.band] : ''})` : ''}${nRoads ? ` · 도로별 학습 ${nRoads}건` : ''}.`);
+    if (walk) notes.push(`걷는 시간은 시속 ${WALK_KMH}km로 계산했습니다. 보도·횡단보도 자료가 없는 곳은 차도 옆으로 안내할 수 있으니 실제 길을 보며 걸으세요.`);
+    else if (ef.n || nRoads) notes.push(`도착 시간은 내 주행 기록으로 보정했습니다${ef.n ? `(전체 ×${ef.k.toFixed(2)}, ${ef.n}회${ef.band ? ', ' + BAND_KO[ef.band] : ''})` : ''}${nRoads ? ` · 도로별 학습 ${nRoads}건` : ''}.`);
     else notes.push('실시간 교통 정보가 없는 무료 지도라, 막히는 시간에는 실제보다 짧게 나올 수 있습니다. 안내를 받으며 달린 도로는 시간대별 실제 속도를 배워 다음부터 경로 선택과 도착 시간에 반영합니다.');
     if (t.warn) out.push(h('p', { class: 'warnline', text: t.warn }));
     out.push(h('div', { class: 'go' },
-      h('button', { class: 'btn', type: 'button', onclick: () => startNav(true) }, h('span', { svg: ic('play', 18, true) }), '모의 주행'),
+      h('button', { class: 'btn', type: 'button', onclick: () => startNav(true) }, h('span', { svg: ic('play', 18, true) }), walk ? '모의 걷기' : '모의 주행'),
       h('button', { class: 'btn btn--primary', type: 'button', id: 'btnStart', onclick: () => startNav(false) }, h('span', { svg: ic('nav', 20, true) }), '안내 시작')));
     out.push(h('p', { class: 'note', text: notes.join(' ') + ` 경로: ${ROUTE_ENGINES[t.engine] ? ROUTE_ENGINES[t.engine].label : ''}(FOSSGIS) · OpenStreetMap` }));
   }

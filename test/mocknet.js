@@ -145,11 +145,13 @@ async function install(context, opt = {}) {
     const req = JSON.parse(new URL(r.request().url()).searchParams.get('json'));
     log.push('valhalla ' + JSON.stringify(req.costing_options) + ' locs=' + req.locations.length + (req.locations[0].heading != null ? ' heading=' + req.locations[0].heading : ''));
     if (opt.valhallaDown) return r.fulfill({ status: 503, body: 'down' });
+    log.push('valhalla-costing ' + req.costing);
     const easy = req.costing_options && req.costing_options.auto && req.costing_options.auto.maneuver_penalty;
-    r.fulfill({ contentType: 'application/json', body: JSON.stringify(easy ? F.easyResponse() : F.valhallaResponse()) });
+    const body = req.costing === 'pedestrian' ? F.walkResponse() : easy ? F.easyResponse() : F.valhallaResponse();
+    r.fulfill({ contentType: 'application/json', body: JSON.stringify(body) });
   });
-  await context.route(/routing\.openstreetmap\.de\/routed-car/, r => {
-    log.push('osrm ' + r.request().url().split('?')[1]);
+  await context.route(/routing\.openstreetmap\.de\/routed-(car|foot)/, r => {
+    log.push('osrm ' + (/routed-foot/.test(r.request().url()) ? 'foot ' : '') + r.request().url().split('?')[1]);
     r.fulfill({ contentType: 'application/json', body: JSON.stringify(F.osrmResponse()) });
   });
   return log;

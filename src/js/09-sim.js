@@ -20,6 +20,7 @@ class Sim {
     let ci = 0;
     while (ci + 1 < steps.length && steps[ci + 1].at <= this.d) ci++;
     const cur = steps[ci];
+    if (this.r.mode === 'walk') return 1.3;                      // 걷기 약 4.7km/h
     let base = cur && cur.hw ? 27 : 15;                          // 고속도로 약 97km/h, 일반 약 54km/h
     for (let j = ci + 1; j < steps.length; j++) {
       const s = steps[j];
@@ -42,7 +43,7 @@ class Sim {
     const vt = this.targetSpeed();
     const a = vt > this.v ? 2.2 : -3.2;
     this.v = a > 0 ? Math.min(vt, this.v + a * dt) : Math.max(vt, this.v + a * dt);
-    this.v = Math.max(this.v, 1.2);
+    this.v = Math.max(this.v, this.r.mode === 'walk' ? 0.8 : 1.2);
     this.d = Math.min(this.total, this.d + this.v * dt);
     this.emit();
     if (this.d >= this.total) { this.ended = true; this.v = 0; this.emit(); this.stop(); }

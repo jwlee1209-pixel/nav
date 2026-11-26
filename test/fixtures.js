@@ -83,4 +83,11 @@ function easyResponse() {
   return valhallaResponse({ legs, pts, vtypes: [1, 10, 10], noAlt: true, speed: 34 });
 }
 
-module.exports = { P, LEGS, build, valhallaResponse, osrmResponse, densify, easyResponse };
+// 도보 경로: 같은 길에 율곡로 중간 계단(이름 없는 길) 하나, 시속 4.5km
+function walkResponse() {
+  const pts = { ...P, E2: [126.98550, 37.57500] };
+  const legs = [['A', 'B', '세종대로', false], ['B', 'C', '종로', false], ['C', 'D', '삼일대로', false], ['D', 'E', '율곡로', false], ['E', 'E2', '', false], ['E2', 'F', '율곡로', false], ['F', 'G', '대학로', false]];
+  return valhallaResponse({ legs, pts, vtypes: [1, 10, 15, 9, 40, 8, 10], noAlt: true, speed: 4.5 });
+}
+
+module.exports = { P, LEGS, build, valhallaResponse, osrmResponse, densify, easyResponse, walkResponse };

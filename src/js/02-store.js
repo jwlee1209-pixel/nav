@@ -24,6 +24,7 @@ const DEFAULT_SETTINGS = {
   overWarn: true,        // 제한속도 초과 경고
   fullscreen: true,      // 안내 중 전체 화면
   vworldKey: '',         // 브이월드(국토교통부) 인증키 — 아파트·건물 이름, 도로명 주소 검색
+  mode: 'car',           // 기본 이동 방법: car 차량 · walk 도보
 };
 
 const store = {
@@ -157,6 +158,7 @@ function roadFactor(name, band) {
 }
 // 경로 소요 시간을 내 기록으로 다시 계산: 배운 도로는 그 도로의 비율, 나머지는 전체 보정 계수
 function personalize(route, ts = Date.now()) {
+  if (route.mode === 'walk') return { dur: route.duration, factors: null, learnedShare: 0 };   // 차량 기록은 도보에 쓰지 않는다
   const band = timeBand(ts);
   const g = etaFactor(ts).k;
   const scale = route.stepDur > 0 ? route.duration / route.stepDur : 1;
@@ -179,7 +181,7 @@ function median(a) {
 
 function etaFactor(ts = Date.now()) {
   if (!store.settings.etaLearn) return { k: 1, n: 0, band: null };
-  const good = store.trips.filter(t => !t.sim && t.arrived && t.dist >= 2000 && t.pred > 120 && (t.rr || 0) <= 1)
+  const good = store.trips.filter(t => !t.sim && (t.mode || 'car') === 'car' && t.arrived && t.dist >= 2000 && t.pred > 120 && (t.rr || 0) <= 1)
     .map(t => ({ r: t.act / t.pred, band: timeBand(t.ts) }))
     .filter(t => t.r > 0.6 && t.r < 3);
   const band = timeBand(ts);

@@ -9,7 +9,7 @@
 <meta name="apple-mobile-web-app-title" content="&#xae38;&#xc7a1;&#xc774; &#xb0b4;&#xbe44;">
 <meta name="description" content="&#xbb34;&#xb8cc; &#xc9c0;&#xb3c4;(OpenStreetMap)&#xb85c; &#xae38;&#xc744; &#xcc3e;&#xace0; &#xd55c;&#xad6d;&#xc5b4; &#xc74c;&#xc131;&#xc73c;&#xb85c; &#xc548;&#xb0b4;&#xd558;&#xb294; &#xac1c;&#xc778;&#xc6a9; &#xcc28;&#xb7c9; &#xb0b4;&#xbe44;&#xac8c;&#xc774;&#xc158;">
 <title>&#xae38;&#xc7a1;&#xc774; &#xb0b4;&#xbe44;</title>
-<meta name="generator" content="&#xae38;&#xc7a1;&#xc774; &#xb0b4;&#xbe44; v1.9">
+<meta name="generator" content="&#xae38;&#xc7a1;&#xc774; &#xb0b4;&#xbe44; v2.0">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230B5CAD'/%3E%3Cpath d='M11 25V15.5a3.5 3.5 0 0 1 3.5-3.5H20' fill='none' stroke='%23fff' stroke-width='3.4' stroke-linecap='round'/%3E%3Cpath d='M19 7.2 25.5 12 19 16.8z' fill='%23fff'/%3E%3C/svg%3E">
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
@@ -345,6 +345,12 @@ input[type="range"] { width: 180px; accent-color: var(--accent); }
   #app[data-screen="guide"] .maplibregl-ctrl-bottom-left { left: calc(var(--sl) + var(--lcol) + 6px); bottom: calc(72px + var(--sb)); }
 }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+
+/* \b3c4 \bcf4  \c548 \b0b4 : \c18d \b3c4 \acc4 \b7 \b2e8 \c18d  \ce74 \ba54 \b77c  \d45c \c2dc  \c5c6 \c74c  */
+#app[data-mode="walk"] #speed, #app[data-mode="walk"] #cambox { display: none !important; }
+.modes { display: inline-flex; gap: 2px; padding: 3px; border-radius: 11px; background: var(--surface-2); flex: 0 0 auto; }
+.modes button { display: inline-flex; align-items: center; gap: 4px; height: 32px; padding: 0 10px; border-radius: 8px; color: var(--text-2); font-weight: 700; font-size: 14px; background: transparent; }
+.modes button[aria-pressed="true"] { background: var(--surface); color: var(--text); box-shadow: 0 1px 3px rgba(0, 0, 0, .18); }
 </style>
 </head>
 <body>
@@ -473,7 +479,7 @@ return maplibregl$1;
 </script>
 <script>(function () {
 'use strict';
-const APP_VERSION = '1.9';
+const APP_VERSION = '2.0';
 // ===== 00-util.js =====
 // \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 \uacf5\ud1b5 \ub3c4\uad6c \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
 const $ = (s, r = document) => r.querySelector(s);
@@ -778,6 +784,7 @@ const DEFAULT_SETTINGS = {
   overWarn: true,        // \uc81c\ud55c\uc18d\ub3c4 \ucd08\uacfc \uacbd\uace0
   fullscreen: true,      // \uc548\ub0b4 \uc911 \uc804\uccb4 \ud654\uba74
   vworldKey: '',         // \ube0c\uc774\uc6d4\ub4dc(\uad6d\ud1a0\uad50\ud1b5\ubd80) \uc778\uc99d\ud0a4 \u2014 \uc544\ud30c\ud2b8\u00b7\uac74\ubb3c \uc774\ub984, \ub3c4\ub85c\uba85 \uc8fc\uc18c \uac80\uc0c9
+  mode: 'car',           // \uae30\ubcf8 \uc774\ub3d9 \ubc29\ubc95: car \ucc28\ub7c9 \u00b7 walk \ub3c4\ubcf4
 };
 
 const store = {
@@ -911,6 +918,7 @@ function roadFactor(name, band) {
 }
 // \uacbd\ub85c \uc18c\uc694 \uc2dc\uac04\uc744 \ub0b4 \uae30\ub85d\uc73c\ub85c \ub2e4\uc2dc \uacc4\uc0b0: \ubc30\uc6b4 \ub3c4\ub85c\ub294 \uadf8 \ub3c4\ub85c\uc758 \ube44\uc728, \ub098\uba38\uc9c0\ub294 \uc804\uccb4 \ubcf4\uc815 \uacc4\uc218
 function personalize(route, ts = Date.now()) {
+  if (route.mode === 'walk') return { dur: route.duration, factors: null, learnedShare: 0 };   // \ucc28\ub7c9 \uae30\ub85d\uc740 \ub3c4\ubcf4\uc5d0 \uc4f0\uc9c0 \uc54a\ub294\ub2e4
   const band = timeBand(ts);
   const g = etaFactor(ts).k;
   const scale = route.stepDur > 0 ? route.duration / route.stepDur : 1;
@@ -933,7 +941,7 @@ function median(a) {
 
 function etaFactor(ts = Date.now()) {
   if (!store.settings.etaLearn) return { k: 1, n: 0, band: null };
-  const good = store.trips.filter(t => !t.sim && t.arrived && t.dist >= 2000 && t.pred > 120 && (t.rr || 0) <= 1)
+  const good = store.trips.filter(t => !t.sim && (t.mode || 'car') === 'car' && t.arrived && t.dist >= 2000 && t.pred > 120 && (t.rr || 0) <= 1)
     .map(t => ({ r: t.act / t.pred, band: timeBand(t.ts) }))
     .filter(t => t.r > 0.6 && t.r < 3);
   const band = timeBand(ts);
@@ -1405,20 +1413,28 @@ function vwErrText(e) {
 // FOSSGIS \uac00 \uc6b4\uc601\ud558\ub294 \uacf5\uac1c \uc11c\ubc84(\ucd08\ub2f9 1\ud68c \uc774\ud558, \uac00\ubcbc\uc6b4 \uac1c\uc778 \uc0ac\uc6a9)
 const ROUTE_ENGINES = {
   valhalla: { label: 'Valhalla', base: 'https://valhalla1.openstreetmap.de/route' },
-  osrm: { label: 'OSRM', base: 'https://routing.openstreetmap.de/routed-car/route/v1/driving/' },
+  osrm: { label: 'OSRM', base: 'https://routing.openstreetmap.de/routed-car/route/v1/driving/', foot: 'https://routing.openstreetmap.de/routed-foot/route/v1/driving/' },
 };
 const PREF_KO = { fast: '\ucd94\ucc9c', short: '\ucd5c\ub2e8\uac70\ub9ac', free: '\ubb34\ub8cc\ub3c4\ub85c', nohwy: '\uace0\uc18d\ub3c4\ub85c \ud68c\ud53c' };
+const WALK_PREF_KO = { fast: '\ucd94\ucc9c', short: '\ucd5c\ub2e8\uac70\ub9ac', nostairs: '\uacc4\ub2e8 \ud53c\ud558\uae30' };
+const MODE_KO = { car: '\ucc28\ub7c9', walk: '\ub3c4\ubcf4' };
+const prefsOf = mode => (mode === 'walk' ? WALK_PREF_KO : PREF_KO);
+const prefLabel = (mode, pref) => prefsOf(mode)[pref] || '\ucd94\ucc9c';
+const WALK_KMH = 4.5;            // \uac77\ub294 \uc18d\ub3c4(\uc2e0\ud638 \ub300\uae30 \ud3ec\ud568 \ub3c4\uc2ec \ud3c9\uade0\uc5d0 \uac00\uae5d\uac8c)
 const routePace = pacer(1100);
 
-const VOICE_KINDS = new Set(['turn', 'uturn', 'ramp', 'exit', 'fork', 'merge', 'roundabout', 'ferry', 'waypoint', 'arrive']);
+const VOICE_KINDS = new Set(['turn', 'uturn', 'ramp', 'exit', 'fork', 'merge', 'roundabout', 'ferry', 'waypoint', 'arrive', 'steps', 'elevator', 'escalator', 'building']);
 
-async function findRoutes(points, { pref = 'fast', heading = null, engine = 'auto', signal, noFallback = false, costing = null } = {}) {
+// mode: car \ucc28\ub7c9 \u00b7 walk \ub3c4\ubcf4
+async function findRoutes(points, { pref = 'fast', heading = null, engine = 'auto', signal, noFallback = false, costing = null, mode = 'car' } = {}) {
   let order = engine === 'osrm' ? ['osrm', 'valhalla'] : ['valhalla', 'osrm'];
   if (noFallback) order = order.slice(0, 1);
+  if (mode === 'walk') heading = null;      // \uac77\ub294 \uc0ac\ub78c\uc740 \ubc14\ub85c \ub3cc\uc544\uc124 \uc218 \uc788\ub2e4
   const errs = [];
   for (const eng of order) {
     try {
-      const r = eng === 'valhalla' ? await viaValhalla(points, pref, heading, signal, costing) : await viaOsrm(points, pref, heading, signal);
+      const r = eng === 'valhalla' ? await viaValhalla(points, pref, heading, signal, costing, mode) : await viaOsrm(points, pref, heading, signal, mode);
+      r.routes.forEach(x => { x.mode = mode; });
       if (r.routes.length) {
         if (errs.length) r.warn = (r.warn ? r.warn + ' ' : '') + `${ROUTE_ENGINES[order[0]].label} \uc11c\ubc84\uac00 \uc751\ub2f5\ud558\uc9c0 \uc54a\uc544 ${josa(ROUTE_ENGINES[eng].label, '\uc73c\ub85c/\ub85c')} \ucc3e\uc558\uc2b5\ub2c8\ub2e4.`;
         return r;
@@ -1436,7 +1452,8 @@ async function findRoutes(points, { pref = 'fast', heading = null, engine = 'aut
 }
 
 // \u2500\u2500 Valhalla \u2500\u2500
-async function viaValhalla(points, pref, heading, signal, costing = null) {
+async function viaValhalla(points, pref, heading, signal, costing = null, mode = 'car') {
+  if (mode === 'walk') return viaValhallaWalk(points, pref, signal, costing);
   const auto = {};
   if (pref === 'short') auto.shortest = true;
   if (pref === 'free') auto.use_tolls = 0;
@@ -1459,6 +1476,22 @@ async function viaValhalla(points, pref, heading, signal, costing = null) {
   return { engine: 'valhalla', routes };
 }
 
+// \ub3c4\ubcf4: pedestrian \ube44\uc6a9 \ubaa8\ub378. \uacc4\ub2e8 \ud53c\ud558\uae30 = \uacc4\ub2e8\ub9c8\ub2e4 10\ubd84\ub9cc\ud07c\uc758 \ube44\uc6a9(\ub2e4\ub978 \uae38\uc774 \uc5c6\uc73c\uba74 \uacc4\ub2e8\ub3c4 \uc4f4\ub2e4)
+async function viaValhallaWalk(points, pref, signal, costing = null) {
+  const ped = { walking_speed: WALK_KMH };
+  if (pref === 'short') ped.shortest = true;
+  if (pref === 'nostairs') ped.step_penalty = 600;
+  if (costing) Object.assign(ped, costing);
+  const locations = points.map(p => ({ lat: +(+p.lat).toFixed(6), lon: +(+p.lon).toFixed(6), type: 'break' }));
+  const req = { locations, costing: 'pedestrian', costing_options: { pedestrian: ped }, units: 'kilometers', language: 'en-US', directions_type: 'maneuvers', alternates: points.length === 2 ? 2 : 0 };
+  const url = ROUTE_ENGINES.valhalla.base + '?json=' + encodeURIComponent(JSON.stringify(req));
+  const data = await routePace(() => fetchJSON(url, { timeout: 15000, signal }));
+  const trips = [data.trip, ...(data.alternates || []).map(a => a && a.trip)].filter(Boolean);
+  const routes = trips.map((t, k) => normValhalla(t, k)).filter(Boolean);
+  if (pref === 'short') routes.sort((a, b) => a.distance - b.distance);
+  return { engine: 'valhalla', routes };
+}
+
 const VAL_TYPE = {
   1: ['depart'], 2: ['depart', 'right'], 3: ['depart', 'left'],
   4: ['arrive'], 5: ['arrive', 'right'], 6: ['arrive', 'left'],
@@ -1471,6 +1504,7 @@ const VAL_TYPE = {
   22: ['fork', 'straight'], 23: ['fork', 'right'], 24: ['fork', 'left'],
   25: ['merge', 'straight'], 26: ['roundabout'], 27: ['rbexit'],
   28: ['ferry'], 29: ['ferryexit'], 37: ['merge', 'right'], 38: ['merge', 'left'],
+  39: ['elevator'], 40: ['steps'], 41: ['escalator'], 42: ['building', 'enter'], 43: ['building', 'exit'],   // \ub3c4\ubcf4
 };
 
 const signText = arr => (arr || []).map(x => x && x.text).filter(Boolean);
@@ -1515,19 +1549,21 @@ function normValhalla(trip, k) {
 }
 
 // \u2500\u2500 OSRM \u2500\u2500
-async function viaOsrm(points, pref, heading, signal) {
+async function viaOsrm(points, pref, heading, signal, mode = 'car') {
   const coordStr = points.map(p => `${(+p.lon).toFixed(6)},${(+p.lat).toFixed(6)}`).join(';');
   const q = ['overview=false', 'steps=true', 'geometries=geojson', 'alternatives=' + (points.length === 2 ? '2' : 'false')];
   if (heading != null) q.push('bearings=' + [`${Math.round(heading) % 360},50`].concat(points.slice(1).map(() => '')).join(';'));
-  const exclude = pref === 'free' ? 'toll' : pref === 'nohwy' ? 'motorway' : '';
-  const url = ex => ROUTE_ENGINES.osrm.base + coordStr + '?' + q.concat(ex ? ['exclude=' + ex] : []).join('&');
-  let data, warn = '';
+  const walk = mode === 'walk';
+  const exclude = walk ? '' : pref === 'free' ? 'toll' : pref === 'nohwy' ? 'motorway' : '';
+  const base = walk ? ROUTE_ENGINES.osrm.foot : ROUTE_ENGINES.osrm.base;
+  const url = ex => base + coordStr + '?' + q.concat(ex ? ['exclude=' + ex] : []).join('&');
+  let data, warn = walk && pref === 'nostairs' ? 'OSRM \uc11c\ubc84\ub294 \u2018\uacc4\ub2e8 \ud53c\ud558\uae30\u2019\ub97c \uc9c0\uc6d0\ud558\uc9c0 \uc54a\uc544 \uae30\ubcf8 \ub3c4\ubcf4 \uacbd\ub85c\ub97c \ubcf4\uc5ec \uc90d\ub2c8\ub2e4.' : '';
   try {
     data = await routePace(() => fetchJSON(url(exclude), { timeout: 15000, signal }));
   } catch (e) {
     if (!exclude || (signal && signal.aborted) || e.status !== 400) throw e;
     data = await routePace(() => fetchJSON(url(''), { timeout: 15000, signal }));
-    warn = `OSRM \uc11c\ubc84\uac00 '${PREF_KO[pref]}' \uc635\uc158\uc744 \uc9c0\uc6d0\ud558\uc9c0 \uc54a\uc544 \uae30\ubcf8 \uacbd\ub85c\ub97c \ubcf4\uc5ec \uc90d\ub2c8\ub2e4.`;
+    warn = `OSRM \uc11c\ubc84\uac00 '${prefLabel(mode, pref)}' \uc635\uc158\uc744 \uc9c0\uc6d0\ud558\uc9c0 \uc54a\uc544 \uae30\ubcf8 \uacbd\ub85c\ub97c \ubcf4\uc5ec \uc90d\ub2c8\ub2e4.`;
   }
   if (data.code !== 'Ok') { const e = new Error(data.code || 'osrm'); e.data = data; e.status = 400; throw e; }
   const routes = (data.routes || []).map((r, k) => normOsrm(r, k)).filter(Boolean);
@@ -1856,6 +1892,14 @@ function sayStep(s, dist, { soon = false, target = true } = {}) {
       return `${noun}\ud68c\uc804\uad50\ucc28\ub85c\uc5d0\uc11c ${s.exit ? s.exit + '\ubc88\uc9f8 \ucd9c\uad6c' : '\ucd9c\uad6c'}${target && tNoun ? ', ' + tNoun : ''}\uc785\ub2c8\ub2e4`;
     case 'ferry':
       return `${lead}\ud398\ub9ac \ud0d1\uc2b9\uc785\ub2c8\ub2e4`;
+    case 'steps':                                   // \ub3c4\ubcf4: \uacc4\ub2e8\u00b7\uc5d8\ub9ac\ubca0\uc774\ud130\u00b7\uc5d0\uc2a4\uceec\ub808\uc774\ud130\u00b7\uac74\ubb3c \ucd9c\uc785
+      return `${noun}\uacc4\ub2e8\uc785\ub2c8\ub2e4`;
+    case 'elevator':
+      return `${noun}\uc5d8\ub9ac\ubca0\uc774\ud130\uc785\ub2c8\ub2e4`;
+    case 'escalator':
+      return `${noun}\uc5d0\uc2a4\uceec\ub808\uc774\ud130\uc785\ub2c8\ub2e4`;
+    case 'building':
+      return `${noun}${s.mod === 'exit' ? '\uac74\ubb3c \ubc16\uc73c\ub85c \ub098\uac11\ub2c8\ub2e4' : '\uac74\ubb3c \uc548\uc73c\ub85c \ub4e4\uc5b4\uac11\ub2c8\ub2e4'}`;
     case 'waypoint':
       return soon ? '\uc7a0\uc2dc \ud6c4 \uacbd\uc720\uc9c0\uc785\ub2c8\ub2e4' : `${dw} \uc55e\uc5d0 \uacbd\uc720\uc9c0\uac00 \uc788\uc2b5\ub2c8\ub2e4`;
     case 'arrive':
@@ -1877,6 +1921,10 @@ function showStep(s) {
     case 'merge': return { title: '\ud569\ub958', sub: s.name || sub };
     case 'roundabout': return { title: '\ud68c\uc804\uad50\ucc28\ub85c', sub: (s.exit ? s.exit + '\ubc88\uc9f8 \ucd9c\uad6c' : '') + (sub ? (s.exit ? ' \u00b7 ' : '') + sub : '') };
     case 'ferry': return { title: '\ud398\ub9ac \ud0d1\uc2b9', sub };
+    case 'steps': return { title: '\uacc4\ub2e8', sub };
+    case 'elevator': return { title: '\uc5d8\ub9ac\ubca0\uc774\ud130', sub };
+    case 'escalator': return { title: '\uc5d0\uc2a4\uceec\ub808\uc774\ud130', sub };
+    case 'building': return { title: s.mod === 'exit' ? '\uac74\ubb3c \ubc16\uc73c\ub85c' : '\uac74\ubb3c \uc548\uc73c\ub85c', sub };
     case 'waypoint': return { title: '\uacbd\uc720\uc9c0', sub: '' };
     case 'arrive': return { title: '\ubaa9\uc801\uc9c0', sub: s.side ? SIDE_KO[s.side] + '\uc5d0 \uc788\uc74c' : '' };
     default: return { title: '\uc9c1\uc9c4', sub };
@@ -1906,6 +1954,9 @@ function iconFor(s, size = 72) {
   const k = s.kind;
   if (k === 'arrive') {
     return svgWrap(`<path d="M30 92V12"/><path d="M34 14h44l-10 16 10 16H34z" fill="currentColor" stroke-width="6"/>`, size);
+  }
+  if (k === 'steps' || k === 'escalator') {
+    return svgWrap(`<path d="M14 84h22V64h22V44h22V24" stroke-width="10"/>`, size);
   }
   if (k === 'waypoint') {
     return svgWrap(`<path d="M50 90C50 90 24 60 24 40a26 26 0 0 1 52 0C76 60 50 90 50 90z" stroke-width="8"/><circle cx="50" cy="40" r="9" fill="currentColor" stroke="none"/>`, size);
@@ -1948,7 +1999,8 @@ function iconFor(s, size = 72) {
 class Guide {
   constructor(route, o) {
     this.r = route;
-    this.o = o;                       // {speak(text,{urgent}), event(name,data), settings(), corr, destName, rerouted}
+    this.o = o;                       // {speak(text,{urgent}), event(name,data), settings(), corr, destName, rerouted, mode}
+    this.W = o.mode === 'walk' || route.mode === 'walk';   // \ub3c4\ubcf4: \ub290\ub9b0 \uc18d\ub3c4\uc5d0 \ub9de\ucd98 \uac70\ub9ac\u00b7\ud310\uc815
     this.total = route.cum[route.cum.length - 1];
     this.d = 0;
     this.matched = false;
@@ -1971,7 +2023,9 @@ class Guide {
     if (this.o.rerouted) { this.say('\uc0c8 \uacbd\ub85c\ub85c \uc548\ub0b4\ud569\ub2c8\ub2e4'); return; }
     const corr = this.o.corr || 1;
     const dn = this.o.destName ? `${this.o.destName}\uae4c\uc9c0 ` : '';
-    this.say(`${dn}\uacbd\ub85c \uc548\ub0b4\ub97c \uc2dc\uc791\ud569\ub2c8\ub2e4. ${distWords(this.total)}, \uc57d ${fmtDur(this.o.totalDur || this.r.duration * corr)} \uac78\ub9bd\ub2c8\ub2e4`);
+    const dur = fmtDur(this.o.totalDur || this.r.duration * corr);
+    if (this.W) this.say(`${dn}\ub3c4\ubcf4 \uc548\ub0b4\ub97c \uc2dc\uc791\ud569\ub2c8\ub2e4. ${distWords(this.total)}, \uac78\uc5b4\uc11c \uc57d ${dur} \uac78\ub9bd\ub2c8\ub2e4`);
+    else this.say(`${dn}\uacbd\ub85c \uc548\ub0b4\ub97c \uc2dc\uc791\ud569\ub2c8\ub2e4. ${distWords(this.total)}, \uc57d ${dur} \uac78\ub9bd\ub2c8\ub2e4`);
   }
 
   match(p, hd, v) {
@@ -2010,17 +2064,18 @@ class Guide {
     }
     v = isFinite(v) && v >= 0 ? v : 0;
     this.speed = this.lastFix ? this.speed * 0.35 + v * 0.65 : v;
-    let hd = (fix.heading != null && isFinite(fix.heading) && v > 1.5) ? fix.heading : null;
+    const W = this.W;
+    let hd = (fix.heading != null && isFinite(fix.heading) && v > (W ? 0.6 : 1.5)) ? fix.heading : null;
     if (this.lastFix) {
       const moved = hav([this.lastFix.lon, this.lastFix.lat], p);
       this.traveled += Math.min(moved, 500);
-      if (hd == null && moved > 4) hd = brg([this.lastFix.lon, this.lastFix.lat], p);
+      if (hd == null && moved > (W ? 3 : 4)) hd = brg([this.lastFix.lon, this.lastFix.lat], p);
     }
     this.lastFix = { ...fix, t: now };
 
     const acc = fix.acc || 10;
     const m = this.match(p, hd, v);
-    const thr = clamp(acc + 20, 30, 70);
+    const thr = W ? clamp(acc + 15, 25, 50) : clamp(acc + 20, 30, 70);
     const on = !!m && m.dist <= thr;
     let shown = p, routeBrg = null;
     if (on) {
@@ -2030,10 +2085,11 @@ class Guide {
       this.offN = 0; this.offT = 0;
       const sp = pointAt(this.r.coords, this.r.cum, this.d);
       shown = sp.p; routeBrg = sp.brg;
-    } else if (acc <= 60 && !this.arrived) {
+    } else if (acc <= (W ? 40 : 60) && !this.arrived) {
       this.offN++;
       if (!this.offT) this.offT = now;
-      if (!this.rerouting && this.offN >= 3 && now - this.offT >= 2500 && now - this.lastReroute > 8000) {
+      // \uac78\uc744 \ub54c\ub294 GPS \uac00 \uc870\uae08\ub9cc \ud754\ub4e4\ub824\ub3c4 \uae38\uc744 \ubc97\uc5b4\ub09c \uac83\ucc98\ub7fc \ubcf4\uc774\ubbc0\ub85c \ub354 \uc624\ub798 \uc9c0\ucf1c\ubcf8\ub2e4
+      if (!this.rerouting && this.offN >= (W ? 4 : 3) && now - this.offT >= (W ? 6000 : 2500) && now - this.lastReroute > (W ? 12000 : 8000)) {
         this.rerouting = true; this.lastReroute = now;
         this.say('\uacbd\ub85c\ub97c \ubc97\uc5b4\ub098 \ub2e4\uc2dc \ud0d0\uc0c9\ud569\ub2c8\ub2e4', { urgent: true });
         this.ev('offroute', { lon: fix.lon, lat: fix.lat, heading: hd, speed: v });
@@ -2056,7 +2112,7 @@ class Guide {
     let ci = Math.max(0, this.ptr - 1);
     while (ci + 1 < steps.length && steps[ci + 1].at <= this.d) ci++;
     const cur = steps[ci];
-    const hw = !!(cur && cur.hw) || this.speed * 3.6 >= 75;
+    const hw = !W && (!!(cur && cur.hw) || this.speed * 3.6 >= 75);
 
     const rem = Math.max(0, this.total - this.d);
     const frac = cur && cur.span > 0 ? clamp((this.d - cur.at) / cur.span, 0, 1) : 1;
@@ -2085,8 +2141,9 @@ class Guide {
     for (let j = Math.max(0, this.ptr - 1); j < steps.length; j++) {
       const s = steps[j];
       if (s.kind !== 'waypoint' || this.visited.has(j)) continue;
-      if (s.at - this.d > 30) break;
-      if (Math.abs(s.at - this.d) <= 30 || this.d > s.at) {
+      const wr = W ? 15 : 30;
+      if (s.at - this.d > wr) break;
+      if (Math.abs(s.at - this.d) <= wr || this.d > s.at) {
         this.visited.add(j);
         this.done.set(j, new Set(['soon', 2000, 1000, 500, 300]));
         this.say('\uacbd\uc720\uc9c0\uc5d0 \ub3c4\ucc29\ud588\uc2b5\ub2c8\ub2e4. \ub2e4\uc74c \ubaa9\uc801\uc9c0\ub85c \uc548\ub0b4\ud569\ub2c8\ub2e4', { urgent: true });
@@ -2095,7 +2152,9 @@ class Guide {
     }
 
     // \ub3c4\ucc29
-    if (!this.arrived && this.matched && (rem < 25 || (rem < 60 && this.speed < 1.5) || (on && hav(p, this.r.coords[this.r.coords.length - 1]) < 25))) {
+    const endD = on ? hav(p, this.r.coords[this.r.coords.length - 1]) : Infinity;
+    const reached = W ? (rem < 12 || endD < 15) : (rem < 25 || (rem < 60 && this.speed < 1.5) || endD < 25);
+    if (!this.arrived && this.matched && reached) {
       this.arrived = true;
       const last = steps[steps.length - 1];
       this.say(`\ubaa9\uc801\uc9c0\uc5d0 \ub3c4\ucc29\ud588\uc2b5\ub2c8\ub2e4.${last && last.side ? ' \ubaa9\uc801\uc9c0\ub294 ' + SIDE_KO[last.side] + '\uc5d0 \uc788\uc2b5\ub2c8\ub2e4.' : ''} \uc548\ub0b4\ub97c \uc885\ub8cc\ud569\ub2c8\ub2e4`, { urgent: true });
@@ -2115,22 +2174,23 @@ class Guide {
   announce(i, s, dist, ai, after, gap, hw, cur) {
     const set = this.done.get(i) || new Set();
     this.done.set(i, set);
-    const v = Math.max(this.speed, 3);
+    const W = this.W;
+    const v = Math.max(this.speed, W ? 1.2 : 3);
     const kmh = v * 3.6;
     const verb = (this.o.settings && this.o.settings().verbosity) || 'normal';
-    const soonD = clamp(v * 7, 45, 180);
+    const soonD = W ? 22 : clamp(v * 7, 45, 180);
 
     // \uc7a0\uc2dc \ud6c4
     if (dist <= soonD + v) {
       if (set.has('soon')) return;
       ['soon', 2000, 1000, 500, 300].forEach(k => set.add(k));
       let text = sayStep(s, dist, { soon: true, target: false });
-      if (after && gap != null && gap < Math.max(100, v * 9) && s.kind !== 'arrive') {
+      if (after && gap != null && gap < (W ? 30 : Math.max(100, v * 9)) && s.kind !== 'arrive') {
         const t = after.kind === 'turn' || after.kind === 'uturn' ? turnCore(after).core : showStep(after).title;
         text += `. \uc774\uc5b4\uc11c ${t}\uc785\ub2c8\ub2e4`;
         const aset = this.done.get(ai) || new Set();
         [2000, 1000, 500, 300].forEach(k => aset.add(k));
-        if (gap < 60) aset.add('soon');
+        if (gap < (W ? 30 : 60)) aset.add('soon');
         this.done.set(ai, aset);
       }
       this.say(text, { urgent: true });
@@ -2140,14 +2200,15 @@ class Guide {
     let stages = hw ? [2000, 1000, 500] : (kmh >= 45 ? [1000, 300] : [300]);
     if (verb === 'brief') stages = hw ? [1000] : [300];
     if (verb === 'detail') stages = hw ? [2000, 1000, 500] : [1000, 500, 300];
+    if (W) stages = verb === 'brief' ? [] : verb === 'detail' ? [200, 100, 50] : [100];   // \ub3c4\ubcf4: 100m \uc55e + \uc7a0\uc2dc \ud6c4
     const lead = v * 1.5;
     const due = stages.filter(st => dist <= st + lead && !set.has(st));
-    if (due.length && dist > soonD + 25) {
+    if (due.length && dist > soonD + (W ? 10 : 25)) {
       const lo = Math.min(...due);
       stages.forEach(st => { if (st >= lo) set.add(st); });
       // \uace7 \ub354 \uac00\uae4c\uc6b4 \ub2e8\uacc4 \uc548\ub0b4\uac00 \ub098\uc62c \uac70\ub9ac\uba74 \uc774\ubc88 \uc548\ub0b4\ub294 \uac74\ub108\ub6f4\ub2e4(\uac19\uc740 \ub9d0 \ubc18\ubcf5 \ubc29\uc9c0)
       const lower = stages.filter(st => st < lo).sort((a, b) => b - a)[0];
-      if (lower && dist < lower + Math.max(220, lower * 0.8)) return;
+      if (lower && dist < lower + Math.max(W ? 30 : 220, lower * 0.8)) return;
       const text = sayStep(s, dist, { target: true });
       if (set.lastText === text) return;
       set.lastText = text;
@@ -2156,8 +2217,9 @@ class Guide {
     }
 
     // \uae34 \uc9c1\uc9c4 \uad6c\uac04 \uc548\ub0b4(\ud68c\uc804 \uc9c1\ud6c4 \ud55c \ubc88)
-    if (verb !== 'brief' && !set.has('straight') && cur && this.d - cur.at > 30 && this.d - cur.at < 400) {
-      const far = hw ? 5000 : 2500;
+    const sinceTurn = this.d - (cur ? cur.at : 0);
+    if (verb !== 'brief' && !set.has('straight') && cur && sinceTurn > (W ? 10 : 30) && sinceTurn < (W ? 80 : 400)) {
+      const far = W ? 400 : hw ? 5000 : 2500;
       if (dist > far) {
         set.add('straight');
         const road = cur.name || '';
@@ -2371,6 +2433,7 @@ class Sim {
     let ci = 0;
     while (ci + 1 < steps.length && steps[ci + 1].at <= this.d) ci++;
     const cur = steps[ci];
+    if (this.r.mode === 'walk') return 1.3;                      // \uac77\uae30 \uc57d 4.7km/h
     let base = cur && cur.hw ? 27 : 15;                          // \uace0\uc18d\ub3c4\ub85c \uc57d 97km/h, \uc77c\ubc18 \uc57d 54km/h
     for (let j = ci + 1; j < steps.length; j++) {
       const s = steps[j];
@@ -2393,7 +2456,7 @@ class Sim {
     const vt = this.targetSpeed();
     const a = vt > this.v ? 2.2 : -3.2;
     this.v = a > 0 ? Math.min(vt, this.v + a * dt) : Math.max(vt, this.v + a * dt);
-    this.v = Math.max(this.v, 1.2);
+    this.v = Math.max(this.v, this.r.mode === 'walk' ? 0.8 : 1.2);
     this.d = Math.min(this.total, this.d + this.v * dt);
     this.emit();
     if (this.d >= this.total) { this.ended = true; this.v = 0; this.emit(); this.stop(); }
@@ -2763,7 +2826,7 @@ const MV = {
       const curB = map.getBearing();
       const dB = angDiff(curB, this.headingUp ? this.vehHdg : 0);
       const bearing = Math.abs(dB) < 0.05 ? curB + dB : curB + dB * 0.18;
-      const pitch = this.tilt ? 52 : 0;
+      const pitch = this.tilt ? (this.pitch3d || 52) : 0;
       const c = map.getCenter();
       const moved = Math.abs(c.lng - this.vehPos[0]) > 2e-7 || Math.abs(c.lat - this.vehPos[1]) > 2e-7;
       if (moved || Math.abs(dB) >= 0.05 || z !== this.zoomNow || Math.abs(map.getPitch() - pitch) > 0.1 || this.padDirty) {
@@ -2815,6 +2878,7 @@ const IC = {
   spark: '<path d="M12 3.5 13.8 10.2 20.5 12 13.8 13.8 12 20.5 10.2 13.8 3.5 12 10.2 10.2z"/>',
   car: '<path d="M5 16.5V12l2-5h10l2 5v4.5"/><path d="M3.5 16.5h17M6.5 19.5v-3M17.5 19.5v-3"/><circle cx="7.5" cy="13.5" r="1"/><circle cx="16.5" cy="13.5" r="1"/>',
   nav: '<path d="M12 3 19 20l-7-4-7 4z"/>',
+  walk: '<circle cx="13.5" cy="4.5" r="2"/><path d="M12.6 8.6 10.4 14l3.1 2.6-1 4.4M10.4 14 8 20.6M12 9.6l-3.2 3M12.6 8.6l2.6 3 3 .9"/>',
 };
 const ic = (n, size = 22, fill = false) => `<svg viewBox="0 0 24 24" width="${size}" height="${size}" fill="${fill ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${IC[n]}</svg>`;
 
@@ -3141,7 +3205,8 @@ function refreshPts() {
 // \u2500\u2500 \uacbd\ub85c \ubbf8\ub9ac\ubcf4\uae30 \u2500\u2500
 function startTrip(dest) {
   if (S.nav) return;
-  S.trip = { origin: null, stops: [], dest: cleanPlace(dest) && { ...cleanPlace(dest), label: dest.label }, pref: store.settings.pref, routes: [], sel: 0, loading: false, err: '', warn: '' };
+  const mode = store.settings.mode === 'walk' ? 'walk' : 'car';
+  S.trip = { origin: null, stops: [], dest: cleanPlace(dest) && { ...cleanPlace(dest), label: dest.label }, mode, pref: mode === 'walk' ? 'fast' : store.settings.pref, routes: [], sel: 0, loading: false, err: '', warn: '' };
   S.pick = null; S.results = null;
   go('preview');
   computeRoutes();
@@ -3169,10 +3234,15 @@ function renderPlan() {
     h('span', { class: 'plan__dot ' + cls }, dot),
     h('button', { class: 'plan__field', type: 'button', onclick: onClick }, h('small', { text: label }), value),
     extra || null);
+  // \uc774\ub3d9 \ubc29\ubc95(\ucc28\ub7c9\u00b7\ub3c4\ubcf4)\uc740 \uc81c\ubaa9 \uc904\uc5d0 \uc791\uac8c \u2014 \ud654\uba74\uc744 \ud55c \uc904 \ub354 \ucc28\uc9c0\ud558\uc9c0 \uc54a\ub3c4\ub85d
+  const modes = h('div', { class: 'modes', role: 'group', 'aria-label': '\uc774\ub3d9 \ubc29\ubc95' },
+    ...[['car', 'car', '\ucc28\ub7c9'], ['walk', 'walk', '\ub3c4\ubcf4']].map(([k, icon, label]) => h('button', { type: 'button', id: 'mode-' + k, 'aria-pressed': (t.mode || 'car') === k ? 'true' : 'false',
+      onclick: () => { if ((t.mode || 'car') === k) return; t.mode = k; t.pref = k === 'walk' ? 'fast' : store.settings.pref; renderPlan(); computeRoutes(); } }, h('span', { svg: ic(icon, 16) }), label)));
   const rows = [
     h('div', { class: 'plan__row' },
       h('button', { class: 'icon-btn', type: 'button', 'aria-label': '\ub4a4\ub85c', svg: ic('back', 22), onclick: cancelTrip }),
-      h('div', { style: 'flex:1;font-weight:800;font-size:16px', text: '\uacbd\ub85c \uc124\uc815' }),
+      h('div', { style: 'flex:1;min-width:0;font-weight:800;font-size:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis', text: '\uacbd\ub85c \uc124\uc815' }),
+      modes,
       h('button', { class: 'icon-btn', type: 'button', 'aria-label': '\ucd9c\ubc1c\uc9c0\uc640 \ub3c4\ucc29\uc9c0 \ubc14\uafb8\uae30', svg: ic('swap', 22), onclick: swapTrip })),
     row('', h('i'), '\ucd9c\ubc1c', t.origin ? t.origin.name : '\ud604\uc7ac \uc704\uce58', () => beginPick('origin'),
       t.origin ? h('button', { class: 'icon-btn', type: 'button', 'aria-label': '\ucd9c\ubc1c\uc9c0\ub97c \ud604\uc7ac \uc704\uce58\ub85c', svg: ic('locate', 20), onclick: () => { t.origin = null; renderPlan(); computeRoutes(); } }) : null),
@@ -3183,7 +3253,7 @@ function renderPlan() {
   const tools = h('div', { class: 'plan__tools' },
     t.stops.length < 3 ? h('button', { class: 'btn btn--sm btn--ghost', type: 'button', onclick: () => beginPick('stop') }, h('span', { svg: ic('plus', 16) }), '\uacbd\uc720\uc9c0 \ucd94\uac00') : null);
   const prefs = h('div', { class: 'prefs', role: 'group', 'aria-label': '\uacbd\ub85c \uc635\uc158' },
-    ...Object.entries(PREF_KO).map(([k, label]) => h('button', { type: 'button', 'aria-pressed': t.pref === k ? 'true' : 'false', text: label, onclick: () => { t.pref = k; renderPlan(); computeRoutes(); } })));
+    ...Object.entries(prefsOf(t.mode)).map(([k, label]) => h('button', { type: 'button', 'aria-pressed': t.pref === k ? 'true' : 'false', text: label, onclick: () => { t.pref = k; renderPlan(); computeRoutes(); } })));
   box.replaceChildren(...rows, tools, prefs);
   requestAnimationFrame(measure);
 }
@@ -3223,13 +3293,14 @@ async function computeRoutes() {
   MV.clearRoutes();
   renderSheet();
   MV.fit(pts.map(p => [p.lon, p.lat]));
-  const heading = !t.origin && S.me && Date.now() - S.me.t < 10000 && S.me.speed > 2 && S.me.heading != null ? S.me.heading : null;
+  const walk = t.mode === 'walk';
+  const heading = !walk && !t.origin && S.me && Date.now() - S.me.t < 10000 && S.me.speed > 2 && S.me.heading != null ? S.me.heading : null;
   try {
-    const r = await findRoutes(pts, { pref: t.pref, heading, engine: store.settings.engine, signal: ctl.signal });
+    const r = await findRoutes(pts, { pref: t.pref, mode: t.mode || 'car', heading, engine: store.settings.engine, signal: ctl.signal });
     if (ctl.signal.aborted || S.trip !== t) return;
     let all = r.routes;
-    // '\ucd94\ucc9c'\uc77c \ub54c\ub294 \uc6b4\uc804\ud558\uae30 \uc26c\uc6b4 \uae38\ub3c4 \ub530\ub85c \ucc3e\uc544 \ud568\uaed8 \ube44\uad50(Valhalla \ub9cc \uc9c0\uc6d0)
-    if (t.pref === 'fast' && store.settings.easyPrefer && r.engine === 'valhalla') {
+    // '\ucd94\ucc9c'\uc77c \ub54c\ub294 \uc6b4\uc804\ud558\uae30 \uc26c\uc6b4 \uae38\ub3c4 \ub530\ub85c \ucc3e\uc544 \ud568\uaed8 \ube44\uad50(\ucc28\ub7c9, Valhalla \ub9cc)
+    if (!walk && t.pref === 'fast' && store.settings.easyPrefer && r.engine === 'valhalla') {
       // \ube60\ub978 \uae38\uc5d0 \uc720\ub8cc\ub3c4\ub85c\u00b7\ud398\ub9ac\uac00 \uc5c6\uc73c\uba74 \uc26c\uc6b4 \uae38\ub3c4 \uadf8\uac83 \uc5c6\uc774 \ucc3e\ub294\ub2e4(\ud1b5\ud589\ub8cc \ub0b4\uba70 \ub3cc\uc544\uac00\ub294 \uae38\uc774 '\uc26c\uc6b4 \uae38'\ub85c \ub098\uc624\uc9c0 \uc54a\uac8c)
       const f0 = all.reduce((a, b) => (personalize(b).dur < personalize(a).dur ? b : a));
       const costing = {};
@@ -3242,29 +3313,38 @@ async function computeRoutes() {
       } catch (err) { if (ctl.signal.aborted) return; }
       if (S.trip !== t) return;
     }
-    const ranked = rankRoutes(all, { pref: t.pref, easyPrefer: store.settings.easyPrefer, easyMin: store.settings.easyMin });
+    const ranked = rankRoutes(all, { pref: t.pref, easyPrefer: !walk && store.settings.easyPrefer, easyMin: store.settings.easyMin });
     t.routes = ranked.routes; t.info = ranked.info; t.sel = 0; t.warn = r.warn || ''; t.engine = r.engine;
-    attachCams(t.routes);
+    if (walk) t.routes.forEach(x => { x.tags = (x.tags || []).filter(k => k !== 'easy'); });
+    else attachCams(t.routes);
   } catch (e) {
     if (ctl.signal.aborted || S.trip !== t) return;
-    t.err = e.noPath ? '\uc774 \uc870\uac74\uc73c\ub85c \uac08 \uc218 \uc788\ub294 \uae38\uc744 \ucc3e\uc9c0 \ubabb\ud588\uc2b5\ub2c8\ub2e4. \uacbd\ub85c \uc635\uc158\uc744 \ubc14\uafb8\uac70\ub098 \ucd9c\ubc1c\u00b7\ub3c4\ucc29 \uc704\uce58\ub97c \ub3c4\ub85c \uac00\uae4c\uc774\ub85c \uc62e\uaca8 \ubcf4\uc138\uc694.' : '\uacbd\ub85c \uc11c\ubc84\uc5d0 \uc5f0\uacb0\ud558\uc9c0 \ubabb\ud588\uc2b5\ub2c8\ub2e4. \uc778\ud130\ub137 \uc5f0\uacb0\uc744 \ud655\uc778\ud55c \ub4a4 \ub2e4\uc2dc \uc2dc\ub3c4\ud558\uc138\uc694.';
+    t.err = e.noPath ? `\uc774 \uc870\uac74\uc73c\ub85c ${walk ? '\uac78\uc5b4\uc11c ' : ''}\uac08 \uc218 \uc788\ub294 \uae38\uc744 \ucc3e\uc9c0 \ubabb\ud588\uc2b5\ub2c8\ub2e4. \uacbd\ub85c \uc635\uc158\uc744 \ubc14\uafb8\uac70\ub098 \ucd9c\ubc1c\u00b7\ub3c4\ucc29 \uc704\uce58\ub97c ${walk ? '\uae38' : '\ub3c4\ub85c'} \uac00\uae4c\uc774\ub85c \uc62e\uaca8 \ubcf4\uc138\uc694.` : '\uacbd\ub85c \uc11c\ubc84\uc5d0 \uc5f0\uacb0\ud558\uc9c0 \ubabb\ud588\uc2b5\ub2c8\ub2e4. \uc778\ud130\ub137 \uc5f0\uacb0\uc744 \ud655\uc778\ud55c \ub4a4 \ub2e4\uc2dc \uc2dc\ub3c4\ud558\uc138\uc694.';
   }
   t.loading = false;
   if (S.screen === 'preview') renderSheet();
   if (t.routes.length) {
     MV.setRoutes(t.routes, t.sel);
-    MV.setCams(t.routes[t.sel].cams);
+    MV.setCams(walk ? [] : t.routes[t.sel].cams);
     MV.fit(t.routes.flatMap(r => [r.coords[0], ...r.coords.filter((_, i) => i % 20 === 0), r.coords[r.coords.length - 1]]));
   }
 }
 
 function fuelCost(m) { return m / 1000 / Math.max(1, store.settings.fuelEff) * store.settings.fuelPrice; }
 
+// \ub3c4\ubcf4 \uacbd\ub85c \uce74\ub4dc \ud55c \uc904: \ud68c\uc804 \uc218\uc640 \uacc4\ub2e8\u00b7\uc5d8\ub9ac\ubca0\uc774\ud130
+function walkLine(r) {
+  const n = k => r.steps.filter(s => s.kind === k).length;
+  const turns = r.steps.filter(s => ['turn', 'uturn', 'roundabout', 'fork'].includes(s.kind)).length;
+  return [`\ud68c\uc804 ${turns}\ubc88`, n('steps') ? `\uacc4\ub2e8 ${n('steps')}\uacf3` : '', n('elevator') ? `\uc5d8\ub9ac\ubca0\uc774\ud130 ${n('elevator')}\uacf3` : '', n('escalator') ? `\uc5d0\uc2a4\uceec\ub808\uc774\ud130 ${n('escalator')}\uacf3` : ''].filter(Boolean).join(' \u00b7 ');
+}
+
 function previewSheet() {
   const t = S.trip;
   if (!t) return [];
   const out = [];
-  if (t.loading) out.push(h('div', { class: 'loading' }, h('span', { class: 'spinner' }), `${PREF_KO[t.pref]} \uacbd\ub85c\ub97c \ucc3e\ub294 \uc911\u2026`));
+  const walk = t.mode === 'walk';
+  if (t.loading) out.push(h('div', { class: 'loading' }, h('span', { class: 'spinner' }), walk ? `\ub3c4\ubcf4 ${t.pref === 'fast' ? '' : prefLabel('walk', t.pref) + ' '}\uacbd\ub85c\ub97c \ucc3e\ub294 \uc911\u2026` : `${prefLabel('car', t.pref)} \uacbd\ub85c\ub97c \ucc3e\ub294 \uc911\u2026`));
   if (t.err) out.push(h('p', { class: 'empty', text: t.err }), h('button', { class: 'btn', type: 'button', onclick: computeRoutes, text: '\ub2e4\uc2dc \ucc3e\uae30' }));
   if (t.routes.length) {
     const ef = etaFactor();
@@ -3274,7 +3354,7 @@ function previewSheet() {
     if (line) out.push(h('p', { class: 'recline', text: line }));
     const list = h('div', { class: 'routes', role: 'radiogroup', 'aria-label': '\uacbd\ub85c \ud6c4\ubcf4' });
     t.routes.forEach((r, i) => {
-      const dur = r.p ? r.p.dur : r.duration * ef.k;
+      const dur = r.p ? r.p.dur : r.duration * (walk ? 1 : ef.k);
       const tags = [];
       const TAG = { rec: ['tag--rec', '\ucd94\ucc9c'], fast: ['tag--fast', '\uac00\uc7a5 \ube60\ub984'], easy: ['tag--easy', '\uc6b4\uc804 \uc26c\uc6c0'] };
       (r.tags || []).forEach(k => tags.push(h('span', { class: 'tag ' + TAG[k][0], text: TAG[k][1] })));
@@ -3288,19 +3368,22 @@ function previewSheet() {
         h('span', { class: 'rcard__time num', text: fmtDur(dur) }),
         h('span', { class: 'rcard__eta num', text: fmtClock(Date.now() + dur * 1000) + ' \ub3c4\ucc29' }),
         h('span', { class: 'rcard__info num' }, fmtDistStr(r.distance),
-          store.settings.showFuel ? h('span', { text: '\u00b7 \uc720\ub958\ube44 \uc57d ' + fmtWon(fuelCost(r.distance)) }) : null),
-        r.ease ? h('span', { class: 'rcard__ease num', text: `\ud68c\uc804 ${r.ease.turns}\ubc88${r.ease.left + r.ease.uturn ? ` (\uc88c\ud68c\uc804\u00b7\uc720\ud134 ${r.ease.left + r.ease.uturn})` : ''} \u00b7 \ud070\uae38 ${Math.round((1 - r.ease.smallShare) * 100)}%${r.cams ? ` \u00b7 \ub2e8\uc18d \uce74\uba54\ub77c ${camCount(r.cams)}\uacf3` : ''}` }) : null,
+          walk ? h('span', { text: `\u00b7 \uc57d ${Math.round(r.distance / 0.7).toLocaleString('ko-KR')}\uac78\uc74c` })
+            : store.settings.showFuel ? h('span', { text: '\u00b7 \uc720\ub958\ube44 \uc57d ' + fmtWon(fuelCost(r.distance)) }) : null),
+        walk ? h('span', { class: 'rcard__ease num', text: walkLine(r) })
+          : r.ease ? h('span', { class: 'rcard__ease num', text: `\ud68c\uc804 ${r.ease.turns}\ubc88${r.ease.left + r.ease.uturn ? ` (\uc88c\ud68c\uc804\u00b7\uc720\ud134 ${r.ease.left + r.ease.uturn})` : ''} \u00b7 \ud070\uae38 ${Math.round((1 - r.ease.smallShare) * 100)}%${r.cams ? ` \u00b7 \ub2e8\uc18d \uce74\uba54\ub77c ${camCount(r.cams)}\uacf3` : ''}` }) : null,
         tags.length ? h('span', { class: 'rcard__tags' }, ...tags) : null,
         r.roads.length ? h('span', { class: 'rcard__via', text: r.roads.join(' \u00b7 ') + ' \uacbd\uc720' }) : null));
     });
     out.push(list);
     const notes = [];
     const nRoads = Object.keys(store.roads).length;
-    if (ef.n || nRoads) notes.push(`\ub3c4\ucc29 \uc2dc\uac04\uc740 \ub0b4 \uc8fc\ud589 \uae30\ub85d\uc73c\ub85c \ubcf4\uc815\ud588\uc2b5\ub2c8\ub2e4${ef.n ? `(\uc804\uccb4 \u00d7${ef.k.toFixed(2)}, ${ef.n}\ud68c${ef.band ? ', ' + BAND_KO[ef.band] : ''})` : ''}${nRoads ? ` \u00b7 \ub3c4\ub85c\ubcc4 \ud559\uc2b5 ${nRoads}\uac74` : ''}.`);
+    if (walk) notes.push(`\uac77\ub294 \uc2dc\uac04\uc740 \uc2dc\uc18d ${WALK_KMH}km\ub85c \uacc4\uc0b0\ud588\uc2b5\ub2c8\ub2e4. \ubcf4\ub3c4\u00b7\ud6a1\ub2e8\ubcf4\ub3c4 \uc790\ub8cc\uac00 \uc5c6\ub294 \uacf3\uc740 \ucc28\ub3c4 \uc606\uc73c\ub85c \uc548\ub0b4\ud560 \uc218 \uc788\uc73c\ub2c8 \uc2e4\uc81c \uae38\uc744 \ubcf4\uba70 \uac78\uc73c\uc138\uc694.`);
+    else if (ef.n || nRoads) notes.push(`\ub3c4\ucc29 \uc2dc\uac04\uc740 \ub0b4 \uc8fc\ud589 \uae30\ub85d\uc73c\ub85c \ubcf4\uc815\ud588\uc2b5\ub2c8\ub2e4${ef.n ? `(\uc804\uccb4 \u00d7${ef.k.toFixed(2)}, ${ef.n}\ud68c${ef.band ? ', ' + BAND_KO[ef.band] : ''})` : ''}${nRoads ? ` \u00b7 \ub3c4\ub85c\ubcc4 \ud559\uc2b5 ${nRoads}\uac74` : ''}.`);
     else notes.push('\uc2e4\uc2dc\uac04 \uad50\ud1b5 \uc815\ubcf4\uac00 \uc5c6\ub294 \ubb34\ub8cc \uc9c0\ub3c4\ub77c, \ub9c9\ud788\ub294 \uc2dc\uac04\uc5d0\ub294 \uc2e4\uc81c\ubcf4\ub2e4 \uc9e7\uac8c \ub098\uc62c \uc218 \uc788\uc2b5\ub2c8\ub2e4. \uc548\ub0b4\ub97c \ubc1b\uc73c\uba70 \ub2ec\ub9b0 \ub3c4\ub85c\ub294 \uc2dc\uac04\ub300\ubcc4 \uc2e4\uc81c \uc18d\ub3c4\ub97c \ubc30\uc6cc \ub2e4\uc74c\ubd80\ud130 \uacbd\ub85c \uc120\ud0dd\uacfc \ub3c4\ucc29 \uc2dc\uac04\uc5d0 \ubc18\uc601\ud569\ub2c8\ub2e4.');
     if (t.warn) out.push(h('p', { class: 'warnline', text: t.warn }));
     out.push(h('div', { class: 'go' },
-      h('button', { class: 'btn', type: 'button', onclick: () => startNav(true) }, h('span', { svg: ic('play', 18, true) }), '\ubaa8\uc758 \uc8fc\ud589'),
+      h('button', { class: 'btn', type: 'button', onclick: () => startNav(true) }, h('span', { svg: ic('play', 18, true) }), walk ? '\ubaa8\uc758 \uac77\uae30' : '\ubaa8\uc758 \uc8fc\ud589'),
       h('button', { class: 'btn btn--primary', type: 'button', id: 'btnStart', onclick: () => startNav(false) }, h('span', { svg: ic('nav', 20, true) }), '\uc548\ub0b4 \uc2dc\uc791')));
     out.push(h('p', { class: 'note', text: notes.join(' ') + ` \uacbd\ub85c: ${ROUTE_ENGINES[t.engine] ? ROUTE_ENGINES[t.engine].label : ''}(FOSSGIS) \u00b7 OpenStreetMap` }));
   }
@@ -3414,9 +3497,10 @@ async function startNav(sim) {
   if (!sim && !S.me) { exitFull(); toast(GPS_BAD.includes(S.gps) ? gpsMsg('long') + ' \ubaa8\uc758 \uc8fc\ud589\uc740 \uc4f8 \uc218 \uc788\uc2b5\ub2c8\ub2e4.' : '\ud604\uc7ac \uc704\uce58\ub97c \ucc3e\ub294 \uc911\uc785\ub2c8\ub2e4. \uc7a0\uc2dc \ub4a4 \ub2e4\uc2dc \ub20c\ub7ec \uc8fc\uc138\uc694.', 4500); return; }
   const route = t.routes[t.sel];
   const ef = etaFactor();
+  const walk = t.mode === 'walk';
   S.nav = {
-    sim, route, trip: t, dest: t.dest, stops: t.stops.slice(), visited: 0,
-    startTs: Date.now(), pred: route.duration, dist0: route.distance, rr: 0, corr: ef.k,
+    sim, route, trip: t, dest: t.dest, stops: t.stops.slice(), visited: 0, mode: t.mode || 'car',
+    startTs: Date.now(), pred: route.duration, dist0: route.distance, rr: 0, corr: walk ? 1 : ef.k,
     lastFixT: 0, lastSt: null, simObj: null, rerouteCtl: null, ended: false,
   };
   S.nav.guide = makeGuide(route, false);
@@ -3429,6 +3513,8 @@ async function startNav(sim) {
   setSimBar();
   measure();
   MV.headingUp = store.settings.headingUp; MV.tilt = store.settings.tilt;
+  MV.pitch3d = walk ? 35 : 52;                    // \uac78\uc744 \ub54c\ub294 \ub35c \uae30\uc6b8\uc5ec \uc8fc\ubcc0\uc744 \ub113\uac8c
+  $('#app').dataset.mode = walk ? 'walk' : 'car'; // \ub3c4\ubcf4: \uc18d\ub3c4\u00b7\ub2e8\uc18d \uce74\uba54\ub77c \ud45c\uc2dc \uc228\uae40
   MV.startGuideCam(guidePad());
   $('#gVoice').setAttribute('aria-pressed', store.settings.voice ? 'true' : 'false');
   $('#gVoice').innerHTML = ic(store.settings.voice ? 'vol' : 'mute', 24);
@@ -3442,7 +3528,7 @@ async function startNav(sim) {
     }, 2000);
   }
   if (sim) {
-    const f = window.__simFactor || 1;
+    const f = window.__simFactor || (walk ? 4 : 1);      // \uac77\uae30 \ubaa8\uc758 \uc8fc\ud589\uc740 \u00d74 \ub85c \uc2dc\uc791
     S.nav.simObj = new Sim(route, { factor: f, onFix: fx => navFix(fx) });
     S.nav.simObj.start();
   } else if (S.me) navFix({ ...S.me, t: Date.now() });
@@ -3451,6 +3537,7 @@ async function startNav(sim) {
 function setNavCams(route) {
   const n = S.nav;
   if (!n) return;
+  if (n.mode === 'walk') { n.cams = []; n.camGuide = null; MV.setCams([]); return; }   // \ub2e8\uc18d \uce74\uba54\ub77c\ub294 \ucc28\ub7c9\ub9cc
   n.cams = route.cams || (CamDB.ready ? camsForRoute(route, { signal: store.settings.camSignal }) : []);
   n.camGuide = new CamGuide(n.cams, { speak: (txt, o) => Voice.say(txt, o), settings: () => store.settings });
   n.camK = -1;
@@ -3489,6 +3576,7 @@ function makeGuide(route, rerouted) {
     lastReroute: rerouted ? Date.now() : 0,
     destName: S.nav && S.nav.dest ? (S.nav.dest.label || S.nav.dest.name) : '',
     rerouted,
+    mode: route.mode || (S.nav && S.nav.mode) || 'car',
   });
 }
 
@@ -3526,6 +3614,7 @@ function navFix(fix) {
   const kmh = st.speed * 3.6;
   let z = kmh < 20 ? 17.3 : kmh < 50 ? 17.3 - (kmh - 20) / 30 * 0.7 : kmh < 90 ? 16.6 - (kmh - 50) / 40 * 0.9 : 15.5;
   if (st.nextDist < 250 && st.next.kind !== 'arrive') z = Math.max(z, 17.2);
+  if (n.mode === 'walk') z = st.nextDist < 60 ? 18.4 : 18;   // \uac78\uc744 \ub54c\ub294 \uace8\ubaa9\uae4c\uc9c0 \ud06c\uac8c
   MV.zoomTarget = z;
   renderGuide(st);
 }
@@ -3566,7 +3655,7 @@ function navEvent(name, data) {
   else if (name === 'backon') { if (n.rerouteCtl) n.rerouteCtl.abort(); banner(null); }
   else if (name === 'waypoint') { n.visited = Math.min(n.stops.length, n.visited + 1); MV.setTripMarks(null, n.stops.slice(n.visited), n.dest); }
   else if (name === 'arrive') setTimeout(() => finishNav(true), 3500);
-  else if (name === 'segment' && !n.sim) learnRoad(data.name, timeBand(data.t), data.act / data.pred, data.t);
+  else if (name === 'segment' && !n.sim && n.mode !== 'walk') learnRoad(data.name, timeBand(data.t), data.act / data.pred, data.t);
 }
 
 async function reroute(at) {
@@ -3576,7 +3665,7 @@ async function reroute(at) {
   const ctl = n.rerouteCtl = new AbortController();
   const pts = [{ lat: at.lat, lon: at.lon }, ...n.stops.slice(n.visited), n.dest];
   try {
-    const r = await findRoutes(pts, { pref: n.trip.pref, heading: at.speed > 2 ? at.heading : null, engine: store.settings.engine, signal: ctl.signal });
+    const r = await findRoutes(pts, { pref: n.trip.pref, mode: n.mode, heading: at.speed > 2 ? at.heading : null, engine: store.settings.engine, signal: ctl.signal });
     if (ctl.signal.aborted || S.nav !== n || n.ended) return;
     n.route = r.routes[0];
     n.route.p = personalize(n.route);
@@ -3605,13 +3694,14 @@ function finishNav(arrived) {
   if (!arrived) Voice.stop();
   const act = (Date.now() - n.startTs) / 1000;
   if (!n.sim) {
-    store.trips.push({ ts: n.startTs, end: Date.now(), pred: n.pred, act, dist: n.dist0, rr: n.rr, arrived: !!arrived,
+    store.trips.push({ ts: n.startTs, end: Date.now(), pred: n.pred, act, dist: n.dist0, rr: n.rr, arrived: !!arrived, mode: n.mode,
       dest: { name: n.dest.label || n.dest.name, lat: n.dest.lat, lon: n.dest.lon } });
     store.trips = store.trips.slice(-300);
     saveStore(true);
   }
   S.nav = null; S.trip = null;
   $('#cambox').hidden = true; $('#speed').classList.remove('over');
+  delete $('#app').dataset.mode; MV.pitch3d = 52;
   exitFull();
   MV.stopGuideCam();
   MV.clearRoutes();
@@ -3629,11 +3719,11 @@ function setSimBar() {
   if (!n || !n.sim) { box.hidden = true; box.replaceChildren(); return; }
   box.hidden = false;
   const seg = h('div', { class: 'seg', role: 'group', 'aria-label': '\ubaa8\uc758 \uc8fc\ud589 \uc18d\ub3c4' },
-    ...[1, 2, 4].map(f => h('button', { type: 'button', 'aria-pressed': (n.simObj ? n.simObj.factor : (window.__simFactor || 1)) === f ? 'true' : 'false', text: '\u00d7' + f,
+    ...(n.mode === 'walk' ? [1, 4, 8] : [1, 2, 4]).map(f => h('button', { type: 'button', 'aria-pressed': (n.simObj ? n.simObj.factor : (window.__simFactor || 1)) === f ? 'true' : 'false', text: '\u00d7' + f,
       onclick: e => { n.simObj && n.simObj.setFactor(f); $$('button', seg).forEach(b => b.setAttribute('aria-pressed', b === e.currentTarget ? 'true' : 'false')); } })));
   const pause = h('button', { class: 'gbtn', type: 'button', 'aria-label': '\uc77c\uc2dc \uc815\uc9c0', svg: ic('pause', 22),
     onclick: e => { const p = n.simObj && n.simObj.togglePause(); e.currentTarget.innerHTML = ic(p ? 'play' : 'pause', 22, p); } });
-  box.replaceChildren(h('span', { class: 'tag', text: '\ubaa8\uc758 \uc8fc\ud589' }), seg, pause);
+  box.replaceChildren(h('span', { class: 'tag', text: n.mode === 'walk' ? '\ubaa8\uc758 \uac77\uae30' : '\ubaa8\uc758 \uc8fc\ud589' }), seg, pause);
 }
 
 // \u2500\u2500 \uc804\uccb4 \ud654\uba74 \ud328\ub110 \u2500\u2500
@@ -3678,7 +3768,8 @@ function openSettings() {
     onchange: e => { const v = clamp(+e.target.value || st[k], min, max); e.target.value = String(v); setS(k, v); } });
   openOverlay('\uc124\uc815', [
     h('section', { class: 'group' }, h('h2', { text: '\uacbd\ub85c' }),
-      row('\uae30\ubcf8 \uacbd\ub85c \uc635\uc158', '\ubaa9\uc801\uc9c0\ub97c \uace0\ub974\uba74 \uc774 \uc635\uc158\uc73c\ub85c \uba3c\uc800 \ucc3e\uc2b5\ub2c8\ub2e4', seg(Object.entries(PREF_KO), st.pref, k => setS('pref', k), '\uae30\ubcf8 \uacbd\ub85c \uc635\uc158')),
+      row('\uae30\ubcf8 \uc774\ub3d9 \ubc29\ubc95', '\ubaa9\uc801\uc9c0\ub97c \uace0\ub974\uba74 \uc774 \ubc29\ubc95\uc73c\ub85c \uba3c\uc800 \ucc3e\uc2b5\ub2c8\ub2e4. \uacbd\ub85c \ud654\uba74\uc5d0\uc11c \ubc14\ub85c \ubc14\uafc0 \uc218 \uc788\uc2b5\ub2c8\ub2e4', seg([['car', '\ucc28\ub7c9'], ['walk', '\ub3c4\ubcf4']], st.mode, k => setS('mode', k), '\uae30\ubcf8 \uc774\ub3d9 \ubc29\ubc95')),
+      row('\uae30\ubcf8 \uacbd\ub85c \uc635\uc158(\ucc28\ub7c9)', '\ubaa9\uc801\uc9c0\ub97c \uace0\ub974\uba74 \uc774 \uc635\uc158\uc73c\ub85c \uba3c\uc800 \ucc3e\uc2b5\ub2c8\ub2e4', seg(Object.entries(PREF_KO), st.pref, k => setS('pref', k), '\uae30\ubcf8 \uacbd\ub85c \uc635\uc158')),
       row('\uc6b4\uc804\ud558\uae30 \uc26c\uc6b4 \uae38 \uc6b0\uc120', '\u2018\ucd94\ucc9c\u2019\uc5d0\uc11c \ube60\ub978 \uae38\uc774 \uae30\uc900 \uc2dc\uac04 \uc774\uc0c1 \ube60\ub974\uc9c0 \uc54a\uc73c\uba74 \ud68c\uc804\uc774 \uc801\uace0 \ud070\uae38 \uc704\uc8fc\uc778 \uae38\uc744 \ucd94\ucc9c\ud569\ub2c8\ub2e4. \ube60\ub978 \uae38\ubcf4\ub2e4 25%(\uc9e7\uc740 \uae38\uc740 1.5km) \ub118\uac8c \uba40\uac70\ub098 \uc5c6\ub358 \uc720\ub8cc\ub3c4\ub85c\u00b7\ud398\ub9ac\uac00 \uc0dd\uae30\ub294 \uae38\uc740 \ucd94\ucc9c\ud558\uc9c0 \uc54a\uc2b5\ub2c8\ub2e4', sw(st.easyPrefer, v => setS('easyPrefer', v), '\uc6b4\uc804\ud558\uae30 \uc26c\uc6b4 \uae38 \uc6b0\uc120')),
       row('\uae30\uc900 \uc2dc\uac04', '\ube60\ub978 \uae38\uc774 \uc774\ub9cc\ud07c \uc774\uc0c1 \ube68\ub77c\uc57c \ube60\ub978 \uae38\uc744 \ucd94\ucc9c\ud569\ub2c8\ub2e4. \uc9e7\uc740 \uae38(25\ubd84 \ubbf8\ub9cc)\uc5d0\uc11c\ub294 \ube60\ub978 \uae38 \uc18c\uc694 \uc2dc\uac04\uc758 40%(\ucd5c\uc18c 3\ubd84)\uae4c\uc9c0\ub9cc \ub2a6\uc5b4\ub3c4 \ub429\ub2c8\ub2e4', seg([[5, '5\ubd84'], [10, '10\ubd84'], [15, '15\ubd84'], [20, '20\ubd84']], st.easyMin, k => setS('easyMin', k), '\uae30\uc900 \uc2dc\uac04')),
       row('\uacbd\ub85c \uc5d4\uc9c4', '\uc790\ub3d9: Valhalla\ub85c \ucc3e\uace0 \uc751\ub2f5\uc774 \uc5c6\uc73c\uba74 OSRM', seg([['auto', '\uc790\ub3d9'], ['valhalla', 'Valhalla'], ['osrm', 'OSRM']], st.engine, k => setS('engine', k), '\uacbd\ub85c \uc5d4\uc9c4'))),

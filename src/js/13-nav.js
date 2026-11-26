@@ -89,9 +89,10 @@ async function startNav(sim) {
   if (!sim && !S.me) { exitFull(); toast(GPS_BAD.includes(S.gps) ? gpsMsg('long') + ' 모의 주행은 쓸 수 있습니다.' : '현재 위치를 찾는 중입니다. 잠시 뒤 다시 눌러 주세요.', 4500); return; }
   const route = t.routes[t.sel];
   const ef = etaFactor();
+  const walk = t.mode === 'walk';
   S.nav = {
-    sim, route, trip: t, dest: t.dest, stops: t.stops.slice(), visited: 0,
-    startTs: Date.now(), pred: route.duration, dist0: route.distance, rr: 0, corr: ef.k,
+    sim, route, trip: t, dest: t.dest, stops: t.stops.slice(), visited: 0, mode: t.mode || 'car',
+    startTs: Date.now(), pred: route.duration, dist0: route.distance, rr: 0, corr: walk ? 1 : ef.k,
     lastFixT: 0, lastSt: null, simObj: null, rerouteCtl: null, ended: false,
   };
   S.nav.guide = makeGuide(route, false);
@@ -104,6 +105,8 @@ async function startNav(sim) {
   setSimBar();
   measure();
   MV.headingUp = store.settings.headingUp; MV.tilt = store.settings.tilt;
+  MV.pitch3d = walk ? 35 : 52;                    // 걸을 때는 덜 기울여 주변을 넓게
+  $('#app').dataset.mode = walk ? 'walk' : 'car'; // 도보: 속도·단속 카메라 표시 숨김
   MV.startGuideCam(guidePad());
   $('#gVoice').setAttribute('aria-pressed', store.settings.voice ? 'true' : 'false');
   $('#gVoice').innerHTML = ic(store.settings.voice ? 'vol' : 'mute', 24);
@@ -117,7 +120,7 @@ async function startNav(sim) {
     }, 2000);
   }
   if (sim) {
-    const f = window.__simFactor || 1;
+    const f = window.__simFactor || (walk ? 4 : 1);      // 걷기 모의 주행은 ×4 로 시작
     S.nav.simObj = new Sim(route, { factor: f, onFix: fx => navFix(fx) });
     S.nav.simObj.start();
   } else if (S.me) navFix({ ...S.me, t: Date.now() });
@@ -126,6 +129,7 @@ async function startNav(sim) {
 function setNavCams(route) {
   const n = S.nav;
   if (!n) return;
+  if (n.mode === 'walk') { n.cams = []; n.camGuide = null; MV.setCams([]); return; }   // 단속 카메라는 차량만
   n.cams = route.cams || (CamDB.ready ? camsForRoute(route, { signal: store.settings.camSignal }) : []);
   n.camGuide = new CamGuide(n.cams, { speak: (txt, o) => Voice.say(txt, o), settings: () => store.settings });
   n.camK = -1;
@@ -164,6 +168,7 @@ function makeGuide(route, rerouted) {
     lastReroute: rerouted ? Date.now() : 0,
     destName: S.nav && S.nav.dest ? (S.nav.dest.label || S.nav.dest.name) : '',
     rerouted,
+    mode: route.mode || (S.nav && S.nav.mode) || 'car',
   });
 }
 
@@ -201,6 +206,7 @@ function navFix(fix) {
   const kmh = st.speed * 3.6;
   let z = kmh < 20 ? 17.3 : kmh < 50 ? 17.3 - (kmh - 20) / 30 * 0.7 : kmh < 90 ? 16.6 - (kmh - 50) / 40 * 0.9 : 15.5;
   if (st.nextDist < 250 && st.next.kind !== 'arrive') z = Math.max(z, 17.2);
+  if (n.mode === 'walk') z = st.nextDist < 60 ? 18.4 : 18;   // 걸을 때는 골목까지 크게
   MV.zoomTarget = z;
   renderGuide(st);
 }
@@ -241,7 +247,7 @@ function navEvent(name, data) {
   else if (name === 'backon') { if (n.rerouteCtl) n.rerouteCtl.abort(); banner(null); }
   else if (name === 'waypoint') { n.visited = Math.min(n.stops.length, n.visited + 1); MV.setTripMarks(null, n.stops.slice(n.visited), n.dest); }
   else if (name === 'arrive') setTimeout(() => finishNav(true), 3500);
-  else if (name === 'segment' && !n.sim) learnRoad(data.name, timeBand(data.t), data.act / data.pred, data.t);
+  else if (name === 'segment' && !n.sim && n.mode !== 'walk') learnRoad(data.name, timeBand(data.t), data.act / data.pred, data.t);
 }
 
 async function reroute(at) {
@@ -251,7 +257,7 @@ async function reroute(at) {
   const ctl = n.rerouteCtl = new AbortController();
   const pts = [{ lat: at.lat, lon: at.lon }, ...n.stops.slice(n.visited), n.dest];
   try {
-    const r = await findRoutes(pts, { pref: n.trip.pref, heading: at.speed > 2 ? at.heading : null, engine: store.settings.engine, signal: ctl.signal });
+    const r = await findRoutes(pts, { pref: n.trip.pref, mode: n.mode, heading: at.speed > 2 ? at.heading : null, engine: store.settings.engine, signal: ctl.signal });
     if (ctl.signal.aborted || S.nav !== n || n.ended) return;
     n.route = r.routes[0];
     n.route.p = personalize(n.route);
@@ -280,13 +286,14 @@ function finishNav(arrived) {
   if (!arrived) Voice.stop();
   const act = (Date.now() - n.startTs) / 1000;
   if (!n.sim) {
-    store.trips.push({ ts: n.startTs, end: Date.now(), pred: n.pred, act, dist: n.dist0, rr: n.rr, arrived: !!arrived,
+    store.trips.push({ ts: n.startTs, end: Date.now(), pred: n.pred, act, dist: n.dist0, rr: n.rr, arrived: !!arrived, mode: n.mode,
       dest: { name: n.dest.label || n.dest.name, lat: n.dest.lat, lon: n.dest.lon } });
     store.trips = store.trips.slice(-300);
     saveStore(true);
   }
   S.nav = null; S.trip = null;
   $('#cambox').hidden = true; $('#speed').classList.remove('over');
+  delete $('#app').dataset.mode; MV.pitch3d = 52;
   exitFull();
   MV.stopGuideCam();
   MV.clearRoutes();
@@ -304,11 +311,11 @@ function setSimBar() {
   if (!n || !n.sim) { box.hidden = true; box.replaceChildren(); return; }
   box.hidden = false;
   const seg = h('div', { class: 'seg', role: 'group', 'aria-label': '모의 주행 속도' },
-    ...[1, 2, 4].map(f => h('button', { type: 'button', 'aria-pressed': (n.simObj ? n.simObj.factor : (window.__simFactor || 1)) === f ? 'true' : 'false', text: '×' + f,
+    ...(n.mode === 'walk' ? [1, 4, 8] : [1, 2, 4]).map(f => h('button', { type: 'button', 'aria-pressed': (n.simObj ? n.simObj.factor : (window.__simFactor || 1)) === f ? 'true' : 'false', text: '×' + f,
       onclick: e => { n.simObj && n.simObj.setFactor(f); $$('button', seg).forEach(b => b.setAttribute('aria-pressed', b === e.currentTarget ? 'true' : 'false')); } })));
   const pause = h('button', { class: 'gbtn', type: 'button', 'aria-label': '일시 정지', svg: ic('pause', 22),
     onclick: e => { const p = n.simObj && n.simObj.togglePause(); e.currentTarget.innerHTML = ic(p ? 'play' : 'pause', 22, p); } });
-  box.replaceChildren(h('span', { class: 'tag', text: '모의 주행' }), seg, pause);
+  box.replaceChildren(h('span', { class: 'tag', text: n.mode === 'walk' ? '모의 걷기' : '모의 주행' }), seg, pause);
 }
 
 // ── 전체 화면 패널 ──
@@ -353,7 +360,8 @@ function openSettings() {
     onchange: e => { const v = clamp(+e.target.value || st[k], min, max); e.target.value = String(v); setS(k, v); } });
   openOverlay('설정', [
     h('section', { class: 'group' }, h('h2', { text: '경로' }),
-      row('기본 경로 옵션', '목적지를 고르면 이 옵션으로 먼저 찾습니다', seg(Object.entries(PREF_KO), st.pref, k => setS('pref', k), '기본 경로 옵션')),
+      row('기본 이동 방법', '목적지를 고르면 이 방법으로 먼저 찾습니다. 경로 화면에서 바로 바꿀 수 있습니다', seg([['car', '차량'], ['walk', '도보']], st.mode, k => setS('mode', k), '기본 이동 방법')),
+      row('기본 경로 옵션(차량)', '목적지를 고르면 이 옵션으로 먼저 찾습니다', seg(Object.entries(PREF_KO), st.pref, k => setS('pref', k), '기본 경로 옵션')),
       row('운전하기 쉬운 길 우선', '‘추천’에서 빠른 길이 기준 시간 이상 빠르지 않으면 회전이 적고 큰길 위주인 길을 추천합니다. 빠른 길보다 25%(짧은 길은 1.5km) 넘게 멀거나 없던 유료도로·페리가 생기는 길은 추천하지 않습니다', sw(st.easyPrefer, v => setS('easyPrefer', v), '운전하기 쉬운 길 우선')),
       row('기준 시간', '빠른 길이 이만큼 이상 빨라야 빠른 길을 추천합니다. 짧은 길(25분 미만)에서는 빠른 길 소요 시간의 40%(최소 3분)까지만 늦어도 됩니다', seg([[5, '5분'], [10, '10분'], [15, '15분'], [20, '20분']], st.easyMin, k => setS('easyMin', k), '기준 시간')),
       row('경로 엔진', '자동: Valhalla로 찾고 응답이 없으면 OSRM', seg([['auto', '자동'], ['valhalla', 'Valhalla'], ['osrm', 'OSRM']], st.engine, k => setS('engine', k), '경로 엔진'))),

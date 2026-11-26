@@ -211,7 +211,7 @@ const MV = {
       const curB = map.getBearing();
       const dB = angDiff(curB, this.headingUp ? this.vehHdg : 0);
       const bearing = Math.abs(dB) < 0.05 ? curB + dB : curB + dB * 0.18;
-      const pitch = this.tilt ? 52 : 0;
+      const pitch = this.tilt ? (this.pitch3d || 52) : 0;
       const c = map.getCenter();
       const moved = Math.abs(c.lng - this.vehPos[0]) > 2e-7 || Math.abs(c.lat - this.vehPos[1]) > 2e-7;
       if (moved || Math.abs(dB) >= 0.05 || z !== this.zoomNow || Math.abs(map.getPitch() - pitch) > 0.1 || this.padDirty) {

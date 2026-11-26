@@ -328,3 +328,9 @@ input[type="range"] { width: 180px; accent-color: var(--accent); }
   #app[data-screen="guide"] .maplibregl-ctrl-bottom-left { left: calc(var(--sl) + var(--lcol) + 6px); bottom: calc(72px + var(--sb)); }
 }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+
+/* 도보 안내: 속도계·단속 카메라 표시 없음 */
+#app[data-mode="walk"] #speed, #app[data-mode="walk"] #cambox { display: none !important; }
+.modes { display: inline-flex; gap: 2px; padding: 3px; border-radius: 11px; background: var(--surface-2); flex: 0 0 auto; }
+.modes button { display: inline-flex; align-items: center; gap: 4px; height: 32px; padding: 0 10px; border-radius: 8px; color: var(--text-2); font-weight: 700; font-size: 14px; background: transparent; }
+.modes button[aria-pressed="true"] { background: var(--surface); color: var(--text); box-shadow: 0 1px 3px rgba(0, 0, 0, .18); }

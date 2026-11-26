@@ -2,20 +2,28 @@
 // FOSSGIS 가 운영하는 공개 서버(초당 1회 이하, 가벼운 개인 사용)
 const ROUTE_ENGINES = {
   valhalla: { label: 'Valhalla', base: 'https://valhalla1.openstreetmap.de/route' },
-  osrm: { label: 'OSRM', base: 'https://routing.openstreetmap.de/routed-car/route/v1/driving/' },
+  osrm: { label: 'OSRM', base: 'https://routing.openstreetmap.de/routed-car/route/v1/driving/', foot: 'https://routing.openstreetmap.de/routed-foot/route/v1/driving/' },
 };
 const PREF_KO = { fast: '추천', short: '최단거리', free: '무료도로', nohwy: '고속도로 회피' };
+const WALK_PREF_KO = { fast: '추천', short: '최단거리', nostairs: '계단 피하기' };
+const MODE_KO = { car: '차량', walk: '도보' };
+const prefsOf = mode => (mode === 'walk' ? WALK_PREF_KO : PREF_KO);
+const prefLabel = (mode, pref) => prefsOf(mode)[pref] || '추천';
+const WALK_KMH = 4.5;            // 걷는 속도(신호 대기 포함 도심 평균에 가깝게)
 const routePace = pacer(1100);
 
-const VOICE_KINDS = new Set(['turn', 'uturn', 'ramp', 'exit', 'fork', 'merge', 'roundabout', 'ferry', 'waypoint', 'arrive']);
+const VOICE_KINDS = new Set(['turn', 'uturn', 'ramp', 'exit', 'fork', 'merge', 'roundabout', 'ferry', 'waypoint', 'arrive', 'steps', 'elevator', 'escalator', 'building']);
 
-async function findRoutes(points, { pref = 'fast', heading = null, engine = 'auto', signal, noFallback = false, costing = null } = {}) {
+// mode: car 차량 · walk 도보
+async function findRoutes(points, { pref = 'fast', heading = null, engine = 'auto', signal, noFallback = false, costing = null, mode = 'car' } = {}) {
   let order = engine === 'osrm' ? ['osrm', 'valhalla'] : ['valhalla', 'osrm'];
   if (noFallback) order = order.slice(0, 1);
+  if (mode === 'walk') heading = null;      // 걷는 사람은 바로 돌아설 수 있다
   const errs = [];
   for (const eng of order) {
     try {
-      const r = eng === 'valhalla' ? await viaValhalla(points, pref, heading, signal, costing) : await viaOsrm(points, pref, heading, signal);
+      const r = eng === 'valhalla' ? await viaValhalla(points, pref, heading, signal, costing, mode) : await viaOsrm(points, pref, heading, signal, mode);
+      r.routes.forEach(x => { x.mode = mode; });
       if (r.routes.length) {
         if (errs.length) r.warn = (r.warn ? r.warn + ' ' : '') + `${ROUTE_ENGINES[order[0]].label} 서버가 응답하지 않아 ${josa(ROUTE_ENGINES[eng].label, '으로/로')} 찾았습니다.`;
         return r;
@@ -33,7 +41,8 @@ async function findRoutes(points, { pref = 'fast', heading = null, engine = 'aut
 }
 
 // ── Valhalla ──
-async function viaValhalla(points, pref, heading, signal, costing = null) {
+async function viaValhalla(points, pref, heading, signal, costing = null, mode = 'car') {
+  if (mode === 'walk') return viaValhallaWalk(points, pref, signal, costing);
   const auto = {};
   if (pref === 'short') auto.shortest = true;
   if (pref === 'free') auto.use_tolls = 0;
@@ -56,6 +65,22 @@ async function viaValhalla(points, pref, heading, signal, costing = null) {
   return { engine: 'valhalla', routes };
 }
 
+// 도보: pedestrian 비용 모델. 계단 피하기 = 계단마다 10분만큼의 비용(다른 길이 없으면 계단도 쓴다)
+async function viaValhallaWalk(points, pref, signal, costing = null) {
+  const ped = { walking_speed: WALK_KMH };
+  if (pref === 'short') ped.shortest = true;
+  if (pref === 'nostairs') ped.step_penalty = 600;
+  if (costing) Object.assign(ped, costing);
+  const locations = points.map(p => ({ lat: +(+p.lat).toFixed(6), lon: +(+p.lon).toFixed(6), type: 'break' }));
+  const req = { locations, costing: 'pedestrian', costing_options: { pedestrian: ped }, units: 'kilometers', language: 'en-US', directions_type: 'maneuvers', alternates: points.length === 2 ? 2 : 0 };
+  const url = ROUTE_ENGINES.valhalla.base + '?json=' + encodeURIComponent(JSON.stringify(req));
+  const data = await routePace(() => fetchJSON(url, { timeout: 15000, signal }));
+  const trips = [data.trip, ...(data.alternates || []).map(a => a && a.trip)].filter(Boolean);
+  const routes = trips.map((t, k) => normValhalla(t, k)).filter(Boolean);
+  if (pref === 'short') routes.sort((a, b) => a.distance - b.distance);
+  return { engine: 'valhalla', routes };
+}
+
 const VAL_TYPE = {
   1: ['depart'], 2: ['depart', 'right'], 3: ['depart', 'left'],
   4: ['arrive'], 5: ['arrive', 'right'], 6: ['arrive', 'left'],
@@ -68,6 +93,7 @@ const VAL_TYPE = {
   22: ['fork', 'straight'], 23: ['fork', 'right'], 24: ['fork', 'left'],
   25: ['merge', 'straight'], 26: ['roundabout'], 27: ['rbexit'],
   28: ['ferry'], 29: ['ferryexit'], 37: ['merge', 'right'], 38: ['merge', 'left'],
+  39: ['elevator'], 40: ['steps'], 41: ['escalator'], 42: ['building', 'enter'], 43: ['building', 'exit'],   // 도보
 };
 
 const signText = arr => (arr || []).map(x => x && x.text).filter(Boolean);
@@ -112,19 +138,21 @@ function normValhalla(trip, k) {
 }
 
 // ── OSRM ──
-async function viaOsrm(points, pref, heading, signal) {
+async function viaOsrm(points, pref, heading, signal, mode = 'car') {
   const coordStr = points.map(p => `${(+p.lon).toFixed(6)},${(+p.lat).toFixed(6)}`).join(';');
   const q = ['overview=false', 'steps=true', 'geometries=geojson', 'alternatives=' + (points.length === 2 ? '2' : 'false')];
   if (heading != null) q.push('bearings=' + [`${Math.round(heading) % 360},50`].concat(points.slice(1).map(() => '')).join(';'));
-  const exclude = pref === 'free' ? 'toll' : pref === 'nohwy' ? 'motorway' : '';
-  const url = ex => ROUTE_ENGINES.osrm.base + coordStr + '?' + q.concat(ex ? ['exclude=' + ex] : []).join('&');
-  let data, warn = '';
+  const walk = mode === 'walk';
+  const exclude = walk ? '' : pref === 'free' ? 'toll' : pref === 'nohwy' ? 'motorway' : '';
+  const base = walk ? ROUTE_ENGINES.osrm.foot : ROUTE_ENGINES.osrm.base;
+  const url = ex => base + coordStr + '?' + q.concat(ex ? ['exclude=' + ex] : []).join('&');
+  let data, warn = walk && pref === 'nostairs' ? 'OSRM 서버는 ‘계단 피하기’를 지원하지 않아 기본 도보 경로를 보여 줍니다.' : '';
   try {
     data = await routePace(() => fetchJSON(url(exclude), { timeout: 15000, signal }));
   } catch (e) {
     if (!exclude || (signal && signal.aborted) || e.status !== 400) throw e;
     data = await routePace(() => fetchJSON(url(''), { timeout: 15000, signal }));
-    warn = `OSRM 서버가 '${PREF_KO[pref]}' 옵션을 지원하지 않아 기본 경로를 보여 줍니다.`;
+    warn = `OSRM 서버가 '${prefLabel(mode, pref)}' 옵션을 지원하지 않아 기본 경로를 보여 줍니다.`;
   }
   if (data.code !== 'Ok') { const e = new Error(data.code || 'osrm'); e.data = data; e.status = 400; throw e; }
   const routes = (data.routes || []).map((r, k) => normOsrm(r, k)).filter(Boolean);

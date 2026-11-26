@@ -91,6 +91,14 @@ function sayStep(s, dist, { soon = false, target = true } = {}) {
       return `${noun}회전교차로에서 ${s.exit ? s.exit + '번째 출구' : '출구'}${target && tNoun ? ', ' + tNoun : ''}입니다`;
     case 'ferry':
       return `${lead}페리 탑승입니다`;
+    case 'steps':                                   // 도보: 계단·엘리베이터·에스컬레이터·건물 출입
+      return `${noun}계단입니다`;
+    case 'elevator':
+      return `${noun}엘리베이터입니다`;
+    case 'escalator':
+      return `${noun}에스컬레이터입니다`;
+    case 'building':
+      return `${noun}${s.mod === 'exit' ? '건물 밖으로 나갑니다' : '건물 안으로 들어갑니다'}`;
     case 'waypoint':
       return soon ? '잠시 후 경유지입니다' : `${dw} 앞에 경유지가 있습니다`;
     case 'arrive':
@@ -112,6 +120,10 @@ function showStep(s) {
     case 'merge': return { title: '합류', sub: s.name || sub };
     case 'roundabout': return { title: '회전교차로', sub: (s.exit ? s.exit + '번째 출구' : '') + (sub ? (s.exit ? ' · ' : '') + sub : '') };
     case 'ferry': return { title: '페리 탑승', sub };
+    case 'steps': return { title: '계단', sub };
+    case 'elevator': return { title: '엘리베이터', sub };
+    case 'escalator': return { title: '에스컬레이터', sub };
+    case 'building': return { title: s.mod === 'exit' ? '건물 밖으로' : '건물 안으로', sub };
     case 'waypoint': return { title: '경유지', sub: '' };
     case 'arrive': return { title: '목적지', sub: s.side ? SIDE_KO[s.side] + '에 있음' : '' };
     default: return { title: '직진', sub };
@@ -141,6 +153,9 @@ function iconFor(s, size = 72) {
   const k = s.kind;
   if (k === 'arrive') {
     return svgWrap(`<path d="M30 92V12"/><path d="M34 14h44l-10 16 10 16H34z" fill="currentColor" stroke-width="6"/>`, size);
+  }
+  if (k === 'steps' || k === 'escalator') {
+    return svgWrap(`<path d="M14 84h22V64h22V44h22V24" stroke-width="10"/>`, size);
   }
   if (k === 'waypoint') {
     return svgWrap(`<path d="M50 90C50 90 24 60 24 40a26 26 0 0 1 52 0C76 60 50 90 50 90z" stroke-width="8"/><circle cx="50" cy="40" r="9" fill="currentColor" stroke="none"/>`, size);
