@@ -155,6 +155,37 @@ process.exitCode = fails ? 1 : 0;
   r = X.rankRoutes([mk('fast', 1200, 4, 1), mk('easy-route', 1260, 4, 0)], { ts });
   t('차이가 작으면(좌회전 1번) 그대로 빠른 길', () => assert.strictEqual(r.routes[0].id, 'fast'));
 
+  // v1.5 제보: 29분·11km(골목·회전 많음) 대신 33분·25km(유료·고속도로)를 '추천·운전 쉬움'으로 냈다
+  const mkr = (id, dur, turns, lefts, dist, extra = {}) => Object.assign(mk(id, dur, turns, lefts, dist), { distance: dist }, extra);
+  const city = () => mkr('city', 1740, 14, 6, 11000);
+  const tollway = () => mkr('tollway', 1980, 4, 1, 25000, { hasToll: true, hasHwy: true });
+  r = X.rankRoutes([city(), tollway()], { ts });
+  const tw = r.routes.find(x => x.id === 'tollway');
+  t('2배 넘게 먼 유료 길은 쉬운 길로 추천하지 않음', () => { assert.strictEqual(r.routes[0].id, 'city'); assert.strictEqual(r.info.why, 'fast'); assert.strictEqual(r.routes[0].tags.join(), 'rec,fast'); assert(tw && !tw.tags.includes('easy') && !tw.tags.includes('rec'), tw && tw.tags.join()); });
+  t('뺀 이유: 거리·유료도로', () => { assert.strictEqual(r.info.reject.route.id, 'tollway'); assert.strictEqual(r.info.reject.reasons.join(), 'dist,toll'); assert.strictEqual(r.info.easiest, null); });
+  t('이유 문구', () => assert.strictEqual(X.recLine(r.info), '회전이 적은 다른 길은 거리가 14km 더 멀고 유료도로를 지나 운전하기 쉬운 길로 추천하지 않습니다.'));
+  r = X.rankRoutes([city(), tollway(), mkr('arterial', 1980, 5, 0, 12500)], { ts });
+  t('조건에 맞는 12.5km 큰길은 쉬운 길로 추천', () => { assert.strictEqual(r.routes[0].id, 'arterial'); assert.strictEqual(r.info.why, 'easy'); assert.strictEqual(r.routes[0].tags.join(), 'rec,easy'); assert.strictEqual(r.routes.find(x => x.id === 'city').tags.join(), 'fast'); assert.strictEqual(r.routes.find(x => x.id === 'tollway').tags.join(), ''); });
+  t('추천 문구(시간·거리 차이)', () => assert.strictEqual(X.recLine(r.info), '가장 빠른 길보다 약 4분 늦고 1.5km 더 멀지만 회전이 9번 적고 큰길 위주라 이 길을 추천합니다 (기준 10분).'));
+  r = X.rankRoutes([city(), mkr('toll-short', 1900, 4, 0, 11800, { hasToll: true })], { ts });
+  t('거리가 비슷해도 없던 통행료가 생기면 추천하지 않음', () => { assert.strictEqual(r.routes[0].id, 'city'); assert.strictEqual(r.info.reject.reasons.join(), 'toll'); });
+  r = X.rankRoutes([Object.assign(city(), { hasToll: true }), mkr('toll-short', 1900, 4, 0, 11800, { hasToll: true })], { ts });
+  t('빠른 길도 유료면 유료 쉬운 길도 괜찮음', () => assert.strictEqual(r.routes[0].id, 'toll-short'));
+  t('거리 조건: 25% 또는 1.5km', () => {
+    const f = { distance: 4000 };
+    assert.strictEqual(X.easyFit({ distance: 5500 }, f).join(), '');
+    assert.strictEqual(X.easyFit({ distance: 5600 }, f).join(), 'dist');
+    assert.strictEqual(X.easyFit({ distance: 50000 }, { distance: 40000 }).join(), '');
+    assert.strictEqual(X.easyFit({ distance: 50100 }, { distance: 40000 }).join(), 'dist');
+  });
+  // 짧은 길: 10분 길에 7분 더 걸리는 길은 기준(10분) 안이어도 추천하지 않음(빠른 길 시간의 40%, 최소 3분)
+  r = X.rankRoutes([mkr('s-fast', 600, 10, 4, 4000), mkr('s-easy', 1020, 3, 0, 4500)], { ts });
+  t('짧은 길에서 7분 늦는 쉬운 길은 추천 안 함', () => { assert.strictEqual(r.routes[0].id, 's-fast'); assert.strictEqual(r.info.limit, 4); assert.strictEqual(r.routes[1].tags.join(), 'easy'); assert.strictEqual(X.recLine(r.info), '운전하기 쉬운 길은 7분 더 걸려(짧은 길 기준 4분 이상) 빠른 길을 추천합니다.'); });
+  r = X.rankRoutes([mkr('s-fast', 600, 10, 4, 4000), mkr('s-easy', 720, 3, 0, 4500)], { ts });
+  t('짧은 길에서 2분 늦는 쉬운 길은 추천', () => assert.strictEqual(r.routes[0].id, 's-easy'));
+  r = X.rankRoutes([city(), tollway()], { ts, easyPrefer: false });
+  t('쉬운 길 우선을 끄면 이유 문구 없음', () => assert.strictEqual(X.recLine(r.info), ''));
+
   // 도로별 학습: '도로0'이 이 시간대에 늘 2배 걸린다고 배우면, 그 도로를 많이 쓰는 경로가 느려진다
   X.learnRoad('도로0', 'day', 3.0, ts); X.learnRoad('도로0', 'day', 3.0, ts);
   t('도로별 비율 학습(2회 이상부터 사용)', () => assert(Math.abs(X.roadFactor('도로0', 'day') - 3.0) < 1e-9));

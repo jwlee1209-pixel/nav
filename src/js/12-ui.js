@@ -423,8 +423,13 @@ async function computeRoutes() {
     let all = r.routes;
     // '추천'일 때는 운전하기 쉬운 길도 따로 찾아 함께 비교(Valhalla 만 지원)
     if (t.pref === 'fast' && store.settings.easyPrefer && r.engine === 'valhalla') {
+      // 빠른 길에 유료도로·페리가 없으면 쉬운 길도 그것 없이 찾는다(통행료 내며 돌아가는 길이 '쉬운 길'로 나오지 않게)
+      const f0 = all.reduce((a, b) => (personalize(b).dur < personalize(a).dur ? b : a));
+      const costing = {};
+      if (!f0.hasToll) costing.use_tolls = 0;
+      if (!f0.hasFerry) costing.use_ferry = 0;
       try {
-        const e = await findRoutes(pts, { pref: 'easy', heading, engine: 'valhalla', noFallback: true, signal: ctl.signal });
+        const e = await findRoutes(pts, { pref: 'easy', heading, engine: 'valhalla', noFallback: true, signal: ctl.signal, costing });
         e.routes.forEach(x => { x.easyReq = true; });
         all = all.concat(e.routes);
       } catch (err) { if (ctl.signal.aborted) return; }
@@ -458,12 +463,8 @@ function previewSheet() {
     const ef = etaFactor();
     const info = t.info;
     // 추천 이유 한 줄
-    if (info && info.why === 'easy') {
-      const m = Math.max(1, Math.round(info.slowerMin));
-      out.push(h('p', { class: 'recline', text: `가장 빠른 길보다 약 ${m}분 늦지만 회전이 ${Math.max(0, info.turnDiff)}번 적고 큰길 위주라 이 길을 추천합니다 (기준 ${info.easyMin}분).` }));
-    } else if (info && info.why === 'fast' && info.easiest !== info.fastest && info.slowerMin >= info.easyMin && info.gain >= 2) {
-      out.push(h('p', { class: 'recline', text: `운전하기 쉬운 길은 ${Math.round(info.slowerMin)}분 더 걸려(기준 ${info.easyMin}분 이상) 빠른 길을 추천합니다.` }));
-    }
+    const line = recLine(info);
+    if (line) out.push(h('p', { class: 'recline', text: line }));
     const list = h('div', { class: 'routes', role: 'radiogroup', 'aria-label': '경로 후보' });
     t.routes.forEach((r, i) => {
       const dur = r.p ? r.p.dur : r.duration * ef.k;

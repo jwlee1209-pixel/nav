@@ -9,13 +9,13 @@ const routePace = pacer(1100);
 
 const VOICE_KINDS = new Set(['turn', 'uturn', 'ramp', 'exit', 'fork', 'merge', 'roundabout', 'ferry', 'waypoint', 'arrive']);
 
-async function findRoutes(points, { pref = 'fast', heading = null, engine = 'auto', signal, noFallback = false } = {}) {
+async function findRoutes(points, { pref = 'fast', heading = null, engine = 'auto', signal, noFallback = false, costing = null } = {}) {
   let order = engine === 'osrm' ? ['osrm', 'valhalla'] : ['valhalla', 'osrm'];
   if (noFallback) order = order.slice(0, 1);
   const errs = [];
   for (const eng of order) {
     try {
-      const r = eng === 'valhalla' ? await viaValhalla(points, pref, heading, signal) : await viaOsrm(points, pref, heading, signal);
+      const r = eng === 'valhalla' ? await viaValhalla(points, pref, heading, signal, costing) : await viaOsrm(points, pref, heading, signal);
       if (r.routes.length) {
         if (errs.length) r.warn = (r.warn ? r.warn + ' ' : '') + `${ROUTE_ENGINES[order[0]].label} 서버가 응답하지 않아 ${josa(ROUTE_ENGINES[eng].label, '으로/로')} 찾았습니다.`;
         return r;
@@ -33,13 +33,15 @@ async function findRoutes(points, { pref = 'fast', heading = null, engine = 'aut
 }
 
 // ── Valhalla ──
-async function viaValhalla(points, pref, heading, signal) {
+async function viaValhalla(points, pref, heading, signal, costing = null) {
   const auto = {};
   if (pref === 'short') auto.shortest = true;
   if (pref === 'free') auto.use_tolls = 0;
   if (pref === 'nohwy') auto.use_highways = 0;
-  // 운전하기 쉬운 길: 길 이름이 바뀔 때(회전)마다 비용을 크게 매기고, 이면도로·생활도로·서비스도로를 피한다
-  if (pref === 'easy') Object.assign(auto, { maneuver_penalty: 45, service_penalty: 60, service_factor: 2, use_living_streets: 0, use_tracks: 0 });
+  // 운전하기 쉬운 길: 길 이름이 바뀔 때(회전)마다 비용을 더 매기고, 이면도로·생활도로·서비스도로를 피한다.
+  // 거리도 조금 따져(use_distance) 회전을 줄이려고 멀리 돌아가는 길은 덜 고르게 한다.
+  if (pref === 'easy') Object.assign(auto, { maneuver_penalty: 30, service_penalty: 40, service_factor: 2, use_living_streets: 0, use_tracks: 0, use_distance: 0.2 });
+  if (costing) Object.assign(auto, costing);
   const locations = points.map((p, i) => {
     const o = { lat: +(+p.lat).toFixed(6), lon: +(+p.lon).toFixed(6), type: 'break' };
     if (i === 0 && heading != null) { o.heading = Math.round(heading) % 360; o.heading_tolerance = 50; }
@@ -271,8 +273,25 @@ function sameRoute(a, b) {
   return Math.abs(a.distance - b.distance) < Math.max(40, a.distance * 0.01) && Math.abs(a.duration - b.duration) < Math.max(20, a.duration * 0.02);
 }
 
-// 후보 경로 정리: 내 기록으로 시간 다시 계산 → 가장 빠른 길·가장 쉬운 길 → 추천 결정
+// 운전하기 쉬운 길로 내세워도 되는가: 가장 빠른 길보다 많이 멀거나(25%, 짧은 길은 1.5km 넘게)
+// 빠른 길에 없던 유료도로·페리가 생기면 안 된다(회전이 적어도 기름값·통행료가 더 들고 돌아가는 길이다)
+const EASY_DIST = { ratio: 0.25, min: 1500 };
+function easyFit(r, fastest) {
+  const bad = [];
+  if (r.distance - fastest.distance > Math.max(EASY_DIST.min, fastest.distance * EASY_DIST.ratio)) bad.push('dist');
+  if (r.hasToll && !fastest.hasToll) bad.push('toll');
+  if (r.hasFerry && !fastest.hasFerry) bad.push('ferry');
+  return bad;
+}
+// 쉬운 길이 늦어도 되는 시간(분): 기준 시간(기본 10분). 다만 짧은 길에서는 빠른 길 시간의 40%(최소 3분)까지
+// (기준 10분이면 25분 이상 걸리는 길부터 10분을 그대로 쓴다)
+function easyLimit(fastest, easyMin) {
+  return Math.min(easyMin, Math.max(3, Math.round(fastest.p.dur / 60 * 0.4)));
+}
+
+// 후보 경로 정리: 내 기록으로 시간 다시 계산 → 가장 빠른 길·운전하기 쉬운 길 → 추천 결정
 //  · '추천' 옵션에서, 가장 빠른 길이 쉬운 길보다 기준 시간(기본 10분) 이상 빠르지 않으면 쉬운 길을 추천
+//  · 쉬운 길은 뚜렷이 쉬워야 하고(난이도 점수 20%·2점 이상 낮음), 거리·통행료 조건(easyFit)을 지켜야 한다
 function rankRoutes(list, { pref = 'fast', easyPrefer = true, easyMin = 10, ts = Date.now() } = {}) {
   const uniq = [];
   for (const r of list) {
@@ -283,19 +302,59 @@ function rankRoutes(list, { pref = 'fast', easyPrefer = true, easyMin = 10, ts =
   for (const r of uniq) { r.p = personalize(r, ts); r.ease = routeEase(r); }
   if (!uniq.length) return { routes: [], rec: null };
   const fastest = uniq.reduce((a, b) => (b.p.dur < a.p.dur ? b : a));
-  const easiest = uniq.reduce((a, b) => (b.ease.score < a.ease.score ? b : a));
+  const limit = easyLimit(fastest, easyMin);
+  const slowerOf = r => (r.p.dur - fastest.p.dur) / 60;
+  const easier = uniq.filter(r => r !== fastest && fastest.ease.score - r.ease.score >= Math.max(2, fastest.ease.score * 0.2));
+  const easiestOf = arr => (arr.length ? arr.reduce((a, b) => (b.ease.score < a.ease.score ? b : a)) : null);
+  const fit = easier.filter(r => !easyFit(r, fastest).length);
+  const inTime = fit.filter(r => slowerOf(r) < limit);
+  const easy = easiestOf(inTime) || easiestOf(fit);   // 시간 안에 드는 쉬운 길 우선, 없으면 (추천하진 않지만) 표시만
+  const on = pref === 'fast' && easyPrefer;
   let rec = fastest, why = 'fast';
-  const slower = (easiest.p.dur - fastest.p.dur) / 60;
-  const gain = fastest.ease.score - easiest.ease.score;
-  const meaningful = gain >= Math.max(2, fastest.ease.score * 0.2);
-  if (pref === 'fast' && easyPrefer && easiest !== fastest && meaningful && slower < easyMin) { rec = easiest; why = 'easy'; }
+  if (on && easy && slowerOf(easy) < limit) { rec = easy; why = 'easy'; }
   if (pref !== 'fast') { rec = uniq[0]; why = pref; }
   const rest = uniq.filter(r => r !== rec).sort((a, b) => a.p.dur - b.p.dur);
   const routes = [rec, ...rest].slice(0, 3);
-  if (easiest !== rec && !routes.includes(easiest) && routes.length === 3) routes[2] = easiest;
-  for (const r of routes) r.tags = [r === rec ? 'rec' : '', r === fastest ? 'fast' : '', r === easiest && easiest !== fastest ? 'easy' : ''].filter(Boolean);
+  if (easy && !routes.includes(easy) && routes.length === 3) routes[2] = easy;
+  for (const r of routes) r.tags = [r === rec ? 'rec' : '', r === fastest ? 'fast' : '', r === easy ? 'easy' : ''].filter(Boolean);
+  // 회전은 적지만 많이 멀거나 통행료가 생겨 뺀 길(시간만 보면 추천됐을 길) — 이유를 한 줄로 알려 준다
+  let reject = null;
+  if (on && why === 'fast') {
+    const out = easiestOf(easier.filter(r => easyFit(r, fastest).length && slowerOf(r) < limit && routes.includes(r)));
+    if (out) reject = { route: out, reasons: easyFit(out, fastest), distDiff: out.distance - fastest.distance };
+  }
   return {
     routes, rec,
-    info: { why, slowerMin: slower, gain, fastest, easiest, easyMin, turnDiff: fastest.ease.turns - easiest.ease.turns },
+    info: {
+      why, on, fastest, easiest: easy, easyMin, limit, reject,
+      slowerMin: easy ? slowerOf(easy) : 0,
+      gain: easy ? fastest.ease.score - easy.ease.score : 0,
+      turnDiff: easy ? fastest.ease.turns - easy.ease.turns : 0,
+      leftDiff: easy ? (fastest.ease.left + fastest.ease.uturn) - (easy.ease.left + easy.ease.uturn) : 0,
+      distDiff: easy ? easy.distance - fastest.distance : 0,
+    },
   };
+}
+
+// 경로 후보 위에 붙는 '왜 이 길을 추천했는지' 한 줄
+const limWord = info => (info.limit < info.easyMin ? `짧은 길 기준 ${info.limit}분` : `기준 ${info.limit}분`);
+function recLine(info) {
+  if (!info || !info.on) return '';
+  if (info.why === 'easy') {
+    const m = Math.max(1, Math.round(info.slowerMin));
+    const cost = info.distDiff >= 300 ? `약 ${m}분 늦고 ${fmtDistStr(info.distDiff)} 더 멀지만` : `약 ${m}분 늦지만`;
+    const gain = info.turnDiff > 0 ? `회전이 ${info.turnDiff}번 적고 큰길 위주라` : info.leftDiff > 0 ? `좌회전·유턴이 ${info.leftDiff}번 적어` : '큰길 위주라';
+    return `가장 빠른 길보다 ${cost} ${gain} 이 길을 추천합니다 (${limWord(info)}).`;
+  }
+  if (info.why !== 'fast') return '';
+  if (info.reject) {
+    const d = fmtDistStr(info.reject.distDiff);
+    const R = { dist: [`거리가 ${d} 더 멀고`, `거리가 ${d} 더 멀어`], toll: ['유료도로를 지나고', '유료도로를 지나'], ferry: ['페리를 타야 하고', '페리를 타야 해'] };
+    const rs = info.reject.reasons;
+    return `회전이 적은 다른 길은 ${rs.map((k, i) => R[k][i === rs.length - 1 ? 1 : 0]).join(' ')} 운전하기 쉬운 길로 추천하지 않습니다.`;
+  }
+  if (info.easiest && info.slowerMin >= info.limit) {
+    return `운전하기 쉬운 길은 ${Math.round(info.slowerMin)}분 더 걸려(${limWord(info)} 이상) 빠른 길을 추천합니다.`;
+  }
+  return '';
 }

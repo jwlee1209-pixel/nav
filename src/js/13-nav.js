@@ -354,8 +354,8 @@ function openSettings() {
   openOverlay('설정', [
     h('section', { class: 'group' }, h('h2', { text: '경로' }),
       row('기본 경로 옵션', '목적지를 고르면 이 옵션으로 먼저 찾습니다', seg(Object.entries(PREF_KO), st.pref, k => setS('pref', k), '기본 경로 옵션')),
-      row('운전하기 쉬운 길 우선', '‘추천’에서 빠른 길이 기준 시간 이상 빠르지 않으면 회전이 적고 큰길 위주인 길을 추천합니다', sw(st.easyPrefer, v => setS('easyPrefer', v), '운전하기 쉬운 길 우선')),
-      row('기준 시간', '빠른 길이 이만큼 이상 빨라야 빠른 길을 추천합니다', seg([[5, '5분'], [10, '10분'], [15, '15분'], [20, '20분']], st.easyMin, k => setS('easyMin', k), '기준 시간')),
+      row('운전하기 쉬운 길 우선', '‘추천’에서 빠른 길이 기준 시간 이상 빠르지 않으면 회전이 적고 큰길 위주인 길을 추천합니다. 빠른 길보다 25%(짧은 길은 1.5km) 넘게 멀거나 없던 유료도로·페리가 생기는 길은 추천하지 않습니다', sw(st.easyPrefer, v => setS('easyPrefer', v), '운전하기 쉬운 길 우선')),
+      row('기준 시간', '빠른 길이 이만큼 이상 빨라야 빠른 길을 추천합니다. 짧은 길(25분 미만)에서는 빠른 길 소요 시간의 40%(최소 3분)까지만 늦어도 됩니다', seg([[5, '5분'], [10, '10분'], [15, '15분'], [20, '20분']], st.easyMin, k => setS('easyMin', k), '기준 시간')),
       row('경로 엔진', '자동: Valhalla로 찾고 응답이 없으면 OSRM', seg([['auto', '자동'], ['valhalla', 'Valhalla'], ['osrm', 'OSRM']], st.engine, k => setS('engine', k), '경로 엔진'))),
     h('section', { class: 'group' }, h('h2', { text: '음성 안내' }),
       row('음성 안내', null, sw(st.voice, v => setS('voice', v), '음성 안내')),
