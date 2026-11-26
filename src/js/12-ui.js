@@ -69,6 +69,7 @@ function banner(text) {
 function go(screen) {
   const prev = S.screen;
   S.screen = screen;
+  S.sheetScr = null;          // 화면을 옮기면(같은 화면을 다시 열어도) 목록은 기본 크기로
   $('#app').dataset.screen = screen;
   if (screen !== 'place' && screen !== 'search') { MV.setPlaceMark(null); MV.setHits(null); }
   if (screen === 'home') { S.pick = null; $('#q').value = ''; $('#q').placeholder = '어디로 갈까요?'; $('#q').blur(); }
@@ -101,20 +102,98 @@ function measure() {
   app.style.setProperty('--gbar-h', ($('#gbar').offsetHeight || 0) + 'px');
   app.style.setProperty('--plan-h', ($('#plan').offsetHeight || 0) + 'px');
 }
+// 손으로 끌어 목록 크기 바꾸기: 손잡이는 어디서나, 목록 안에서는 맨 위에서 아래로 끌 때(또는 크게가 아닐 때 위로)
+// 놓으면 가까운 크기(접기·보통·크게)로 붙고, 빠르게 튕기면 그 방향으로 한 단계
+function sheetSnapHeights() {
+  const sheet = $('#sheet'), cur = sheet.dataset.size, mh = sheet.style.maxHeight;
+  sheet.style.transition = 'none';
+  const hs = {};
+  for (const k of SHEET_SIZES) { sheet.style.maxHeight = ''; sheet.dataset.size = k; hs[k] = sheet.getBoundingClientRect().height; }
+  sheet.dataset.size = cur; sheet.style.maxHeight = mh;
+  return hs;
+}
+function initSheetDrag() {
+  const sheet = $('#sheet'), body = $('#sheetBody'), grip = $('#grip');
+  let st = null, justDragged = 0;
+  const begin = (x, y, fromBody) => { st = { x0: x, y0: y, h0: sheet.getBoundingClientRect().height, active: false, fromBody, pts: [{ y, t: performance.now() }] }; };
+  const move = (x, y) => {
+    if (!st) return false;
+    const dy = y - st.y0, dx = x - st.x0;
+    if (!st.active) {
+      if (Math.abs(dy) < 8 || Math.abs(dx) > Math.abs(dy)) { if (Math.abs(dx) > 12) st = null; return false; }
+      if (st.fromBody && ((dy > 0 && body.scrollTop > 2) || (dy < 0 && sheet.dataset.size === 'full'))) { st = null; return false; }   // 목록 스크롤
+      st.active = true; st.hs = sheetSnapHeights();
+      sheet.style.transition = 'none';
+      $('#app').classList.add('sheet-drag');
+    }
+    const lo = Math.min(st.hs.min, st.hs.peek, st.hs.full), hi = Math.max(st.hs.min, st.hs.peek, st.hs.full);
+    sheet.style.maxHeight = clamp(st.h0 - dy, lo - 12, hi + 12) + 'px';
+    st.pts.push({ y, t: performance.now() }); if (st.pts.length > 8) st.pts.shift();
+    measure();
+    return true;
+  };
+  const end = () => {
+    const was = st; st = null;
+    if (!was || !was.active) return;
+    justDragged = Date.now();
+    const h = sheet.getBoundingClientRect().height;
+    const b = was.pts[was.pts.length - 1];
+    const a = was.pts.find(p => b.t - p.t <= 150) || was.pts[0];   // 손을 떼기 직전 0.15초의 빠르기
+    const v = (b.y - a.y) / Math.max(16, b.t - a.t);              // px/ms, + 아래로
+    const order = SHEET_SIZES.map(k => [k, was.hs[k]]).sort((p, q) => p[1] - q[1]);
+    let target;
+    if (v > 0.35) target = [...order].reverse().find(([, hh]) => hh < h - 4) || order[0];
+    else if (v < -0.35) target = order.find(([, hh]) => hh > h + 4) || order[order.length - 1];
+    else target = order.reduce((p, q) => (Math.abs(q[1] - h) < Math.abs(p[1] - h) ? q : p));
+    sheet.getBoundingClientRect();
+    sheet.style.transition = '';
+    setSheetSize(target[0]);
+    $('#app').classList.remove('sheet-drag');
+  };
+  const t0 = e => e.touches[0];
+  grip.addEventListener('touchstart', e => { if (e.touches.length === 1) begin(t0(e).clientX, t0(e).clientY, false); }, { passive: true });
+  body.addEventListener('touchstart', e => { if (e.touches.length === 1) begin(t0(e).clientX, t0(e).clientY, true); }, { passive: true });
+  sheet.addEventListener('touchmove', e => { if (st && e.touches.length === 1 && move(t0(e).clientX, t0(e).clientY) && e.cancelable) e.preventDefault(); }, { passive: false });
+  sheet.addEventListener('touchend', end);
+  sheet.addEventListener('touchcancel', end);
+  // PC(마우스): 손잡이를 끌어서
+  grip.addEventListener('pointerdown', e => { if (e.pointerType !== 'mouse' || e.button !== 0) return; begin(e.clientX, e.clientY, false); try { grip.setPointerCapture(e.pointerId); } catch (er) { /* 무시 */ } });
+  grip.addEventListener('pointermove', e => { if (e.pointerType === 'mouse' && st) move(e.clientX, e.clientY); });
+  grip.addEventListener('pointerup', e => { if (e.pointerType === 'mouse') end(); });
+  grip.addEventListener('pointercancel', end);
+  // 끈 직후의 클릭은 버리고, 접힌 상태에서 목록을 누르면 펼친다
+  sheet.addEventListener('click', e => {
+    if (Date.now() - justDragged < 350) { e.stopPropagation(); e.preventDefault(); return; }
+    if (sheet.dataset.size === 'min' && !grip.contains(e.target)) { e.stopPropagation(); e.preventDefault(); setSheetSize('peek'); }
+  }, true);
+}
+
 const _ro = new ResizeObserver(() => measure());
 _ro.observe(document.body);
 ['#sheet', '#mpanel', '#gbar', '#plan'].forEach(sel => { const el = document.querySelector(sel); if (el) _ro.observe(el); });
 
-function setSheetSize(size) { $('#sheet').dataset.size = size; requestAnimationFrame(measure); setTimeout(measure, 300); }
+// ── 아래 목록(시트) 크기: min 접기(손잡이와 한 줄) · peek 보통 · full 크게 ──
+const SHEET_SIZES = ['min', 'peek', 'full'];
+function setSheetSize(size) {
+  const sh = $('#sheet');
+  sh.style.maxHeight = '';
+  sh.dataset.size = size;
+  $('#grip').setAttribute('aria-expanded', size === 'min' ? 'false' : 'true');
+  if (size === 'min') $('#sheetBody').scrollTop = 0;
+  requestAnimationFrame(measure); setTimeout(measure, 300);
+}
+const SHEET_DEFAULT = { home: 'peek', search: 'full', place: 'peek', preview: 'peek' };
 
 function renderSheet() {
   const body = $('#sheetBody');
   const scr = S.screen;
   const put = kids => body.replaceChildren(...kids.filter(Boolean));
-  if (scr === 'home') { setSheetSize('peek'); put(homeSheet()); }
-  else if (scr === 'search') { setSheetSize('full'); put(searchSheet()); }
-  else if (scr === 'place') { setSheetSize('peek'); put(placeSheet()); }
-  else if (scr === 'preview') { setSheetSize('peek'); put(previewSheet()); }
+  // 화면이 바뀔 때만 기본 크기로. 같은 화면을 다시 그릴 때는 손으로 맞춘 크기를 그대로 둔다
+  if (SHEET_DEFAULT[scr] && S.sheetScr !== scr) { S.sheetScr = scr; setSheetSize(SHEET_DEFAULT[scr]); }
+  if (scr === 'home') put(homeSheet());
+  else if (scr === 'search') put(searchSheet());
+  else if (scr === 'place') put(placeSheet());
+  else if (scr === 'preview') put(previewSheet());
   body.scrollTop = 0;
 }
 
@@ -264,7 +343,7 @@ async function doSearch() {
   if (S.searchCtl) S.searchCtl.abort();
   const ctl = S.searchCtl = new AbortController();
   S.searching = true; S.lastQuery = q;
-  if (S.screen !== 'search') go('search'); else renderSheet();
+  if (S.screen !== 'search') go('search'); else { if ($('#sheet').dataset.size === 'min') setSheetSize('full'); renderSheet(); }
   const near = S.me || (MV.map ? { lat: MV.map.getCenter().lat, lon: MV.map.getCenter().lng } : null);
   try {
     S.results = await searchPlaces(q, near, ctl.signal);

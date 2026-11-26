@@ -9,7 +9,7 @@
 <meta name="apple-mobile-web-app-title" content="&#xae38;&#xc7a1;&#xc774; &#xb0b4;&#xbe44;">
 <meta name="description" content="&#xbb34;&#xb8cc; &#xc9c0;&#xb3c4;(OpenStreetMap)&#xb85c; &#xae38;&#xc744; &#xcc3e;&#xace0; &#xd55c;&#xad6d;&#xc5b4; &#xc74c;&#xc131;&#xc73c;&#xb85c; &#xc548;&#xb0b4;&#xd558;&#xb294; &#xac1c;&#xc778;&#xc6a9; &#xcc28;&#xb7c9; &#xb0b4;&#xbe44;&#xac8c;&#xc774;&#xc158;">
 <title>&#xae38;&#xc7a1;&#xc774; &#xb0b4;&#xbe44;</title>
-<meta name="generator" content="&#xae38;&#xc7a1;&#xc774; &#xb0b4;&#xbe44; v2.0">
+<meta name="generator" content="&#xae38;&#xc7a1;&#xc774; &#xb0b4;&#xbe44; v2.1">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230B5CAD'/%3E%3Cpath d='M11 25V15.5a3.5 3.5 0 0 1 3.5-3.5H20' fill='none' stroke='%23fff' stroke-width='3.4' stroke-linecap='round'/%3E%3Cpath d='M19 7.2 25.5 12 19 16.8z' fill='%23fff'/%3E%3C/svg%3E">
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
@@ -106,7 +106,10 @@ svg { display: block; flex: none; }
 .sheet { position: absolute; left: 0; right: 0; bottom: 0; z-index: 6; background: var(--surface); border-radius: 20px 20px 0 0; box-shadow: 0 -6px 28px rgba(18, 28, 45, .16); display: flex; flex-direction: column; max-height: calc(100% - var(--st) - 140px); padding-bottom: var(--sb); transition: max-height .25s; }
 .sheet[data-size="peek"] { max-height: min(44%, 360px); }
 .sheet[data-size="full"] { max-height: calc(100% - var(--st) - 72px); }
-.sheet__grip { height: 22px; flex: none; display: grid; place-items: center; width: 100%; }
+.sheet[data-size="min"] { max-height: calc(var(--sb) + 82px); }
+.sheet[data-size="min"] .sheet__body { overflow: hidden; }
+.sheet__grip { height: 22px; flex: none; display: grid; place-items: center; width: 100%; touch-action: none; cursor: grab; }
+#app.sheet-drag .fabs, #app.sheet-drag .maplibregl-ctrl-bottom-left { transition: none; }
 .sheet__grip::before { content: ""; width: 40px; height: 5px; border-radius: 3px; background: var(--surface-3); }
 .sheet__body { overflow-y: auto; overscroll-behavior: contain; padding: 0 var(--sr) 14px var(--sl); min-height: 0; }
 .sheet h2 { font-size: 17px; margin: 4px 0 10px; letter-spacing: -.01em; }
@@ -300,6 +303,7 @@ input[type="range"] { width: 180px; accent-color: var(--accent); }
   .sheet { left: 16px; right: auto; width: var(--col); bottom: 16px; border-radius: 20px; max-height: calc(100% - 180px); }
   .sheet[data-size="peek"] { max-height: min(46%, 420px); }
   [data-screen="preview"] .sheet { max-height: calc(100% - var(--plan-h, 200px) - 40px); }
+  [data-screen] .sheet[data-size="min"] { max-height: 82px; }
   .mpanel { left: 16px; right: auto; top: 16px; width: var(--col); border-radius: 18px; padding: 14px 16px; }
   .gbar { left: 16px; right: auto; bottom: 16px; width: var(--col); border-radius: 18px; padding: 12px 14px; flex-wrap: wrap; }
   .nexthint { left: 16px; top: calc(var(--mp-h, 120px) + 24px); }
@@ -479,7 +483,7 @@ return maplibregl$1;
 </script>
 <script>(function () {
 'use strict';
-const APP_VERSION = '2.0';
+const APP_VERSION = '2.1';
 // ===== 00-util.js =====
 // \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 \uacf5\ud1b5 \ub3c4\uad6c \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
 const $ = (s, r = document) => r.querySelector(s);
@@ -2922,6 +2926,7 @@ function banner(text) {
 function go(screen) {
   const prev = S.screen;
   S.screen = screen;
+  S.sheetScr = null;          // \ud654\uba74\uc744 \uc62e\uae30\uba74(\uac19\uc740 \ud654\uba74\uc744 \ub2e4\uc2dc \uc5f4\uc5b4\ub3c4) \ubaa9\ub85d\uc740 \uae30\ubcf8 \ud06c\uae30\ub85c
   $('#app').dataset.screen = screen;
   if (screen !== 'place' && screen !== 'search') { MV.setPlaceMark(null); MV.setHits(null); }
   if (screen === 'home') { S.pick = null; $('#q').value = ''; $('#q').placeholder = '\uc5b4\ub514\ub85c \uac08\uae4c\uc694?'; $('#q').blur(); }
@@ -2954,20 +2959,98 @@ function measure() {
   app.style.setProperty('--gbar-h', ($('#gbar').offsetHeight || 0) + 'px');
   app.style.setProperty('--plan-h', ($('#plan').offsetHeight || 0) + 'px');
 }
+// \uc190\uc73c\ub85c \ub04c\uc5b4 \ubaa9\ub85d \ud06c\uae30 \ubc14\uafb8\uae30: \uc190\uc7a1\uc774\ub294 \uc5b4\ub514\uc11c\ub098, \ubaa9\ub85d \uc548\uc5d0\uc11c\ub294 \ub9e8 \uc704\uc5d0\uc11c \uc544\ub798\ub85c \ub04c \ub54c(\ub610\ub294 \ud06c\uac8c\uac00 \uc544\ub2d0 \ub54c \uc704\ub85c)
+// \ub193\uc73c\uba74 \uac00\uae4c\uc6b4 \ud06c\uae30(\uc811\uae30\u00b7\ubcf4\ud1b5\u00b7\ud06c\uac8c)\ub85c \ubd99\uace0, \ube60\ub974\uac8c \ud295\uae30\uba74 \uadf8 \ubc29\ud5a5\uc73c\ub85c \ud55c \ub2e8\uacc4
+function sheetSnapHeights() {
+  const sheet = $('#sheet'), cur = sheet.dataset.size, mh = sheet.style.maxHeight;
+  sheet.style.transition = 'none';
+  const hs = {};
+  for (const k of SHEET_SIZES) { sheet.style.maxHeight = ''; sheet.dataset.size = k; hs[k] = sheet.getBoundingClientRect().height; }
+  sheet.dataset.size = cur; sheet.style.maxHeight = mh;
+  return hs;
+}
+function initSheetDrag() {
+  const sheet = $('#sheet'), body = $('#sheetBody'), grip = $('#grip');
+  let st = null, justDragged = 0;
+  const begin = (x, y, fromBody) => { st = { x0: x, y0: y, h0: sheet.getBoundingClientRect().height, active: false, fromBody, pts: [{ y, t: performance.now() }] }; };
+  const move = (x, y) => {
+    if (!st) return false;
+    const dy = y - st.y0, dx = x - st.x0;
+    if (!st.active) {
+      if (Math.abs(dy) < 8 || Math.abs(dx) > Math.abs(dy)) { if (Math.abs(dx) > 12) st = null; return false; }
+      if (st.fromBody && ((dy > 0 && body.scrollTop > 2) || (dy < 0 && sheet.dataset.size === 'full'))) { st = null; return false; }   // \ubaa9\ub85d \uc2a4\ud06c\ub864
+      st.active = true; st.hs = sheetSnapHeights();
+      sheet.style.transition = 'none';
+      $('#app').classList.add('sheet-drag');
+    }
+    const lo = Math.min(st.hs.min, st.hs.peek, st.hs.full), hi = Math.max(st.hs.min, st.hs.peek, st.hs.full);
+    sheet.style.maxHeight = clamp(st.h0 - dy, lo - 12, hi + 12) + 'px';
+    st.pts.push({ y, t: performance.now() }); if (st.pts.length > 8) st.pts.shift();
+    measure();
+    return true;
+  };
+  const end = () => {
+    const was = st; st = null;
+    if (!was || !was.active) return;
+    justDragged = Date.now();
+    const h = sheet.getBoundingClientRect().height;
+    const b = was.pts[was.pts.length - 1];
+    const a = was.pts.find(p => b.t - p.t <= 150) || was.pts[0];   // \uc190\uc744 \ub5bc\uae30 \uc9c1\uc804 0.15\ucd08\uc758 \ube60\ub974\uae30
+    const v = (b.y - a.y) / Math.max(16, b.t - a.t);              // px/ms, + \uc544\ub798\ub85c
+    const order = SHEET_SIZES.map(k => [k, was.hs[k]]).sort((p, q) => p[1] - q[1]);
+    let target;
+    if (v > 0.35) target = [...order].reverse().find(([, hh]) => hh < h - 4) || order[0];
+    else if (v < -0.35) target = order.find(([, hh]) => hh > h + 4) || order[order.length - 1];
+    else target = order.reduce((p, q) => (Math.abs(q[1] - h) < Math.abs(p[1] - h) ? q : p));
+    sheet.getBoundingClientRect();
+    sheet.style.transition = '';
+    setSheetSize(target[0]);
+    $('#app').classList.remove('sheet-drag');
+  };
+  const t0 = e => e.touches[0];
+  grip.addEventListener('touchstart', e => { if (e.touches.length === 1) begin(t0(e).clientX, t0(e).clientY, false); }, { passive: true });
+  body.addEventListener('touchstart', e => { if (e.touches.length === 1) begin(t0(e).clientX, t0(e).clientY, true); }, { passive: true });
+  sheet.addEventListener('touchmove', e => { if (st && e.touches.length === 1 && move(t0(e).clientX, t0(e).clientY) && e.cancelable) e.preventDefault(); }, { passive: false });
+  sheet.addEventListener('touchend', end);
+  sheet.addEventListener('touchcancel', end);
+  // PC(\ub9c8\uc6b0\uc2a4): \uc190\uc7a1\uc774\ub97c \ub04c\uc5b4\uc11c
+  grip.addEventListener('pointerdown', e => { if (e.pointerType !== 'mouse' || e.button !== 0) return; begin(e.clientX, e.clientY, false); try { grip.setPointerCapture(e.pointerId); } catch (er) { /* \ubb34\uc2dc */ } });
+  grip.addEventListener('pointermove', e => { if (e.pointerType === 'mouse' && st) move(e.clientX, e.clientY); });
+  grip.addEventListener('pointerup', e => { if (e.pointerType === 'mouse') end(); });
+  grip.addEventListener('pointercancel', end);
+  // \ub048 \uc9c1\ud6c4\uc758 \ud074\ub9ad\uc740 \ubc84\ub9ac\uace0, \uc811\ud78c \uc0c1\ud0dc\uc5d0\uc11c \ubaa9\ub85d\uc744 \ub204\ub974\uba74 \ud3bc\uce5c\ub2e4
+  sheet.addEventListener('click', e => {
+    if (Date.now() - justDragged < 350) { e.stopPropagation(); e.preventDefault(); return; }
+    if (sheet.dataset.size === 'min' && !grip.contains(e.target)) { e.stopPropagation(); e.preventDefault(); setSheetSize('peek'); }
+  }, true);
+}
+
 const _ro = new ResizeObserver(() => measure());
 _ro.observe(document.body);
 ['#sheet', '#mpanel', '#gbar', '#plan'].forEach(sel => { const el = document.querySelector(sel); if (el) _ro.observe(el); });
 
-function setSheetSize(size) { $('#sheet').dataset.size = size; requestAnimationFrame(measure); setTimeout(measure, 300); }
+// \u2500\u2500 \uc544\ub798 \ubaa9\ub85d(\uc2dc\ud2b8) \ud06c\uae30: min \uc811\uae30(\uc190\uc7a1\uc774\uc640 \ud55c \uc904) \u00b7 peek \ubcf4\ud1b5 \u00b7 full \ud06c\uac8c \u2500\u2500
+const SHEET_SIZES = ['min', 'peek', 'full'];
+function setSheetSize(size) {
+  const sh = $('#sheet');
+  sh.style.maxHeight = '';
+  sh.dataset.size = size;
+  $('#grip').setAttribute('aria-expanded', size === 'min' ? 'false' : 'true');
+  if (size === 'min') $('#sheetBody').scrollTop = 0;
+  requestAnimationFrame(measure); setTimeout(measure, 300);
+}
+const SHEET_DEFAULT = { home: 'peek', search: 'full', place: 'peek', preview: 'peek' };
 
 function renderSheet() {
   const body = $('#sheetBody');
   const scr = S.screen;
   const put = kids => body.replaceChildren(...kids.filter(Boolean));
-  if (scr === 'home') { setSheetSize('peek'); put(homeSheet()); }
-  else if (scr === 'search') { setSheetSize('full'); put(searchSheet()); }
-  else if (scr === 'place') { setSheetSize('peek'); put(placeSheet()); }
-  else if (scr === 'preview') { setSheetSize('peek'); put(previewSheet()); }
+  // \ud654\uba74\uc774 \ubc14\ub014 \ub54c\ub9cc \uae30\ubcf8 \ud06c\uae30\ub85c. \uac19\uc740 \ud654\uba74\uc744 \ub2e4\uc2dc \uadf8\ub9b4 \ub54c\ub294 \uc190\uc73c\ub85c \ub9de\ucd98 \ud06c\uae30\ub97c \uadf8\ub300\ub85c \ub454\ub2e4
+  if (SHEET_DEFAULT[scr] && S.sheetScr !== scr) { S.sheetScr = scr; setSheetSize(SHEET_DEFAULT[scr]); }
+  if (scr === 'home') put(homeSheet());
+  else if (scr === 'search') put(searchSheet());
+  else if (scr === 'place') put(placeSheet());
+  else if (scr === 'preview') put(previewSheet());
   body.scrollTop = 0;
 }
 
@@ -3117,7 +3200,7 @@ async function doSearch() {
   if (S.searchCtl) S.searchCtl.abort();
   const ctl = S.searchCtl = new AbortController();
   S.searching = true; S.lastQuery = q;
-  if (S.screen !== 'search') go('search'); else renderSheet();
+  if (S.screen !== 'search') go('search'); else { if ($('#sheet').dataset.size === 'min') setSheetSize('full'); renderSheet(); }
   const near = S.me || (MV.map ? { lat: MV.map.getCenter().lat, lon: MV.map.getCenter().lng } : null);
   try {
     S.results = await searchPlaces(q, near, ctl.signal);
@@ -4012,7 +4095,8 @@ function bindUI() {
   $('#btnNorth').innerHTML = ic('north', 22, true);
   $('#btnRecenter').replaceChildren(h('span', { svg: ic('nav', 20, true) }), '\ud604\uc704\uce58\ub85c');
   $('#gOverview').innerHTML = ic('overview', 24);
-  $('#grip').onclick = () => setSheetSize($('#sheet').dataset.size === 'full' ? 'peek' : 'full');
+  $('#grip').onclick = () => { const z = $('#sheet').dataset.size; setSheetSize(z === 'peek' ? 'full' : 'peek'); };   // \uc811\uae30\u00b7\ud06c\uac8c \u2192 \ubcf4\ud1b5, \ubcf4\ud1b5 \u2192 \ud06c\uac8c
+  initSheetDrag();
 
   const q = $('#q');
   q.addEventListener('focus', () => { if (S.screen === 'home' || S.screen === 'place') { S.results = null; go('search'); } });
@@ -4123,7 +4207,7 @@ function boot() {
       toast('\uc800\uc7a5\ub41c \uc7a5\uc18c \uc774\ub984\u00b7\uc8fc\uc18c\ub97c \ud55c\uae00\ub85c \ubc14\uafe8\uc2b5\ub2c8\ub2e4');
     }).catch(() => { /* \ub2e4\uc74c\uc5d0 \ub2e4\uc2dc */ });
   }, 4000);
-  window.__navi = { S, store, MV, Voice, navFix, startTrip, finishNav, applyTheme, openSettings, openPlaces, onPos, reversePlace, searchPlaces };
+  window.__navi = { S, store, MV, Voice, navFix, startTrip, finishNav, applyTheme, openSettings, openPlaces, onPos, reversePlace, searchPlaces, renderSheet, setSheetSize };
 }
 
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();

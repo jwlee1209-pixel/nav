@@ -7,7 +7,8 @@ function bindUI() {
   $('#btnNorth').innerHTML = ic('north', 22, true);
   $('#btnRecenter').replaceChildren(h('span', { svg: ic('nav', 20, true) }), '현위치로');
   $('#gOverview').innerHTML = ic('overview', 24);
-  $('#grip').onclick = () => setSheetSize($('#sheet').dataset.size === 'full' ? 'peek' : 'full');
+  $('#grip').onclick = () => { const z = $('#sheet').dataset.size; setSheetSize(z === 'peek' ? 'full' : 'peek'); };   // 접기·크게 → 보통, 보통 → 크게
+  initSheetDrag();
 
   const q = $('#q');
   q.addEventListener('focus', () => { if (S.screen === 'home' || S.screen === 'place') { S.results = null; go('search'); } });
@@ -118,7 +119,7 @@ function boot() {
       toast('저장된 장소 이름·주소를 한글로 바꿨습니다');
     }).catch(() => { /* 다음에 다시 */ });
   }, 4000);
-  window.__navi = { S, store, MV, Voice, navFix, startTrip, finishNav, applyTheme, openSettings, openPlaces, onPos, reversePlace, searchPlaces };
+  window.__navi = { S, store, MV, Voice, navFix, startTrip, finishNav, applyTheme, openSettings, openPlaces, onPos, reversePlace, searchPlaces, renderSheet, setSheetSize };
 }
 
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();
