@@ -59,6 +59,13 @@ fs.writeFileSync(path.join(web, 'manifest.json'), JSON.stringify(manifest, null,
 for (const f of ['icon-192.png', 'icon-512.png', 'icon-maskable-512.png', 'apple-touch-icon.png']) fs.copyFileSync(path.join(__dirname, 'src/web', f), path.join(web, f));
 fs.writeFileSync(path.join(dist, 'index.html'), html);   // 예전 위치 호환
 
+// GitHub Pages 로 내보낼 폴더(docs/): https://jwlee1209-pixel.github.io/nav/
+const docs = path.join(__dirname, 'docs');
+fs.rmSync(docs, { recursive: true, force: true });
+fs.mkdirSync(docs, { recursive: true });
+for (const f of fs.readdirSync(web)) fs.copyFileSync(path.join(web, f), path.join(docs, f));
+fs.writeFileSync(path.join(docs, '.nojekyll'), '');
+
 const zip = path.join(dist, `길잡이내비_v${VER}_웹용.zip`);
 fs.rmSync(zip, { force: true });
 execSync(`cd "${path.join(dist, 'web')}" && zip -q -r -X "${zip}" navi`);

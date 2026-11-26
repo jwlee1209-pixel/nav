@@ -1,4 +1,4 @@
-// 웹사이트(https://www.knicksgo.co.kr/navi/)에 올린 상황을 흉내 낸 시험
+// 웹(https://jwlee1209-pixel.github.io/nav/)에 올린 상황을 흉내 낸 시험
 // 서버가 EUC-KR 이라고 알려 줘도 한글이 깨지지 않는지, 서비스 워커·홈 화면 정보·위치가 동작하는지 확인
 const { chromium } = require('playwright');
 const path = require('path'), fs = require('fs');
@@ -6,15 +6,15 @@ const mock = require('./mocknet');
 const F = require('./fixtures');
 const OUT = path.join(__dirname, 'out');
 const WEB = path.join(__dirname, '..', 'dist', 'web', 'navi');
-const BASE = 'https://www.knicksgo.co.kr/navi/';
+const BASE = 'https://jwlee1209-pixel.github.io/nav/';
 const TYPES = { html: 'text/html; charset=euc-kr', json: 'application/json', js: 'application/javascript', png: 'image/png' };
 (async () => {
   const browser = await chromium.launch({ args: ['--enable-unsafe-swiftshader'] });
   const context = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, geolocation: { latitude: F.P.A[1], longitude: F.P.A[0], accuracy: 8 }, permissions: ['geolocation'], locale: 'ko-KR', timezoneId: 'Asia/Seoul' });
   const served = [];
-  await context.route(/^https:\/\/www\.knicksgo\.co\.kr\/navi\/.*/, r => {
+  await context.route(/^https:\/\/jwlee1209-pixel\.github\.io\/nav\/.*/, r => {
     const u = new URL(r.request().url());
-    let f = u.pathname.replace('/navi/', '') || 'index.html';
+    let f = u.pathname.replace('/nav/', '') || 'index.html';
     const fp = path.join(WEB, f);
     served.push(f + ' (' + (r.request().headers()['referer'] ? 'ref' : '-') + ')');
     if (!fs.existsSync(fp)) return r.fulfill({ status: 404, body: 'nf' });

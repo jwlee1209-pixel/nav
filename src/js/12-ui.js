@@ -163,7 +163,7 @@ function homeSheet() {
 }
 
 // 위치를 못 쓰는 이유와 해결 방법(한곳에서 관리)
-const APP_URL = 'https://www.knicksgo.co.kr/navi/';
+const APP_URL = 'https://jwlee1209-pixel.github.io/nav/';
 const isLocalFile = () => /^(file|content):$/.test(location.protocol);
 const GPS_BAD = ['localfile', 'insecure', 'denied', 'off', 'unavail'];
 function gpsMsg(kind = 'long') {
