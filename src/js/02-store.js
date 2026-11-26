@@ -43,7 +43,25 @@ function placeKey(p) { return p ? `${(+p.lat).toFixed(4)},${(+p.lon).toFixed(4)}
 
 function cleanPlace(p) {
   if (!p || !isFinite(+p.lat) || !isFinite(+p.lon)) return null;
-  return { id: p.id || uid(), name: String(p.name || '').slice(0, 80) || '이름 없는 장소', addr: String(p.addr || '').slice(0, 160), lat: +p.lat, lon: +p.lon, ts: +p.ts || Date.now(), ...(p.n ? { n: +p.n } : {}) };
+  const memo = String(p.memo || '').trim().slice(0, 120);
+  return { id: p.id || uid(), name: String(p.name || '').slice(0, 80) || '이름 없는 장소', addr: String(p.addr || '').slice(0, 160), lat: +p.lat, lon: +p.lon, ts: +p.ts || Date.now(), ...(p.n ? { n: +p.n } : {}), ...(memo ? { memo } : {}) };
+}
+
+// 내 장소 찾기: 집·회사·이름·메모·주소에서, 띄어쓰기와 대소문자를 무시하고 낱말이 모두 들어 있으면 맞음
+const squash = s => String(s || '').toLowerCase().replace(/\s+/g, '');
+function matchPlace(p, q) {
+  const words = String(q || '').toLowerCase().split(/\s+/).filter(Boolean);
+  if (!words.length) return true;
+  const hay = squash([p.label, p.name, p.memo, p.addr].filter(Boolean).join(' '));
+  return hay.includes(squash(q)) || words.every(w => hay.includes(w));
+}
+// 저장된 내 장소(집·회사·즐겨찾기) 가운데 같은 자리
+function savedAt(p) {
+  const k = placeKey(p);
+  if (store.home && placeKey(store.home) === k) return { kind: 'home', place: store.home };
+  if (store.work && placeKey(store.work) === k) return { kind: 'work', place: store.work };
+  const f = store.favs.find(x => placeKey(x) === k);
+  return f ? { kind: 'fav', place: f } : null;
 }
 
 function applyData(d) {

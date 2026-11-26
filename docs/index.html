@@ -9,7 +9,7 @@
 <meta name="apple-mobile-web-app-title" content="&#xae38;&#xc7a1;&#xc774; &#xb0b4;&#xbe44;">
 <meta name="description" content="&#xbb34;&#xb8cc; &#xc9c0;&#xb3c4;(OpenStreetMap)&#xb85c; &#xae38;&#xc744; &#xcc3e;&#xace0; &#xd55c;&#xad6d;&#xc5b4; &#xc74c;&#xc131;&#xc73c;&#xb85c; &#xc548;&#xb0b4;&#xd558;&#xb294; &#xac1c;&#xc778;&#xc6a9; &#xcc28;&#xb7c9; &#xb0b4;&#xbe44;&#xac8c;&#xc774;&#xc158;">
 <title>&#xae38;&#xc7a1;&#xc774; &#xb0b4;&#xbe44;</title>
-<meta name="generator" content="&#xae38;&#xc7a1;&#xc774; &#xb0b4;&#xbe44; v1.8">
+<meta name="generator" content="&#xae38;&#xc7a1;&#xc774; &#xb0b4;&#xbe44; v1.9">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230B5CAD'/%3E%3Cpath d='M11 25V15.5a3.5 3.5 0 0 1 3.5-3.5H20' fill='none' stroke='%23fff' stroke-width='3.4' stroke-linecap='round'/%3E%3Cpath d='M19 7.2 25.5 12 19 16.8z' fill='%23fff'/%3E%3C/svg%3E">
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
@@ -270,6 +270,15 @@ input[type="range"] { width: 180px; accent-color: var(--accent); }
 .dialog__box p { margin: 0 0 16px; font-size: 16px; font-weight: 600; }
 .dialog__btns { display: flex; gap: 8px; }
 .dialog__btns .btn { flex: 1; }
+.pform h2 { margin: 0 0 4px; font-size: 18px; font-weight: 800; }
+.pform__info { font-size: 13px; color: var(--text-3); margin: 0 0 12px; min-height: 18px; line-height: 1.45; }
+.pform__info--warn { color: var(--warn); }
+.pform .seg { margin: 0 0 10px; }
+.pform .field { display: block; margin: 0 0 8px; font-weight: 600; }
+.pform .dialog__btns { margin-top: 6px; }
+.pform .btn:disabled { opacity: .45; }
+.field--memo { margin-top: 6px; font-weight: 500 !important; height: 38px; }
+.place__memo { margin-top: 6px; font-size: 14px; color: var(--text); background: var(--surface-2); padding: 7px 10px; border-radius: 9px; }
 .toast { position: absolute; z-index: 40; left: 50%; bottom: calc(var(--sb) + 24px); transform: translate(-50%, 20px); max-width: calc(100% - 32px); background: #141A22; color: #fff; padding: 12px 16px; border-radius: 12px; font-size: 14.5px; font-weight: 600; opacity: 0; pointer-events: none; transition: opacity .2s, transform .2s; text-align: center; }
 .toast.show { opacity: 1; transform: translate(-50%, 0); }
 .boot { position: absolute; inset: 0; z-index: 50; display: grid; place-items: center; background: var(--bg); color: var(--text-2); font-weight: 600; transition: opacity .3s; }
@@ -464,7 +473,7 @@ return maplibregl$1;
 </script>
 <script>(function () {
 'use strict';
-const APP_VERSION = '1.8';
+const APP_VERSION = '1.9';
 // ===== 00-util.js =====
 // \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 \uacf5\ud1b5 \ub3c4\uad6c \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
 const $ = (s, r = document) => r.querySelector(s);
@@ -788,7 +797,25 @@ function placeKey(p) { return p ? `${(+p.lat).toFixed(4)},${(+p.lon).toFixed(4)}
 
 function cleanPlace(p) {
   if (!p || !isFinite(+p.lat) || !isFinite(+p.lon)) return null;
-  return { id: p.id || uid(), name: String(p.name || '').slice(0, 80) || '\uc774\ub984 \uc5c6\ub294 \uc7a5\uc18c', addr: String(p.addr || '').slice(0, 160), lat: +p.lat, lon: +p.lon, ts: +p.ts || Date.now(), ...(p.n ? { n: +p.n } : {}) };
+  const memo = String(p.memo || '').trim().slice(0, 120);
+  return { id: p.id || uid(), name: String(p.name || '').slice(0, 80) || '\uc774\ub984 \uc5c6\ub294 \uc7a5\uc18c', addr: String(p.addr || '').slice(0, 160), lat: +p.lat, lon: +p.lon, ts: +p.ts || Date.now(), ...(p.n ? { n: +p.n } : {}), ...(memo ? { memo } : {}) };
+}
+
+// \ub0b4 \uc7a5\uc18c \ucc3e\uae30: \uc9d1\u00b7\ud68c\uc0ac\u00b7\uc774\ub984\u00b7\uba54\ubaa8\u00b7\uc8fc\uc18c\uc5d0\uc11c, \ub744\uc5b4\uc4f0\uae30\uc640 \ub300\uc18c\ubb38\uc790\ub97c \ubb34\uc2dc\ud558\uace0 \ub0b1\ub9d0\uc774 \ubaa8\ub450 \ub4e4\uc5b4 \uc788\uc73c\uba74 \ub9de\uc74c
+const squash = s => String(s || '').toLowerCase().replace(/\s+/g, '');
+function matchPlace(p, q) {
+  const words = String(q || '').toLowerCase().split(/\s+/).filter(Boolean);
+  if (!words.length) return true;
+  const hay = squash([p.label, p.name, p.memo, p.addr].filter(Boolean).join(' '));
+  return hay.includes(squash(q)) || words.every(w => hay.includes(w));
+}
+// \uc800\uc7a5\ub41c \ub0b4 \uc7a5\uc18c(\uc9d1\u00b7\ud68c\uc0ac\u00b7\uc990\uaca8\ucc3e\uae30) \uac00\uc6b4\ub370 \uac19\uc740 \uc790\ub9ac
+function savedAt(p) {
+  const k = placeKey(p);
+  if (store.home && placeKey(store.home) === k) return { kind: 'home', place: store.home };
+  if (store.work && placeKey(store.work) === k) return { kind: 'work', place: store.work };
+  const f = store.favs.find(x => placeKey(x) === k);
+  return f ? { kind: 'fav', place: f } : null;
 }
 
 function applyData(d) {
@@ -2888,7 +2915,7 @@ function placeItem(p, { kind = 'pin', onClick, right } = {}) {
     h('span', { class: 'item__ic item__ic--' + kind, svg: ic(icName, 20, kind === 'fav') }),
     h('span', { class: 'item__txt' },
       h('div', { class: 'item__name', text: p.label || p.name }),
-      h('div', { class: 'item__addr', text: [p.cat, p.label ? p.name : '', p.addr].filter(Boolean).join(' \u00b7 ') || ' ' })),
+      h('div', { class: 'item__addr', text: [p.cat, p.label ? p.name : '', p.memo, p.addr].filter(Boolean).join(' \u00b7 ') || ' ' })),
     right || (d != null ? h('span', { class: 'item__dist num', text: fmtDistStr(d) }) : null));
 }
 
@@ -2919,8 +2946,10 @@ function homeSheet() {
   } else {
     for (const p of items.slice(0, 20)) list.append(placeItem(p, { kind: S.homeTab === 'recent' ? 'recent' : 'fav', onClick: () => openPlace(p) }));
   }
-  const manage = h('div', { class: 'sec-head', style: 'margin-top:8px' },
-    h('button', { class: 'btn btn--sm btn--ghost', type: 'button', onclick: openPlaces }, h('span', { svg: ic('star', 16) }), '\ub0b4 \uc7a5\uc18c \uad00\ub9ac'),
+  const manage = h('div', { class: 'sec-head', style: 'margin-top:8px;flex-wrap:wrap' },
+    h('div', { style: 'display:flex;gap:6px;flex-wrap:wrap' },
+      h('button', { class: 'btn btn--sm', type: 'button', id: 'btnSaveHere', onclick: () => saveHere() }, h('span', { svg: ic('pin', 16) }), '\ud604\uc7ac \uc704\uce58 \uc800\uc7a5'),
+      h('button', { class: 'btn btn--sm btn--ghost', type: 'button', onclick: openPlaces }, h('span', { svg: ic('star', 16) }), '\ub0b4 \uc7a5\uc18c \uad00\ub9ac')),
     gpsNote());
   return [gpsAlert(), h('div', { class: 'sec-head' }, tabs), list, manage];
 }
@@ -2966,7 +2995,7 @@ function beginPick(kind) {
 }
 
 function localMatches(q) {
-  q = q.trim().toLowerCase();
+  q = q.trim();
   const all = [];
   if (store.home) all.push({ ...store.home, label: '\uc9d1', _k: 'home' });
   if (store.work) all.push({ ...store.work, label: '\ud68c\uc0ac', _k: 'work' });
@@ -2976,9 +3005,11 @@ function localMatches(q) {
   for (const p of all) {
     const k = placeKey(p);
     if (seen.has(k)) continue;
-    if (q && !((p.label || '') + ' ' + p.name + ' ' + (p.addr || '')).toLowerCase().includes(q)) continue;
+    if (q && !matchPlace(p, q)) continue;
     seen.add(k); out.push(p);
   }
+  // \uc774\ub984\uc774\ub098 \uc9d1\u00b7\ud68c\uc0ac\uac00 \ub9de\ub294 \uacf3\uc744 \uba3c\uc800(\uba54\ubaa8\u00b7\uc8fc\uc18c\ub85c\ub9cc \ub9de\uc740 \uacf3\uc740 \ub4a4\ub85c)
+  if (q) out.sort((a, b) => (matchPlace({ label: a.label, name: a.name }, q) ? 0 : 1) - (matchPlace({ label: b.label, name: b.name }, q) ? 0 : 1));
   return out.slice(0, q ? 8 : 12);
 }
 
@@ -2986,6 +3017,14 @@ function searchSheet() {
   const q = $('#q').value;
   const out = [];
   if (S.searching) out.push(h('div', { class: 'loading' }, h('span', { class: 'spinner' }), '\uac80\uc0c9\ud558\ub294 \uc911\u2026'));
+  const loc = localMatches(q);
+  const done = S.results && !S.searching && q.trim() === S.lastQuery;
+  if (done && q.trim() && loc.length) {     // \uac80\uc0c9\uc744 \ub20c\ub7ec\ub3c4 \ub0b4 \uc7a5\uc18c(\uc774\ub984\u00b7\uba54\ubaa8)\uac00 \ub9de\uc73c\uba74 \ub9e8 \uc704\uc5d0
+    out.push(h('div', { class: 'sec-head' }, h('h2', { text: `\ub0b4 \uc7a5\uc18c ${loc.length}\uacf3` })));
+    const list = h('ul', { class: 'list' });
+    loc.forEach(p => list.append(placeItem(p, { kind: p._k, onClick: () => openPlace(p) })));
+    out.push(list);
+  }
   if (S.results && !S.searching) {
     const r = S.results;
     out.push(h('div', { class: 'sec-head' }, h('h2', { text: r.items.length ? `\u2018${S.lastQuery}\u2019 \uac80\uc0c9 \uacb0\uacfc ${r.items.length}\uacf3` : `\u2018${S.lastQuery}\u2019 \uac80\uc0c9 \uacb0\uacfc\uac00 \uc5c6\uc2b5\ub2c8\ub2e4` })));
@@ -2997,8 +3036,7 @@ function searchSheet() {
     out.push(list);
     if (r.items.length && r.errors.length) out.push(h('p', { class: 'note', text: `${r.errors.join('\u00b7')} \uac80\uc0c9 \uc11c\ubc84\uac00 \uc751\ub2f5\ud558\uc9c0 \uc54a\uc544 \uc77c\ubd80 \uacb0\uacfc\ub9cc \ubcf4\uc5ec \uc90d\ub2c8\ub2e4.` }));
   }
-  const loc = localMatches(q);
-  if (loc.length && !(S.results && q.trim() === S.lastQuery && S.results.items.length)) {
+  if (loc.length && !done) {
     out.push(h('div', { class: 'sec-head' }, h('h2', { text: q.trim() ? '\ub0b4 \uc7a5\uc18c\uc5d0\uc11c \ucc3e\uc74c' : '\ub0b4 \uc7a5\uc18c \u00b7 \ucd5c\uadfc' })));
     const list = h('ul', { class: 'list' });
     loc.forEach(p => list.append(placeItem(p, { kind: p._k, onClick: () => openPlace(p) })));
@@ -3048,9 +3086,12 @@ function placeSheet() {
   if (!p) return [];
   const d = S.me ? hav([S.me.lon, S.me.lat], [p.lon, p.lat]) : null;
   const meta = [p.cat, p.addr].filter(Boolean).join(' \u00b7 ');
+  const saved = savedAt(p);
+  const memo = p.memo || (saved && saved.place.memo) || '';
   const out = [
     h('div', { class: 'place__name', text: p.label ? `${p.label} \u00b7 ${p.name}` : p.name }),
     h('div', { class: 'place__meta' }, meta || '\uc8fc\uc18c \uc815\ubcf4 \uc5c6\uc74c', d != null ? h('span', { class: 'num', text: ` \u00b7 \uc5ec\uae30\uc11c ${fmtDistStr(d)}` }) : null),
+    memo ? h('div', { class: 'place__memo', text: memo }) : null,
   ];
   const acts = h('div', { class: 'place__acts' });
   const pk = S.pick;
@@ -3071,10 +3112,11 @@ function placeSheet() {
   out.push(acts);
   if (!pk) {
     out.push(h('div', { class: 'place__more' },
+      saved ? h('button', { class: 'btn btn--sm btn--ghost', type: 'button', id: 'btnEditSaved', onclick: () => editSaved(p) }, h('span', { svg: ic('edit', 16) }), '\uc774\ub984\u00b7\uba54\ubaa8') : null,
       h('button', { class: 'btn btn--sm btn--ghost', type: 'button', onclick: () => setMyPlace('home', p) }, h('span', { svg: ic('home', 16) }), '\uc9d1\uc73c\ub85c \ub4f1\ub85d'),
       h('button', { class: 'btn btn--sm btn--ghost', type: 'button', onclick: () => setMyPlace('work', p) }, h('span', { svg: ic('work', 16) }), '\ud68c\uc0ac\ub85c \ub4f1\ub85d')));
   }
-  return out;
+  return out.filter(Boolean);
 }
 
 function setMyPlace(kind, p) {
@@ -3738,6 +3780,111 @@ function importFile() {
 }
 
 // \ub0b4 \uc7a5\uc18c \uad00\ub9ac
+// \u2500\u2500 \ud604\uc7ac \uc704\uce58 \uc800\uc7a5 \u00b7 \ub0b4 \uc7a5\uc18c \uc774\ub984\uacfc \uba54\ubaa8 \u2500\u2500
+// \uc774\ub984\u00b7\uba54\ubaa8 \uc785\ub825 \ucc3d(\ud604\uc7ac \uc704\uce58 \uc800\uc7a5\uacfc \uace0\uce58\uae30\uc5d0 \uac19\uc774 \uc4f4\ub2e4). \uc5f4\ub9b0 \ub3d9\uc548 info()\u00b7setName()\u00b7enable() \ub85c \ub0b4\uc6a9\uc744 \ubc14\uafbc\ub2e4
+function placeForm({ title, name = '', memo = '', kinds = null, okText = '\uc800\uc7a5', onSave }) {
+  const box = $('#dialog');
+  let typed = false, kind = kinds ? kinds[0][0] : null, closed = false;
+  const close = () => { closed = true; box.hidden = true; box.replaceChildren(); };
+  const nameIn = h('input', { class: 'field field--wide', id: 'pfName', maxlength: '40', value: name, placeholder: '\uc774\ub984(\uc608: \uc8fc\ucc28\ud55c \uacf3, \uc6b0\ub9ac \uc544\ud30c\ud2b8)', 'aria-label': '\uc774\ub984', enterkeyhint: 'done',
+    oninput: () => { typed = true; }, onkeydown: e => { if (e.key === 'Enter') save(); } });
+  const memoIn = h('input', { class: 'field field--wide', id: 'pfMemo', maxlength: '120', value: memo, placeholder: '\uba54\ubaa8(\uc120\ud0dd) \u2014 \uc608: \uc9c0\ud558 2\uce35 B-37', 'aria-label': '\uba54\ubaa8', enterkeyhint: 'done',
+    onkeydown: e => { if (e.key === 'Enter') save(); } });
+  const infoEl = h('div', { class: 'pform__info', id: 'pfInfo', 'aria-live': 'polite' });
+  const ok = h('button', { class: 'btn btn--primary', type: 'button', id: 'pfSave', text: okText, onclick: () => save() });
+  const save = () => { if (ok.disabled) return; const r = onSave({ name: nameIn.value.trim(), memo: memoIn.value.trim(), kind }); if (r !== false) close(); };
+  box.replaceChildren(h('div', { class: 'dialog__box pform', role: 'dialog', 'aria-modal': 'true', 'aria-label': title },
+    h('h2', { text: title }), infoEl,
+    kinds ? seg(kinds, kind, k => { kind = k; }, '\uc800\uc7a5\ud560 \uacf3') : null,
+    nameIn, memoIn,
+    h('div', { class: 'dialog__btns' }, h('button', { class: 'btn', type: 'button', text: '\ucde8\uc18c', onclick: close }), ok)));
+  box.hidden = false;
+  box.onclick = e => { if (e.target === box) close(); };
+  box.onkeydown = e => { if (e.key === 'Escape') close(); };
+  nameIn.focus();
+  return {
+    get closed() { return closed; },
+    info(text, warn = false) { infoEl.textContent = text; infoEl.classList.toggle('pform__info--warn', warn); },
+    setName(v) { if (!typed && !nameIn.value.trim()) nameIn.value = v; },   // \uc0ac\uc6a9\uc790\uac00 \uc4f0\uae30 \uc804\uc5d0\ub9cc \ucc44\uc6b4\ub2e4
+    enable(v) { ok.disabled = !v; },
+    close,
+  };
+}
+
+const hm = ts => { const d = new Date(ts); return `${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`; };
+
+// \uc0c8 GPS \uc704\uce58\ub97c \uc7a0\uc2dc \uae30\ub2e4\ub9b0\ub2e4(15\ucd08 \uc548\uc758 \uc704\uce58\uba74 \ubc14\ub85c)
+function freshFix(maxWait = 10000) {
+  return new Promise(res => {
+    const t0 = Date.now();
+    const tick = () => {
+      if (S.me && Date.now() - S.me.t < 15000) return res(S.me);
+      if (GPS_BAD.includes(S.gps) || Date.now() - t0 > maxWait) return res(null);
+      setTimeout(tick, 300);
+    };
+    tick();
+  });
+}
+
+async function saveHere() {
+  if (!S.me && GPS_BAD.includes(S.gps)) { await ask(gpsMsg('long'), { ok: '\ud655\uc778', cancel: '\ub2eb\uae30' }); return; }
+  let fix = null, addr = '', defName = '';
+  const form = placeForm({
+    title: '\ud604\uc7ac \uc704\uce58 \uc800\uc7a5',
+    kinds: [['fav', '\uc990\uaca8\ucc3e\uae30'], ['home', '\uc9d1'], ['work', '\ud68c\uc0ac']],
+    onSave: ({ name, memo, kind }) => {
+      if (!fix) return false;
+      const p = cleanPlace({ name: name || defName || `\ub0b4 \uc704\uce58 ${hm(fix.t)}`, addr: addr || `${fix.lat.toFixed(5)}, ${fix.lon.toFixed(5)}`, lat: fix.lat, lon: fix.lon, memo });
+      if (kind === 'fav') { const k = placeKey(p); store.favs = [p, ...store.favs.filter(f => placeKey(f) !== k)].slice(0, 100); }
+      else store[kind] = p;
+      saveStore(true);
+      refreshPts();
+      const obj = `\u2018${p.name}\u2019${josa(p.name, '\uc744/\ub97c').slice(p.name.length)}`;
+      toast(kind === 'fav' ? `${obj} \uc800\uc7a5\ud588\uc2b5\ub2c8\ub2e4. \uac80\uc0c9\ucc3d\uc5d0 \uc774\ub984\uc774\ub098 \uba54\ubaa8\ub85c \ucc3e\uc744 \uc218 \uc788\uc2b5\ub2c8\ub2e4` : `${obj} ${kind === 'home' ? '\uc9d1' : '\ud68c\uc0ac'}\uc73c\ub85c \ub4f1\ub85d\ud588\uc2b5\ub2c8\ub2e4`, 3600);
+      if (S.screen === 'home') { if (kind === 'fav') S.homeTab = 'fav'; renderSheet(); }
+    },
+  });
+  form.enable(false);
+  form.info('\ud604\uc7ac \uc704\uce58\ub97c \ucc3e\ub294 \uc911\u2026');
+  fix = await freshFix();
+  if (form.closed) return;
+  let old = '';
+  if (!fix && S.me) { fix = S.me; old = ` \u00b7 ${Math.max(1, Math.round((Date.now() - S.me.t) / 60000))}\ubd84 \uc804\uc5d0 \uc7a1\ud78c \uc704\uce58`; }
+  if (!fix) { form.info(gpsMsg('short') || '\ud604\uc7ac \uc704\uce58\ub97c \ucc3e\uc9c0 \ubabb\ud588\uc2b5\ub2c8\ub2e4. \uc7a0\uc2dc \ub4a4 \ub2e4\uc2dc \uc2dc\ub3c4\ud558\uc138\uc694.', true); return; }
+  fix = { ...fix };
+  const acc = Math.round(fix.acc || 0);
+  const accText = acc ? `\uc815\ud655\ub3c4 \uc57d ${acc}m` : '';
+  const weak = acc > 50 || !!old;
+  form.enable(true);
+  form.info([accText, '\uc8fc\uc18c \ucc3e\ub294 \uc911\u2026'].filter(Boolean).join(' \u00b7 ') + old, weak);
+  defName = `\ub0b4 \uc704\uce58 ${hm(fix.t)}`;
+  try {
+    const r = await reversePlace(fix.lon, fix.lat);
+    if (form.closed) return;
+    if (r && r.name && r.name !== '\uc120\ud0dd\ud55c \uc704\uce58') { defName = r.name; addr = r.addr || ''; }
+  } catch (e) { /* \uc8fc\uc18c \uc5c6\uc774 \uc800\uc7a5 */ }
+  if (form.closed) return;
+  form.setName(defName);
+  form.info([addr || '\uc8fc\uc18c\ub97c \ucc3e\uc9c0 \ubabb\ud588\uc2b5\ub2c8\ub2e4', accText].filter(Boolean).join(' \u00b7 ') + old + (acc > 50 ? ' \u2014 \ubc16\uc73c\ub85c \ub098\uac00\uac70\ub098 \uc7a0\uc2dc \uae30\ub2e4\ub9ac\uba74 \ub354 \uc815\ud655\ud574\uc9d1\ub2c8\ub2e4' : ''), weak);
+}
+
+// \uc800\uc7a5\ub41c \uc7a5\uc18c(\uc9d1\u00b7\ud68c\uc0ac\u00b7\uc990\uaca8\ucc3e\uae30)\uc758 \uc774\ub984\uacfc \uba54\ubaa8 \uace0\uce58\uae30
+function editSaved(p) {
+  const sv = savedAt(p);
+  if (!sv) return;
+  placeForm({
+    title: '\uc774\ub984\u00b7\uba54\ubaa8 \uace0\uce58\uae30', name: sv.place.name, memo: sv.place.memo || '',
+    onSave: ({ name, memo }) => {
+      sv.place.name = name || sv.place.name;
+      if (memo) sv.place.memo = memo.slice(0, 120); else delete sv.place.memo;
+      saveStore(true);
+      refreshPts();
+      if (S.place && placeKey(S.place) === placeKey(sv.place)) { S.place = { ...S.place, name: sv.place.name, memo: sv.place.memo }; if (S.screen === 'place') renderSheet(); }
+      toast('\uace0\ucce4\uc2b5\ub2c8\ub2e4');
+    },
+  }).info(sv.kind === 'home' ? '\uc9d1' : sv.kind === 'work' ? '\ud68c\uc0ac' : '\uc990\uaca8\ucc3e\uae30');
+}
+
 function openPlaces() {
   const sec = (title, kids) => h('section', { class: 'group' }, h('h2', { text: title }), ...kids);
   const myRow = (kind, label) => {
@@ -3750,12 +3897,16 @@ function openPlaces() {
   const favRows = store.favs.length ? store.favs.map((f, i) => {
     const name = h('input', { class: 'field field--wide', value: f.name, maxlength: '40', 'aria-label': '\uc774\ub984', id: 'fav-' + f.id,
       onchange: e => { f.name = e.target.value.trim() || f.name; saveStore(); refreshPts(); } });
-    return h('div', { class: 'row' }, h('div', { class: 'row__label' }, name, h('span', { text: f.addr || '' })),
+    const memo = h('input', { class: 'field field--wide field--memo', value: f.memo || '', maxlength: '120', placeholder: '\uba54\ubaa8', 'aria-label': '\uba54\ubaa8', id: 'favm-' + f.id,
+      onchange: e => { const v = e.target.value.trim(); if (v) f.memo = v; else delete f.memo; saveStore(); } });
+    return h('div', { class: 'row' }, h('div', { class: 'row__label' }, name, memo, h('span', { text: f.addr || '' })),
       h('button', { class: 'btn btn--sm btn--ghost', type: 'button', 'aria-label': '\uc0ad\uc81c', svg: ic('trash', 18), onclick: () => { store.favs.splice(i, 1); saveStore(); refreshPts(); openPlaces(); } }));
-  }) : [h('p', { class: 'empty', text: '\uc7a5\uc18c \uce74\ub4dc\uc5d0\uc11c \u2018\uc800\uc7a5\u2019\uc744 \ub204\ub974\uba74 \uc5ec\uae30\uc5d0 \ubaa8\uc785\ub2c8\ub2e4. \uc774\ub984\uc740 \ubc14\ub85c \uace0\uce60 \uc218 \uc788\uc2b5\ub2c8\ub2e4.' })];
+  }) : [h('p', { class: 'empty', text: '\uc7a5\uc18c \uce74\ub4dc\uc5d0\uc11c \u2018\uc800\uc7a5\u2019\uc744 \ub204\ub974\uac70\ub098 \u2018\ud604\uc7ac \uc704\uce58 \uc800\uc7a5\u2019\uc744 \ud558\uba74 \uc5ec\uae30\uc5d0 \ubaa8\uc785\ub2c8\ub2e4. \uc774\ub984\uacfc \uba54\ubaa8\ub294 \ubc14\ub85c \uace0\uce60 \uc218 \uc788\uc2b5\ub2c8\ub2e4.' })];
+  const here = row('\ud604\uc7ac \uc704\uce58 \uc800\uc7a5', '\uc9c0\uae08 \uc788\ub294 \uacf3\uc744 \uc774\ub984\u00b7\uba54\ubaa8\uc640 \ud568\uaed8 \uc800\uc7a5\ud569\ub2c8\ub2e4. \uac80\uc0c9\ucc3d\uc5d0 \uc774\ub984\uc774\ub098 \uba54\ubaa8\ub97c \uc4f0\uba74 \ucc3e\uc544 \uc90d\ub2c8\ub2e4.',
+    h('button', { class: 'btn btn--sm', type: 'button', onclick: () => { closeOverlay(); saveHere(); } }, h('span', { svg: ic('pin', 16) }), '\uc800\uc7a5'));
   openOverlay('\ub0b4 \uc7a5\uc18c', [
     sec('\uc9d1 \u00b7 \ud68c\uc0ac', [myRow('home', '\uc9d1'), myRow('work', '\ud68c\uc0ac')]),
-    sec(`\uc990\uaca8\ucc3e\uae30 ${store.favs.length}\uacf3`, favRows),
+    sec(`\uc990\uaca8\ucc3e\uae30 ${store.favs.length}\uacf3`, [here, ...favRows]),
     sec('\ucd5c\uadfc \ubaa9\uc801\uc9c0', [row(`${store.recents.length}\uacf3 \uc800\uc7a5\ub428`, null, h('button', { class: 'btn btn--sm btn--ghost', type: 'button', text: '\ubaa8\ub450 \uc9c0\uc6b0\uae30', onclick: () => { store.recents = []; saveStore(); openPlaces(); } }))]),
   ]);
 }

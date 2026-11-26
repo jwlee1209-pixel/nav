@@ -125,7 +125,7 @@ function placeItem(p, { kind = 'pin', onClick, right } = {}) {
     h('span', { class: 'item__ic item__ic--' + kind, svg: ic(icName, 20, kind === 'fav') }),
     h('span', { class: 'item__txt' },
       h('div', { class: 'item__name', text: p.label || p.name }),
-      h('div', { class: 'item__addr', text: [p.cat, p.label ? p.name : '', p.addr].filter(Boolean).join(' · ') || ' ' })),
+      h('div', { class: 'item__addr', text: [p.cat, p.label ? p.name : '', p.memo, p.addr].filter(Boolean).join(' · ') || ' ' })),
     right || (d != null ? h('span', { class: 'item__dist num', text: fmtDistStr(d) }) : null));
 }
 
@@ -156,8 +156,10 @@ function homeSheet() {
   } else {
     for (const p of items.slice(0, 20)) list.append(placeItem(p, { kind: S.homeTab === 'recent' ? 'recent' : 'fav', onClick: () => openPlace(p) }));
   }
-  const manage = h('div', { class: 'sec-head', style: 'margin-top:8px' },
-    h('button', { class: 'btn btn--sm btn--ghost', type: 'button', onclick: openPlaces }, h('span', { svg: ic('star', 16) }), '내 장소 관리'),
+  const manage = h('div', { class: 'sec-head', style: 'margin-top:8px;flex-wrap:wrap' },
+    h('div', { style: 'display:flex;gap:6px;flex-wrap:wrap' },
+      h('button', { class: 'btn btn--sm', type: 'button', id: 'btnSaveHere', onclick: () => saveHere() }, h('span', { svg: ic('pin', 16) }), '현재 위치 저장'),
+      h('button', { class: 'btn btn--sm btn--ghost', type: 'button', onclick: openPlaces }, h('span', { svg: ic('star', 16) }), '내 장소 관리')),
     gpsNote());
   return [gpsAlert(), h('div', { class: 'sec-head' }, tabs), list, manage];
 }
@@ -203,7 +205,7 @@ function beginPick(kind) {
 }
 
 function localMatches(q) {
-  q = q.trim().toLowerCase();
+  q = q.trim();
   const all = [];
   if (store.home) all.push({ ...store.home, label: '집', _k: 'home' });
   if (store.work) all.push({ ...store.work, label: '회사', _k: 'work' });
@@ -213,9 +215,11 @@ function localMatches(q) {
   for (const p of all) {
     const k = placeKey(p);
     if (seen.has(k)) continue;
-    if (q && !((p.label || '') + ' ' + p.name + ' ' + (p.addr || '')).toLowerCase().includes(q)) continue;
+    if (q && !matchPlace(p, q)) continue;
     seen.add(k); out.push(p);
   }
+  // 이름이나 집·회사가 맞는 곳을 먼저(메모·주소로만 맞은 곳은 뒤로)
+  if (q) out.sort((a, b) => (matchPlace({ label: a.label, name: a.name }, q) ? 0 : 1) - (matchPlace({ label: b.label, name: b.name }, q) ? 0 : 1));
   return out.slice(0, q ? 8 : 12);
 }
 
@@ -223,6 +227,14 @@ function searchSheet() {
   const q = $('#q').value;
   const out = [];
   if (S.searching) out.push(h('div', { class: 'loading' }, h('span', { class: 'spinner' }), '검색하는 중…'));
+  const loc = localMatches(q);
+  const done = S.results && !S.searching && q.trim() === S.lastQuery;
+  if (done && q.trim() && loc.length) {     // 검색을 눌러도 내 장소(이름·메모)가 맞으면 맨 위에
+    out.push(h('div', { class: 'sec-head' }, h('h2', { text: `내 장소 ${loc.length}곳` })));
+    const list = h('ul', { class: 'list' });
+    loc.forEach(p => list.append(placeItem(p, { kind: p._k, onClick: () => openPlace(p) })));
+    out.push(list);
+  }
   if (S.results && !S.searching) {
     const r = S.results;
     out.push(h('div', { class: 'sec-head' }, h('h2', { text: r.items.length ? `‘${S.lastQuery}’ 검색 결과 ${r.items.length}곳` : `‘${S.lastQuery}’ 검색 결과가 없습니다` })));
@@ -234,8 +246,7 @@ function searchSheet() {
     out.push(list);
     if (r.items.length && r.errors.length) out.push(h('p', { class: 'note', text: `${r.errors.join('·')} 검색 서버가 응답하지 않아 일부 결과만 보여 줍니다.` }));
   }
-  const loc = localMatches(q);
-  if (loc.length && !(S.results && q.trim() === S.lastQuery && S.results.items.length)) {
+  if (loc.length && !done) {
     out.push(h('div', { class: 'sec-head' }, h('h2', { text: q.trim() ? '내 장소에서 찾음' : '내 장소 · 최근' })));
     const list = h('ul', { class: 'list' });
     loc.forEach(p => list.append(placeItem(p, { kind: p._k, onClick: () => openPlace(p) })));
@@ -285,9 +296,12 @@ function placeSheet() {
   if (!p) return [];
   const d = S.me ? hav([S.me.lon, S.me.lat], [p.lon, p.lat]) : null;
   const meta = [p.cat, p.addr].filter(Boolean).join(' · ');
+  const saved = savedAt(p);
+  const memo = p.memo || (saved && saved.place.memo) || '';
   const out = [
     h('div', { class: 'place__name', text: p.label ? `${p.label} · ${p.name}` : p.name }),
     h('div', { class: 'place__meta' }, meta || '주소 정보 없음', d != null ? h('span', { class: 'num', text: ` · 여기서 ${fmtDistStr(d)}` }) : null),
+    memo ? h('div', { class: 'place__memo', text: memo }) : null,
   ];
   const acts = h('div', { class: 'place__acts' });
   const pk = S.pick;
@@ -308,10 +322,11 @@ function placeSheet() {
   out.push(acts);
   if (!pk) {
     out.push(h('div', { class: 'place__more' },
+      saved ? h('button', { class: 'btn btn--sm btn--ghost', type: 'button', id: 'btnEditSaved', onclick: () => editSaved(p) }, h('span', { svg: ic('edit', 16) }), '이름·메모') : null,
       h('button', { class: 'btn btn--sm btn--ghost', type: 'button', onclick: () => setMyPlace('home', p) }, h('span', { svg: ic('home', 16) }), '집으로 등록'),
       h('button', { class: 'btn btn--sm btn--ghost', type: 'button', onclick: () => setMyPlace('work', p) }, h('span', { svg: ic('work', 16) }), '회사로 등록')));
   }
-  return out;
+  return out.filter(Boolean);
 }
 
 function setMyPlace(kind, p) {

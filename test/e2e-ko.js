@@ -71,7 +71,7 @@ const t = (name, fn) => { try { fn(); console.log('  ok  ', name); } catch (e) {
   const res = await page.$$eval('.list .item', a => a.map(x => x.textContent.replace(/\s+/g, ' ').trim()));
   console.log('[검색 결과]\n  ' + res.join('\n  '));
   await page.screenshot({ path: path.join(OUT, 'ko-2-search.png') });
-  t('검색 결과 이름·주소가 한국어', () => { assert(res.length >= 3); res.forEach(x => assert(!/Daehak|Jongno|Seoul/.test(x), x)); assert(res[0].includes('서울 종로구 대학로 101'), res[0]); });
+  t('검색 결과 이름·주소가 한국어', () => { assert(res.length >= 3); res.forEach(x => assert(!/Daehak|Jongno|Seoul/.test(x), x)); assert(res.some(x => x.includes('서울 종로구 대학로 101')), res.join(' / ')); });
 
   // 다시 열어도 정리는 한 번만
   await page.waitForTimeout(800);

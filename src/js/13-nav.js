@@ -455,6 +455,111 @@ function importFile() {
 }
 
 // 내 장소 관리
+// ── 현재 위치 저장 · 내 장소 이름과 메모 ──
+// 이름·메모 입력 창(현재 위치 저장과 고치기에 같이 쓴다). 열린 동안 info()·setName()·enable() 로 내용을 바꾼다
+function placeForm({ title, name = '', memo = '', kinds = null, okText = '저장', onSave }) {
+  const box = $('#dialog');
+  let typed = false, kind = kinds ? kinds[0][0] : null, closed = false;
+  const close = () => { closed = true; box.hidden = true; box.replaceChildren(); };
+  const nameIn = h('input', { class: 'field field--wide', id: 'pfName', maxlength: '40', value: name, placeholder: '이름(예: 주차한 곳, 우리 아파트)', 'aria-label': '이름', enterkeyhint: 'done',
+    oninput: () => { typed = true; }, onkeydown: e => { if (e.key === 'Enter') save(); } });
+  const memoIn = h('input', { class: 'field field--wide', id: 'pfMemo', maxlength: '120', value: memo, placeholder: '메모(선택) — 예: 지하 2층 B-37', 'aria-label': '메모', enterkeyhint: 'done',
+    onkeydown: e => { if (e.key === 'Enter') save(); } });
+  const infoEl = h('div', { class: 'pform__info', id: 'pfInfo', 'aria-live': 'polite' });
+  const ok = h('button', { class: 'btn btn--primary', type: 'button', id: 'pfSave', text: okText, onclick: () => save() });
+  const save = () => { if (ok.disabled) return; const r = onSave({ name: nameIn.value.trim(), memo: memoIn.value.trim(), kind }); if (r !== false) close(); };
+  box.replaceChildren(h('div', { class: 'dialog__box pform', role: 'dialog', 'aria-modal': 'true', 'aria-label': title },
+    h('h2', { text: title }), infoEl,
+    kinds ? seg(kinds, kind, k => { kind = k; }, '저장할 곳') : null,
+    nameIn, memoIn,
+    h('div', { class: 'dialog__btns' }, h('button', { class: 'btn', type: 'button', text: '취소', onclick: close }), ok)));
+  box.hidden = false;
+  box.onclick = e => { if (e.target === box) close(); };
+  box.onkeydown = e => { if (e.key === 'Escape') close(); };
+  nameIn.focus();
+  return {
+    get closed() { return closed; },
+    info(text, warn = false) { infoEl.textContent = text; infoEl.classList.toggle('pform__info--warn', warn); },
+    setName(v) { if (!typed && !nameIn.value.trim()) nameIn.value = v; },   // 사용자가 쓰기 전에만 채운다
+    enable(v) { ok.disabled = !v; },
+    close,
+  };
+}
+
+const hm = ts => { const d = new Date(ts); return `${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`; };
+
+// 새 GPS 위치를 잠시 기다린다(15초 안의 위치면 바로)
+function freshFix(maxWait = 10000) {
+  return new Promise(res => {
+    const t0 = Date.now();
+    const tick = () => {
+      if (S.me && Date.now() - S.me.t < 15000) return res(S.me);
+      if (GPS_BAD.includes(S.gps) || Date.now() - t0 > maxWait) return res(null);
+      setTimeout(tick, 300);
+    };
+    tick();
+  });
+}
+
+async function saveHere() {
+  if (!S.me && GPS_BAD.includes(S.gps)) { await ask(gpsMsg('long'), { ok: '확인', cancel: '닫기' }); return; }
+  let fix = null, addr = '', defName = '';
+  const form = placeForm({
+    title: '현재 위치 저장',
+    kinds: [['fav', '즐겨찾기'], ['home', '집'], ['work', '회사']],
+    onSave: ({ name, memo, kind }) => {
+      if (!fix) return false;
+      const p = cleanPlace({ name: name || defName || `내 위치 ${hm(fix.t)}`, addr: addr || `${fix.lat.toFixed(5)}, ${fix.lon.toFixed(5)}`, lat: fix.lat, lon: fix.lon, memo });
+      if (kind === 'fav') { const k = placeKey(p); store.favs = [p, ...store.favs.filter(f => placeKey(f) !== k)].slice(0, 100); }
+      else store[kind] = p;
+      saveStore(true);
+      refreshPts();
+      const obj = `‘${p.name}’${josa(p.name, '을/를').slice(p.name.length)}`;
+      toast(kind === 'fav' ? `${obj} 저장했습니다. 검색창에 이름이나 메모로 찾을 수 있습니다` : `${obj} ${kind === 'home' ? '집' : '회사'}으로 등록했습니다`, 3600);
+      if (S.screen === 'home') { if (kind === 'fav') S.homeTab = 'fav'; renderSheet(); }
+    },
+  });
+  form.enable(false);
+  form.info('현재 위치를 찾는 중…');
+  fix = await freshFix();
+  if (form.closed) return;
+  let old = '';
+  if (!fix && S.me) { fix = S.me; old = ` · ${Math.max(1, Math.round((Date.now() - S.me.t) / 60000))}분 전에 잡힌 위치`; }
+  if (!fix) { form.info(gpsMsg('short') || '현재 위치를 찾지 못했습니다. 잠시 뒤 다시 시도하세요.', true); return; }
+  fix = { ...fix };
+  const acc = Math.round(fix.acc || 0);
+  const accText = acc ? `정확도 약 ${acc}m` : '';
+  const weak = acc > 50 || !!old;
+  form.enable(true);
+  form.info([accText, '주소 찾는 중…'].filter(Boolean).join(' · ') + old, weak);
+  defName = `내 위치 ${hm(fix.t)}`;
+  try {
+    const r = await reversePlace(fix.lon, fix.lat);
+    if (form.closed) return;
+    if (r && r.name && r.name !== '선택한 위치') { defName = r.name; addr = r.addr || ''; }
+  } catch (e) { /* 주소 없이 저장 */ }
+  if (form.closed) return;
+  form.setName(defName);
+  form.info([addr || '주소를 찾지 못했습니다', accText].filter(Boolean).join(' · ') + old + (acc > 50 ? ' — 밖으로 나가거나 잠시 기다리면 더 정확해집니다' : ''), weak);
+}
+
+// 저장된 장소(집·회사·즐겨찾기)의 이름과 메모 고치기
+function editSaved(p) {
+  const sv = savedAt(p);
+  if (!sv) return;
+  placeForm({
+    title: '이름·메모 고치기', name: sv.place.name, memo: sv.place.memo || '',
+    onSave: ({ name, memo }) => {
+      sv.place.name = name || sv.place.name;
+      if (memo) sv.place.memo = memo.slice(0, 120); else delete sv.place.memo;
+      saveStore(true);
+      refreshPts();
+      if (S.place && placeKey(S.place) === placeKey(sv.place)) { S.place = { ...S.place, name: sv.place.name, memo: sv.place.memo }; if (S.screen === 'place') renderSheet(); }
+      toast('고쳤습니다');
+    },
+  }).info(sv.kind === 'home' ? '집' : sv.kind === 'work' ? '회사' : '즐겨찾기');
+}
+
 function openPlaces() {
   const sec = (title, kids) => h('section', { class: 'group' }, h('h2', { text: title }), ...kids);
   const myRow = (kind, label) => {
@@ -467,12 +572,16 @@ function openPlaces() {
   const favRows = store.favs.length ? store.favs.map((f, i) => {
     const name = h('input', { class: 'field field--wide', value: f.name, maxlength: '40', 'aria-label': '이름', id: 'fav-' + f.id,
       onchange: e => { f.name = e.target.value.trim() || f.name; saveStore(); refreshPts(); } });
-    return h('div', { class: 'row' }, h('div', { class: 'row__label' }, name, h('span', { text: f.addr || '' })),
+    const memo = h('input', { class: 'field field--wide field--memo', value: f.memo || '', maxlength: '120', placeholder: '메모', 'aria-label': '메모', id: 'favm-' + f.id,
+      onchange: e => { const v = e.target.value.trim(); if (v) f.memo = v; else delete f.memo; saveStore(); } });
+    return h('div', { class: 'row' }, h('div', { class: 'row__label' }, name, memo, h('span', { text: f.addr || '' })),
       h('button', { class: 'btn btn--sm btn--ghost', type: 'button', 'aria-label': '삭제', svg: ic('trash', 18), onclick: () => { store.favs.splice(i, 1); saveStore(); refreshPts(); openPlaces(); } }));
-  }) : [h('p', { class: 'empty', text: '장소 카드에서 ‘저장’을 누르면 여기에 모입니다. 이름은 바로 고칠 수 있습니다.' })];
+  }) : [h('p', { class: 'empty', text: '장소 카드에서 ‘저장’을 누르거나 ‘현재 위치 저장’을 하면 여기에 모입니다. 이름과 메모는 바로 고칠 수 있습니다.' })];
+  const here = row('현재 위치 저장', '지금 있는 곳을 이름·메모와 함께 저장합니다. 검색창에 이름이나 메모를 쓰면 찾아 줍니다.',
+    h('button', { class: 'btn btn--sm', type: 'button', onclick: () => { closeOverlay(); saveHere(); } }, h('span', { svg: ic('pin', 16) }), '저장'));
   openOverlay('내 장소', [
     sec('집 · 회사', [myRow('home', '집'), myRow('work', '회사')]),
-    sec(`즐겨찾기 ${store.favs.length}곳`, favRows),
+    sec(`즐겨찾기 ${store.favs.length}곳`, [here, ...favRows]),
     sec('최근 목적지', [row(`${store.recents.length}곳 저장됨`, null, h('button', { class: 'btn btn--sm btn--ghost', type: 'button', text: '모두 지우기', onclick: () => { store.recents = []; saveStore(); openPlaces(); } }))]),
   ]);
 }

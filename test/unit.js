@@ -271,3 +271,24 @@ process.exitCode = fails ? 1 : 0;
   console.log(fails ? `\n${fails}개 실패` : '\n검색어·브이월드 통과');
   process.exitCode = fails ? 1 : 0;
 }
+
+// ── 내 장소 이름·메모로 찾기 ──
+{
+  console.log('내 장소 찾기');
+  const p = X.cleanPlace({ name: '주차한 곳', addr: '서울 종로구 율곡로 57', lat: 37.575, lon: 126.99, memo: '  지하 2층 B-37  ' });
+  t('메모 저장(앞뒤 공백 제거)', () => assert.strictEqual(p.memo, '지하 2층 B-37'));
+  t('메모 없으면 필드 없음', () => assert(!('memo' in X.cleanPlace({ name: 'a', lat: 1, lon: 2, memo: '   ' }))));
+  t('이름 일부', () => assert(X.matchPlace(p, '주차')));
+  t('띄어쓰기 무시', () => { assert(X.matchPlace(p, '주차한곳')); assert(X.matchPlace({ name: '우리아파트' }, '우리 아파트')); });
+  t('메모로', () => { assert(X.matchPlace(p, 'b-37')); assert(X.matchPlace(p, '지하 2층')); });
+  t('낱말 순서 무관', () => assert(X.matchPlace(p, '곳 주차한')));
+  t('주소로', () => assert(X.matchPlace(p, '율곡로')));
+  t('집·회사 이름표로', () => assert(X.matchPlace({ label: '집', name: '우리 아파트' }, '집')));
+  t('안 맞는 말', () => assert(!X.matchPlace(p, '회사')));
+  X.store.home = X.cleanPlace({ name: '우리 아파트', lat: 37.47, lon: 126.93 });
+  X.store.favs = [p];
+  t('같은 자리의 저장된 장소 찾기', () => { assert.strictEqual(X.savedAt({ lat: 37.575, lon: 126.99 }).kind, 'fav'); assert.strictEqual(X.savedAt({ lat: 37.47, lon: 126.93 }).kind, 'home'); assert.strictEqual(X.savedAt({ lat: 1, lon: 1 }), null); });
+  X.store.home = null; X.store.favs = [];
+  console.log(fails ? `\n${fails}개 실패` : '\n내 장소 찾기 통과');
+  process.exitCode = fails ? 1 : 0;
+}
