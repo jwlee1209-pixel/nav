@@ -4,7 +4,8 @@
 
 ## 쓰는 법
 - PC: `dist/길잡이내비_v버전.html` 을 크롬·엣지로 연다. 위치 권한을 허용하면 현재 위치에서 출발한다. 위치가 없으면 출발지를 직접 고르고 ‘모의 주행’으로 안내를 미리 들을 수 있다.
-- 휴대폰: 위치(GPS)·화면 꺼짐 방지는 https 주소에서만 동작한다. `dist/index.html` 을 GitHub Pages·Netlify 같은 무료 정적 호스팅에 올려 그 주소로 연다.
+- 휴대폰: 위치(GPS)·화면 꺼짐 방지는 https 주소에서만 동작한다(내려받은 파일로 열면 브라우저가 위치를 막는다). `dist/길잡이내비_v버전_웹용.zip` 의 `navi` 폴더를 웹사이트 최상위에 올려 https://www.knicksgo.co.kr/navi/ 로 연다. 홈 화면에 추가하면 주소창 없이 앱처럼 열린다(manifest.json·sw.js·아이콘 포함).
+- HTML 은 빌드할 때 영문(ASCII) 문자만 쓰도록 바꿔, 서버가 EUC-KR 로 알려 줘도 한글이 깨지지 않는다.
 - 저장 데이터(집·회사·즐겨찾기·설정·주행 기록)는 그 브라우저에만 남는다. 설정 > 데이터에서 백업 파일로 옮긴다.
 
 ## 기능
@@ -21,6 +22,8 @@ node build.js 1.0        # dist/길잡이내비_v1.0.html, dist/index.html
 node test/unit.js        # 경로 정규화·안내 문구·안내 엔진·개인화
 node test/e2e.js phone   # 가짜 네트워크로 전체 흐름(스크린샷: test/out)
 node test/e2e2.js        # 내 장소 등록·길게 누르기·경유지·백업
+node test/e2e-web.js     # 웹사이트에 올린 상황(EUC-KR 헤더·서비스 워커·홈 화면 정보·파일로 연 경우)
+node tools/icons.js      # 앱 아이콘 다시 만들기
 ```
 소스: `src/index.html`, `src/app.css`, `src/js/*.js`(번호 순서로 하나의 즉시 실행 함수에 묶임). 지도 라이브러리 MapLibre GL JS 5.24.0 을 파일 안에 넣는다.
 

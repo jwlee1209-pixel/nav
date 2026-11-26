@@ -28,11 +28,12 @@ function onPos(pos) {
   if (S.trip && !S.trip.origin && !S.trip.routes.length && !S.trip.loading && S.screen === 'preview') computeRoutes();
 }
 function onPosErr(err) {
-  if (err.code === 1) S.gps = 'denied';
+  if (err.code === 1) S.gps = isLocalFile() ? 'localfile' : 'denied';
   else if (err.code === 2) S.gps = 'unavail';
   else return;  // 시간 초과: 계속 기다림
   if (S.screen === 'home') renderSheet();
-  if (S.nav && !S.nav.sim) banner(S.gps === 'denied' ? '위치 권한이 꺼져 있어 안내할 수 없습니다' : 'GPS 신호를 찾는 중…');
+  if (S.screen === 'preview' && S.trip && !S.trip.origin && !S.trip.routes.length) computeRoutes();
+  if (S.nav && !S.nav.sim) banner(gpsMsg('short') || 'GPS 신호를 찾는 중…');
 }
 
 // ── 주간/야간 ──
@@ -73,7 +74,7 @@ async function startNav(sim) {
     t.origin = null; renderPlan(); await computeRoutes();
     if (!t.routes.length) return;
   }
-  if (!sim && !S.me) { toast(S.gps === 'denied' ? '위치 권한이 없어 안내를 시작할 수 없습니다. 모의 주행은 쓸 수 있습니다.' : '현재 위치를 찾는 중입니다. 잠시 뒤 다시 눌러 주세요.', 3500); return; }
+  if (!sim && !S.me) { toast(GPS_BAD.includes(S.gps) ? gpsMsg('long') + ' 모의 주행은 쓸 수 있습니다.' : '현재 위치를 찾는 중입니다. 잠시 뒤 다시 눌러 주세요.', 4500); return; }
   const route = t.routes[t.sel];
   const ef = etaFactor();
   S.nav = {
@@ -317,6 +318,9 @@ function openSettings() {
       row('백업 파일로 저장', '집·회사·즐겨찾기·설정·기록을 이 기기에서 다른 기기로 옮길 때', h('button', { class: 'btn btn--sm', type: 'button', onclick: exportFile }, h('span', { svg: ic('down', 16) }), '저장')),
       row('백업 파일 불러오기', '지금 데이터는 백업 내용으로 바뀝니다', h('button', { class: 'btn btn--sm', type: 'button', onclick: importFile }, h('span', { svg: ic('up', 16) }), '불러오기')),
       row('모두 초기화', null, h('button', { class: 'btn btn--sm btn--ghost', type: 'button', text: '초기화', onclick: async () => { if (await ask('집·회사·즐겨찾기·기록·설정을 모두 지울까요?', { ok: '모두 지우기', danger: true })) { applyData({}); store.settings = { ...DEFAULT_SETTINGS }; saveStore(true); refreshPts(); applyTheme(); toast('초기화했습니다'); openSettings(); } } }))),
+    h('section', { class: 'group' }, h('h2', { text: '앱 정보' }),
+      row('버전', null, h('span', { class: 'num', style: 'font-weight:700', text: 'v' + APP_VERSION })),
+      row('앱 주소', '휴대폰에서는 이 주소로 열어야 위치(GPS)를 쓸 수 있습니다. 메뉴의 ‘홈 화면에 추가’를 하면 앱처럼 열립니다.', h('span', { class: 'num', style: 'font-weight:700;user-select:all;word-break:break-all', text: APP_URL }))),
     h('section', { class: 'group credits' }, h('h2', { text: '데이터 출처와 이용 정책' }),
       h('p', null, '지도: ', h('a', { href: 'https://openfreemap.org', target: '_blank', rel: 'noopener', text: 'OpenFreeMap' }), ' · ', h('a', { href: 'https://www.openmaptiles.org/', target: '_blank', rel: 'noopener', text: 'OpenMapTiles' }), ' · 지도 데이터 ', h('a', { href: 'https://www.openstreetmap.org/copyright', target: '_blank', rel: 'noopener', text: '© OpenStreetMap 기여자' })),
       h('p', null, '경로: ', h('a', { href: 'https://valhalla.github.io/valhalla/', target: '_blank', rel: 'noopener', text: 'Valhalla' }), ' · ', h('a', { href: 'https://routing.openstreetmap.de/about.html', target: '_blank', rel: 'noopener', text: 'OSRM' }), ' (FOSSGIS 공개 서버, 초당 1회 이하·가벼운 개인 사용)'),

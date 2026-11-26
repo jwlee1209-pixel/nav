@@ -18,7 +18,7 @@ function bindUI() {
   $('#btnSettings').onclick = openSettings;
 
   $('#btnLocate').onclick = () => {
-    if (!S.me) { toast(S.gps === 'denied' ? '위치 권한이 꺼져 있습니다. 브라우저 주소창의 위치 권한을 허용해 주세요.' : S.gps === 'insecure' ? '위치는 https 주소로 열었을 때만 쓸 수 있습니다' : '현재 위치를 찾는 중입니다…', 3200); if (S.gps === 'idle') GPS.start(); return; }
+    if (!S.me) { toast(gpsMsg('long') || '현재 위치를 찾는 중입니다…', 4500); if (S.gps === 'idle') GPS.start(); return; }
     S.followHome = true; MV.follow = true;
     MV.map.easeTo({ center: [S.me.lon, S.me.lat], zoom: Math.max(MV.map.getZoom(), 16), bearing: 0, pitch: 0, duration: 600 });
     $('#btnLocate').setAttribute('aria-pressed', 'true');
@@ -102,6 +102,7 @@ function boot() {
   const hide = () => { bootEl.style.opacity = '0'; setTimeout(() => bootEl.remove(), 300); };
   MV.whenLoaded(hide);
   setTimeout(() => { if (document.body.contains(bootEl)) hide(); }, 6000);
+  if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => { /* 없어도 동작 */ });
   window.__navi = { S, store, MV, Voice, navFix, startTrip, finishNav, applyTheme, openSettings, openPlaces, onPos };
 }
 

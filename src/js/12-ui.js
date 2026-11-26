@@ -109,10 +109,11 @@ function setSheetSize(size) { $('#sheet').dataset.size = size; requestAnimationF
 function renderSheet() {
   const body = $('#sheetBody');
   const scr = S.screen;
-  if (scr === 'home') { setSheetSize('peek'); body.replaceChildren(...homeSheet()); }
-  else if (scr === 'search') { setSheetSize('full'); body.replaceChildren(...searchSheet()); }
-  else if (scr === 'place') { setSheetSize('peek'); body.replaceChildren(...placeSheet()); }
-  else if (scr === 'preview') { setSheetSize('peek'); body.replaceChildren(...previewSheet()); }
+  const put = kids => body.replaceChildren(...kids.filter(Boolean));
+  if (scr === 'home') { setSheetSize('peek'); put(homeSheet()); }
+  else if (scr === 'search') { setSheetSize('full'); put(searchSheet()); }
+  else if (scr === 'place') { setSheetSize('peek'); put(placeSheet()); }
+  else if (scr === 'preview') { setSheetSize('peek'); put(previewSheet()); }
   body.scrollTop = 0;
 }
 
@@ -158,12 +159,36 @@ function homeSheet() {
   const manage = h('div', { class: 'sec-head', style: 'margin-top:8px' },
     h('button', { class: 'btn btn--sm btn--ghost', type: 'button', onclick: openPlaces }, h('span', { svg: ic('star', 16) }), '내 장소 관리'),
     gpsNote());
-  return [h('div', { class: 'sec-head' }, tabs), list, manage];
+  return [gpsAlert(), h('div', { class: 'sec-head' }, tabs), list, manage];
 }
 
+// 위치를 못 쓰는 이유와 해결 방법(한곳에서 관리)
+const APP_URL = 'https://www.knicksgo.co.kr/navi/';
+const isLocalFile = () => /^(file|content):$/.test(location.protocol);
+const GPS_BAD = ['localfile', 'insecure', 'denied', 'off', 'unavail'];
+function gpsMsg(kind = 'long') {
+  const short = kind === 'short';
+  switch (S.gps) {
+    case 'localfile': return short ? '파일로 열어 위치를 쓸 수 없습니다' : `내려받은 파일로 연 화면에서는 휴대폰이 위치(GPS)를 막습니다. ${APP_URL} 주소로 여세요.`;
+    case 'insecure': return short ? '위치는 https 주소에서만 쓸 수 있습니다' : `위치는 https 주소에서만 쓸 수 있습니다. ${APP_URL} 주소로 여세요.`;
+    case 'denied': return short ? '위치 권한이 꺼져 있습니다' : '위치 권한이 꺼져 있습니다. 주소창 왼쪽 아이콘(사이트 정보)에서 위치를 허용하고, 휴대폰 설정 → 애플리케이션 → 사용하는 브라우저 → 권한 → 위치도 허용해 주세요.';
+    case 'off': return '이 브라우저는 위치를 지원하지 않습니다';
+    case 'unavail': return short ? '위치를 찾을 수 없습니다' : '위치를 찾을 수 없습니다. 휴대폰의 위치(GPS)가 켜져 있는지 확인하세요.';
+    case 'wait': return short ? '위치 찾는 중…' : '현재 위치를 찾는 중입니다…';
+    default: return '';
+  }
+}
 function gpsNote() {
-  const msg = { idle: '', wait: '위치 찾는 중…', ok: '', denied: '위치 권한이 꺼져 있습니다', off: '이 브라우저는 위치를 지원하지 않습니다', insecure: '위치는 https 주소에서만 쓸 수 있습니다', unavail: '위치를 찾을 수 없습니다' }[S.gps] || '';
+  const msg = S.gps === 'wait' ? gpsMsg('short') : '';
   return msg ? h('span', { class: 'muted', style: 'font-size:12.5px', text: msg }) : h('span');
+}
+function gpsAlert() {
+  if (!GPS_BAD.includes(S.gps)) return null;
+  const openUrl = (S.gps === 'localfile' || S.gps === 'insecure') && location.href.indexOf(APP_URL) !== 0;
+  return h('div', { class: 'alert', role: 'note' },
+    h('span', { svg: ic('locate', 20) }),
+    h('div', null, h('b', { text: gpsMsg('short') }), h('p', { text: gpsMsg('long') }),
+      openUrl ? h('a', { class: 'btn btn--sm btn--primary', href: APP_URL, text: '주소로 열기' }) : null));
 }
 
 // ── 검색 ──
@@ -375,7 +400,9 @@ async function computeRoutes() {
   const pts = tripPoints();
   MV.setTripMarks(t.origin, t.stops, t.dest);
   if (!pts) {
-    t.loading = false; t.routes = []; t.err = S.gps === 'denied' ? '위치 권한이 없어 현재 위치에서 출발할 수 없습니다. ‘출발’을 눌러 출발지를 직접 고르세요.' : '현재 위치를 찾는 중입니다. 잠시 뒤 다시 시도하거나 출발지를 직접 고르세요.';
+    t.loading = false; t.routes = [];
+    t.err = GPS_BAD.includes(S.gps) ? gpsMsg('long') + ' 지금은 ‘출발’을 눌러 출발지를 직접 고르면 경로를 볼 수 있습니다.' : '현재 위치를 찾는 중입니다. 잠시 뒤 다시 시도하거나 ‘출발’을 눌러 출발지를 직접 고르세요.';
+    MV.clearRoutes();
     renderSheet();
     MV.fit([[t.dest.lon, t.dest.lat]]);
     return;
