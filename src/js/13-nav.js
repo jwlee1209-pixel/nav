@@ -83,6 +83,7 @@ async function startNav(sim) {
     lastFixT: 0, lastSt: null, simObj: null, rerouteCtl: null, ended: false,
   };
   S.nav.guide = makeGuide(route, false);
+  setNavCams(route);
   if (!sim) addRecent(t.dest);
   MV.clearRoutes();
   MV.setTripMarks(null, t.stops, t.dest);
@@ -108,6 +109,35 @@ async function startNav(sim) {
     S.nav.simObj = new Sim(route, { factor: f, onFix: fx => navFix(fx) });
     S.nav.simObj.start();
   } else if (S.me) navFix({ ...S.me, t: Date.now() });
+}
+
+function setNavCams(route) {
+  const n = S.nav;
+  if (!n) return;
+  n.cams = route.cams || (CamDB.ready ? camsForRoute(route, { signal: store.settings.camSignal }) : []);
+  n.camGuide = new CamGuide(n.cams, { speak: (txt, o) => Voice.say(txt, o), settings: () => store.settings });
+  n.camK = -1;
+  MV.setCams(n.cams);
+}
+
+function renderCam(cs) {
+  const box = $('#cambox'), spd = $('#speed');
+  spd.classList.toggle('over', !!cs.over);
+  const show = cs.sec || (cs.ahead && cs.ahead.dist < 600);
+  if (!show) { box.hidden = true; return; }
+  const c = cs.ahead && cs.ahead.cam;
+  const lim = cs.sec ? cs.sec.lim : (c && c.lim) || 0;
+  box.classList.toggle('sec', !!cs.sec);
+  $('.limsign', box).classList.toggle('sig', !lim);
+  $('#limNum').textContent = lim ? String(lim) : '신호';
+  if (cs.sec) {
+    $('#camTitle').textContent = '구간단속' + (cs.sec.avg ? ` · 평균 ${Math.round(cs.sec.avg)}km/h` : '');
+    $('#camDist').textContent = `남은 구간 ${fmtDistStr(cs.sec.left)}`;
+  } else {
+    $('#camTitle').textContent = (c.zone === 2 ? '어린이 보호구역 · ' : c.zone === 1 ? '노인 보호구역 · ' : '') + (CAM_KO[c.t] || '단속 카메라').replace(' 카메라', '');
+    $('#camDist').textContent = fmtDistStr(Math.max(0, cs.ahead.dist)) + ' 앞';
+  }
+  box.hidden = false;
 }
 
 function makeGuide(route, rerouted) {
@@ -146,6 +176,11 @@ function navFix(fix) {
     n.remDrawn = true;
   }
   MV.setTurn(n.route, st.nextDist < 700 ? st.next : null);
+  if (n.camGuide) {
+    const cs = n.camGuide.update(st.d, st.speed, fix.t || Date.now());
+    renderCam(cs);
+    if (n.camGuide.k !== n.camK) { n.camK = n.camGuide.k; MV.setCams(n.cams.slice(n.camGuide.k)); }
+  }
   const kmh = st.speed * 3.6;
   let z = kmh < 20 ? 17.3 : kmh < 50 ? 17.3 - (kmh - 20) / 30 * 0.7 : kmh < 90 ? 16.6 - (kmh - 50) / 40 * 0.9 : 15.5;
   if (st.nextDist < 250 && st.next.kind !== 'arrive') z = Math.max(z, 17.2);
@@ -204,6 +239,7 @@ async function reroute(at) {
     n.route = r.routes[0];
     n.route.p = personalize(n.route);
     n.rr++;
+    setNavCams(n.route);
     n.remDrawn = false;
     n.guide = makeGuide(n.route, true);
     n.guide.intro();
@@ -233,6 +269,7 @@ function finishNav(arrived) {
     saveStore(true);
   }
   S.nav = null; S.trip = null;
+  $('#cambox').hidden = true; $('#speed').classList.remove('over');
   MV.stopGuideCam();
   MV.clearRoutes();
   MV.setTripMarks(null, [], null);
@@ -308,6 +345,11 @@ function openSettings() {
       row('말하기 속도', null, rate),
       row('안내 빈도', '간단: 회전 직전 위주 · 자세히: 1km·500m·300m 모두', seg([['brief', '간단'], ['normal', '보통'], ['detail', '자세히']], st.verbosity, k => setS('verbosity', k), '안내 빈도')),
       row('들어 보기', null, h('button', { class: 'btn btn--sm', type: 'button', text: '300미터 앞 우회전', onclick: () => { Voice.unlock(); Voice.say('300미터 앞에서 우회전입니다', { force: true, urgent: true }); } }))),
+    h('section', { class: 'group' }, h('h2', { text: '단속 카메라' }),
+      row('카메라 음성 안내', '고속도로 600m·일반도로 300m 앞에서 알려 줍니다', sw(st.camVoice, v => setS('camVoice', v), '카메라 음성 안내')),
+      row('신호 단속 카메라도 안내', '끄면 과속·구간단속 카메라만 안내합니다(다음 경로부터)', sw(st.camSignal, v => setS('camSignal', v), '신호 단속 카메라 안내')),
+      row('제한속도 초과 경고', '카메라 앞·구간단속 중 제한속도를 넘으면 속도 표시가 빨개지고 음성으로 알립니다', sw(st.overWarn, v => setS('overWarn', v), '제한속도 초과 경고')),
+      row('카메라 자료', CamDB.ready ? `${CamDB.n.toLocaleString('ko-KR')}대 · ${CamDB.date || ''} 기준 · 반년마다 갱신되는 공공 자료라 새로 생긴 카메라와 이동식 단속은 빠질 수 있습니다` : CamDB.err ? (isLocalFile() ? '파일로 열면 카메라 자료를 쓸 수 없습니다. 앱 주소로 여세요.' : '카메라 자료를 불러오지 못했습니다. 인터넷 연결을 확인하세요.') : '불러오는 중…', h('span'))),
     h('section', { class: 'group' }, h('h2', { text: '화면' }),
       row('지도 밝기', '자동: 해가 지면 야간 지도로 바꿉니다', seg([['auto', '자동'], ['day', '주간'], ['night', '야간']], st.theme, k => { setS('theme', k); applyTheme(); }, '지도 밝기')),
       row('안내 중 지도 방향', null, seg([['1', '진행 방향 위'], ['0', '북쪽 위']], st.headingUp ? '1' : '0', k => { setS('headingUp', k === '1'); MV.headingUp = k === '1'; }, '지도 방향')),
@@ -333,7 +375,8 @@ function openSettings() {
       h('p', null, '지도: ', h('a', { href: 'https://openfreemap.org', target: '_blank', rel: 'noopener', text: 'OpenFreeMap' }), ' · ', h('a', { href: 'https://www.openmaptiles.org/', target: '_blank', rel: 'noopener', text: 'OpenMapTiles' }), ' · 지도 데이터 ', h('a', { href: 'https://www.openstreetmap.org/copyright', target: '_blank', rel: 'noopener', text: '© OpenStreetMap 기여자' })),
       h('p', null, '경로: ', h('a', { href: 'https://valhalla.github.io/valhalla/', target: '_blank', rel: 'noopener', text: 'Valhalla' }), ' · ', h('a', { href: 'https://routing.openstreetmap.de/about.html', target: '_blank', rel: 'noopener', text: 'OSRM' }), ' (FOSSGIS 공개 서버, 초당 1회 이하·가벼운 개인 사용)'),
       h('p', null, '검색: ', h('a', { href: 'https://photon.komoot.io', target: '_blank', rel: 'noopener', text: 'Photon(komoot)' }), ' · Nominatim — ', h('a', { href: 'https://operations.osmfoundation.org/policies/nominatim/', target: '_blank', rel: 'noopener', text: 'Nominatim 이용 정책' }), '(자동완성 금지, 초당 1회 이하, 결과 저장 후 재사용)을 지키도록 검색 버튼을 눌렀을 때만 요청하고 결과를 이 기기에 7일간 보관합니다.'),
-      h('p', null, '실시간 교통·단속 카메라 정보는 없습니다. 안내는 참고용이며 실제 도로 표지와 교통 법규를 따르세요. 운전 중에는 화면을 조작하지 마세요.')),
+      h('p', null, '단속 카메라: 경찰청·지방자치단체 「전국무인교통단속카메라표준데이터」(', h('a', { href: 'https://www.data.go.kr/data/15028200/standard.do', target: '_blank', rel: 'noopener', text: '공공데이터포털' }), ')'),
+      h('p', null, '실시간 교통 정보와 이동식 단속 정보는 없습니다. 안내는 참고용이며 실제 도로 표지와 교통 법규를 따르세요. 운전 중에는 화면을 조작하지 마세요.')),
   ]);
 }
 

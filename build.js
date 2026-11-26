@@ -56,7 +56,7 @@ const manifest = {
   ],
 };
 fs.writeFileSync(path.join(web, 'manifest.json'), JSON.stringify(manifest, null, 2).replace(/[^\x00-\x7f]/g, c => '\\u' + c.charCodeAt(0).toString(16).padStart(4, '0')) + '\n');
-for (const f of ['icon-192.png', 'icon-512.png', 'icon-maskable-512.png', 'apple-touch-icon.png']) fs.copyFileSync(path.join(__dirname, 'src/web', f), path.join(web, f));
+for (const f of ['icon-192.png', 'icon-512.png', 'icon-maskable-512.png', 'apple-touch-icon.png', 'cameras.json']) fs.copyFileSync(path.join(__dirname, 'src/web', f), path.join(web, f));
 fs.writeFileSync(path.join(dist, 'index.html'), html);   // 예전 위치 호환
 
 // GitHub Pages 로 내보낼 폴더(docs/): https://jwlee1209-pixel.github.io/nav/

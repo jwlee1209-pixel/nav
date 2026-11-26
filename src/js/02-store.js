@@ -19,6 +19,9 @@ const DEFAULT_SETTINGS = {
   suggest: true,
   easyPrefer: true,      // 빠른 길이 기준 시간 이상 빠르지 않으면 운전하기 쉬운 길을 추천
   easyMin: 10,           // 기준 시간(분)
+  camVoice: true,        // 단속 카메라 음성 안내
+  camSignal: true,       // 신호 단속 카메라도 안내
+  overWarn: true,        // 제한속도 초과 경고
 };
 
 const store = {

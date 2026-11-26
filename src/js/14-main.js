@@ -103,6 +103,11 @@ function boot() {
   MV.whenLoaded(hide);
   setTimeout(() => { if (document.body.contains(bootEl)) hide(); }, 6000);
   if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => { /* 없어도 동작 */ });
+  CamDB.load().then(() => {
+    if (!CamDB.ready) return;
+    if (S.trip && S.trip.routes.length) { attachCams(S.trip.routes); MV.setCams(S.trip.routes[S.trip.sel].cams); if (S.screen === 'preview') renderSheet(); }
+    if (S.nav && !S.nav.cams.length) setNavCams(S.nav.route);
+  });
   window.__navi = { S, store, MV, Voice, navFix, startTrip, finishNav, applyTheme, openSettings, openPlaces, onPos };
 }
 

@@ -13,6 +13,7 @@ const PAL = {
     label: '#2A303A', halo: '#FFFFFF', roadLabel: '#46505F', placeLabel: '#141A22', poiLabel: '#5D6675', waterLabel: '#356A9C',
     route: '#2A62F4', routeCase: '#1636A0', alt: '#9FB0CF', altCase: '#71839F', arrow: '#FFFFFF',
     acc: 'rgba(42,98,244,0.12)', ptHome: '#0B5CAD', ptWork: '#0E7A4C', ptFav: '#D9822B', ptHalo: '#FFFFFF',
+    camFill: '#FFFFFF', camSpd: '#D32F2F', camSig: '#E07B00', camSec: '#7A56D6', camText: '#141A22',
   },
   night: {
     bg: '#0F151C', resid: '#121921', park: '#12231B', wood: '#10201A', grass: '#131F1A', sand: '#1B1A16',
@@ -23,6 +24,7 @@ const PAL = {
     label: '#C7D1DD', halo: '#0A0F14', roadLabel: '#9CA9B8', placeLabel: '#E4EAF0', poiLabel: '#8693A3', waterLabel: '#6A98C6',
     route: '#4D8BFF', routeCase: '#0C2A6E', alt: '#3B4A63', altCase: '#1E2737', arrow: '#FFFFFF',
     acc: 'rgba(77,139,255,0.16)', ptHome: '#4F9BEB', ptWork: '#3DBB86', ptFav: '#F0A04B', ptHalo: '#0A0F14',
+    camFill: '#E9EEF3', camSpd: '#FF5A5A', camSig: '#FF9F2E', camSec: '#A98BFF', camText: '#0E141B',
   },
 };
 
@@ -87,6 +89,11 @@ function mapLayers(P) {
     { id: 'turn-head', type: 'symbol', source: 'turn', filter: ['==', ['geometry-type'], 'Point'], minzoom: 13,
       layout: { 'icon-image': 'nv-head', 'icon-size': ['interpolate', ['linear'], ['zoom'], 14, 0.45, 18, 1.1], 'icon-rotate': ['get', 'b'], 'icon-rotation-alignment': 'map', 'icon-pitch-alignment': 'map', 'icon-allow-overlap': true, 'icon-ignore-placement': true } },
     { id: 'me-acc', type: 'fill', source: 'acc', paint: { 'fill-color': P.acc } },
+    // 경로 위 단속 카메라(흰 원 + 제한속도)
+    { id: 'cams-dot', type: 'circle', source: 'cams', minzoom: 11, paint: { 'circle-radius': ['interpolate', ['linear'], ['zoom'], 11, 5, 16, 11], 'circle-color': P.camFill,
+      'circle-stroke-color': ['match', ['get', 't'], 1, P.camSig, 5, P.camSec, 6, P.camSec, P.camSpd], 'circle-stroke-width': ['interpolate', ['linear'], ['zoom'], 11, 2, 16, 3.2] } },
+    { id: 'cams-num', type: 'symbol', source: 'cams', minzoom: 13, layout: { 'text-field': ['case', ['>', ['get', 'lim'], 0], ['to-string', ['get', 'lim']], '신호'], 'text-font': ['Noto Sans Bold'],
+      'text-size': ['interpolate', ['linear'], ['zoom'], 13, 8.5, 16, 11.5], 'text-allow-overlap': true, 'text-ignore-placement': true }, paint: { 'text-color': P.camText } },
     // 글자
     { id: 'water-label', type: 'symbol', source: 'omt', 'source-layer': 'water_name', layout: { 'text-field': KO_NAME, 'text-font': ['Noto Sans Regular'], 'text-size': 12, 'text-max-width': 8 }, paint: text(12, P.waterLabel) },
     { id: 'road-label', type: 'symbol', source: 'omt', 'source-layer': 'transportation_name', minzoom: 12,
@@ -128,6 +135,7 @@ function buildStyle(theme) {
       acc: { type: 'geojson', data: empty },
       pts: { type: 'geojson', data: empty },
       hits: { type: 'geojson', data: empty },
+      cams: { type: 'geojson', data: empty },
     },
     layers: mapLayers(P),
   };

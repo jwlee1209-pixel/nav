@@ -1,7 +1,7 @@
 // gilnavi service worker: the app page is network-first (always fresh when online),
 // icons and manifest are cache-first. Map tiles, search and routing requests are not touched.
-const CACHE = 'gilnavi-v1.3';
-const SHELL = ['./', './manifest.json', './icon-192.png', './icon-512.png'];
+const CACHE = 'gilnavi-v1.4';
+const SHELL = ['./', './manifest.json', './icon-192.png', './icon-512.png', './cameras.json'];
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()));
 });

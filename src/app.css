@@ -179,6 +179,20 @@ svg { display: block; flex: none; }
 .speed b { font-size: 23px; font-weight: 800; font-variant-numeric: tabular-nums; }
 .speed span { font-size: 10.5px; color: var(--text-3); margin-top: 2px; font-weight: 600; }
 
+/* 안내 중: 단속 카메라·제한속도 */
+.cambox { position: absolute; z-index: 6; left: var(--sl); bottom: calc(var(--gbar-h, 0px) + var(--sb) + 88px); display: flex; align-items: center; gap: 10px; padding: 6px 14px 6px 6px; border-radius: 40px; background: var(--surface); box-shadow: var(--shadow); max-width: calc(100% - 100px); }
+.limsign { width: 56px; height: 56px; border-radius: 50%; background: #fff; border: 6px solid #D32F2F; display: grid; place-items: center; flex: none; }
+.limsign b { font-size: 21px; font-weight: 800; color: #111; letter-spacing: -.03em; font-variant-numeric: tabular-nums; }
+.limsign.sig b { font-size: 13px; }
+.cambox__txt { display: flex; flex-direction: column; min-width: 0; line-height: 1.25; }
+.cambox__txt b { font-size: 14.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cambox__txt span { font-size: 13.5px; color: var(--text-2); font-weight: 700; white-space: nowrap; }
+.cambox.sec .limsign { border-color: #7A56D6; }
+.speed.over { background: #D32F2F; color: #fff; animation: overblink 1s steps(2, start) infinite; }
+.speed.over span { color: rgba(255,255,255,.85); }
+@keyframes overblink { 50% { background: #8E1B1B; } }
+#app:not([data-screen="guide"]) .cambox { display: none; }
+
 /* 안내 중: 아래 막대 */
 .gbar { position: absolute; z-index: 7; left: 0; right: 0; bottom: 0; background: var(--surface); box-shadow: 0 -6px 24px rgba(0, 0, 0, .18); border-radius: 20px 20px 0 0; padding: 12px var(--sr) calc(12px + var(--sb)) var(--sl); display: flex; align-items: center; gap: 10px 12px; flex-wrap: wrap; }
 .gbar__stats { flex: 1 1 auto; min-width: 0; display: grid; grid-template-columns: auto 1fr; column-gap: 12px; align-items: center; }
@@ -266,6 +280,7 @@ input[type="range"] { width: 180px; accent-color: var(--accent); }
   .banner { left: 16px; right: auto; width: var(--col); }
   .caption { left: calc(16px + var(--col) / 2); top: calc(var(--mp-h, 120px) + 72px); max-width: var(--col); }
   .speed { left: calc(16px + var(--col) + 16px); bottom: 16px; }
+  .cambox { left: calc(16px + var(--col) + 92px); bottom: 20px; }
   .recenter { bottom: 16px; }
   .fabs { bottom: 24px; }
   .maplibregl-ctrl-bottom-left { left: calc(var(--col) + 40px); bottom: 0; }

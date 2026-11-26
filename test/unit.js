@@ -1,7 +1,7 @@
 const assert = require('assert');
 const load = require('./load');
 const F = require('./fixtures');
-const X = load(['00-util', '01-geo', '02-store', '03-sun', '04-search', '05-route', '06-phrase', '07-guide', '09-sim']);
+const X = load(['00-util', '01-geo', '02-store', '03-sun', '04-search', '05-route', '06-phrase', '07-guide', '07b-cams', '09-sim']);
 
 let fails = 0;
 const t = (name, fn) => { try { fn(); console.log('  ok  ', name); } catch (e) { fails++; console.log('  FAIL', name, '\n       ', e.message); } };
@@ -169,5 +169,55 @@ process.exitCode = fails ? 1 : 0;
   t('구간 기록: 300m 이상 이름 있는 도로 4곳', () => assert.strictEqual(seg.map(x => x.name).join(), '세종대로,종로,율곡로,대학로'));
   t('구간 기록: 실제/예상 비율이 그럴듯함', () => seg.forEach(x => assert(x.act / x.pred > 0.5 && x.act / x.pred < 2, x.name + ' ' + (x.act / x.pred).toFixed(2))));
   console.log(fails ? `\n${fails}개 실패` : '\n쉬운 길·학습 통과');
+  process.exitCode = fails ? 1 : 0;
+}
+
+// ── 단속 카메라 ──
+{
+  console.log('단속 카메라');
+  const P = F.P;
+  const raw = [ // [위도, 경도, 종류, 제한속도, 보호구역, 구간길이m]
+    [37.5690, P.A[0] + 0.00009, 2, 50, 0, 0],        // 세종대로 북쪽 방향 오른쪽 8m → 포함
+    [37.5700, P.A[0] - 0.00023, 2, 50, 0, 0],        // 왼쪽 20m(반대 차로) → 제외
+    [P.C[1] - 0.00004, P.C[0] + 0.00004, 1, 0, 0, 0], // 종로·삼일대로 교차로 신호 카메라 → 포함
+    [P.E[1] - 0.00007, 126.9870, 5, 60, 0, 1000],     // 율곡로 동쪽 방향 오른쪽(남쪽) 구간 시작
+    [P.E[1] - 0.00007, 126.9980, 6, 60, 0, 1000],     // 구간 끝
+    [37.5730, P.G[0] - 0.00008, 2, 30, 2, 0],         // 대학로 남쪽 방향 오른쪽(서쪽) 어린이 보호구역
+  ].sort((a, b) => a[0] - b[0]);
+  const flat = []; let pl = 0, po = 0;
+  for (const [la, lo, ty, lim, z, sl] of raw) { const a = Math.round(la * 1e5), b = Math.round(lo * 1e5); flat.push(a - pl, b - po, ty, lim, z, sl); pl = a; po = b; }
+  X.CamDB.decode({ date: 'test', d: flat });
+  const cams = X.camsForRoute(rv);
+  t('오른쪽 카메라만 경로에 붙음(반대 차로 제외)', () => assert.strictEqual(cams.map(c => c.t).join(), '2,1,5,6,2'));
+  t('구간단속 시작·끝 짝짓기', () => { const s = cams.find(c => c.t === 5); assert(s.endD - s.d > 900 && s.endD - s.d < 1100, s.endD - s.d); });
+  t('신호 카메라 끄기', () => assert.strictEqual(X.camsForRoute(rv, { signal: false }).map(c => c.t).join(), '2,5,6,2'));
+  t('문구', () => {
+    assert.strictEqual(X.camPhrase({ t: 2, lim: 60, zone: 0 }, 300), '300미터 앞 과속 단속 카메라입니다. 제한속도 60킬로미터입니다');
+    assert.strictEqual(X.camPhrase({ t: 2, lim: 30, zone: 2 }, 300), '어린이 보호구역, 300미터 앞 과속 단속 카메라입니다. 제한속도 30킬로미터입니다');
+    assert.strictEqual(X.camPhrase({ t: 1, lim: 0, zone: 0 }, 300), '300미터 앞 신호 단속 카메라입니다');
+  });
+  // 가상 주행: 안내 엔진 + 카메라 안내
+  const said = [];
+  const g = new X.Guide(rv, { speak: () => {}, event: () => {}, settings: () => ({ verbosity: 'normal' }) });
+  const cg = new X.CamGuide(cams, { speak: txt => said.push(txt), settings: () => ({ camVoice: true, overWarn: true }) });
+  const sim = new X.Sim(rv, { onFix: () => {} });
+  let tm = 1e12, overSeen = false, secSeen = null;
+  while (!sim.ended) {
+    const vt = sim.targetSpeed(); sim.v = vt > sim.v ? Math.min(vt, sim.v + 2.2) : Math.max(vt, sim.v - 3.2); sim.v = Math.max(sim.v, 1.2);
+    sim.d = Math.min(sim.total, sim.d + sim.v); tm += 1000;
+    const pa = X.pointAt(rv.coords, rv.cum, sim.d);
+    const st = g.update({ lon: pa.p[0], lat: pa.p[1], acc: 6, speed: sim.v, heading: pa.brg, t: tm });
+    const cs = cg.update(st.d, sim.v, tm);
+    if (cs.over) overSeen = true;
+    if (cs.sec && cs.sec.avg) secSeen = cs.sec;
+    if (sim.d >= sim.total) sim.ended = true;
+  }
+  console.log('    음성:', said.join(' / '));
+  t('과속 카메라 사전 안내', () => assert(said.includes('300미터 앞 과속 단속 카메라입니다. 제한속도 50킬로미터입니다') || said.some(s => /^\d+미터 앞 과속 단속 카메라입니다\. 제한속도 50킬로미터입니다$/.test(s))));
+  t('구간단속 시작·끝 안내', () => { assert(said.some(s => s.includes('구간단속 시작입니다. 제한속도 60킬로미터, 구간 길이'))); assert(said.some(s => s.startsWith('구간단속이 끝났습니다'))); });
+  t('구간 평균 속도 계산', () => assert(secSeen && secSeen.avg > 10 && secSeen.avg < 80, JSON.stringify(secSeen)));
+  t('어린이 보호구역 안내', () => assert(said.some(s => s.startsWith('어린이 보호구역, '))));
+  t('제한속도 초과 경고(54km/h로 50 구간 통과)', () => { assert(overSeen); assert(said.includes('제한속도를 넘었습니다. 속도를 줄이세요')); });
+  console.log(fails ? `\n${fails}개 실패` : '\n카메라 통과');
   process.exitCode = fails ? 1 : 0;
 }

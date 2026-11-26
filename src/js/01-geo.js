@@ -124,6 +124,13 @@ function projSeg(p, a, b) {
   return { t, d: Math.hypot(ax + dx * t, ay + dy * t) };
 }
 
+// 점 p 가 a→b 진행 방향의 오른쪽이면 +1, 왼쪽이면 -1
+function sideOfLine(p, a, b) {
+  const kx = Math.cos(p[1] * RAD);
+  const vx = (b[0] - a[0]) * kx, vy = b[1] - a[1], wx = (p[0] - a[0]) * kx, wy = p[1] - a[1];
+  return vx * wy - vy * wx < 0 ? 1 : -1;
+}
+
 function bboxOf(coords) {
   let a = Infinity, b = Infinity, c = -Infinity, d = -Infinity;
   for (const [x, y] of coords) { if (x < a) a = x; if (y < b) b = y; if (x > c) c = x; if (y > d) d = y; }

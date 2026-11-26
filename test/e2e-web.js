@@ -20,6 +20,12 @@ const TYPES = { html: 'text/html; charset=euc-kr', json: 'application/json', js:
     if (!fs.existsSync(fp)) return r.fulfill({ status: 404, body: 'nf' });
     r.fulfill({ status: 200, headers: { 'content-type': TYPES[f.split('.').pop()] || 'application/octet-stream' }, body: fs.readFileSync(fp) });
   });
+  // 시험 경로 위에 가짜 단속 카메라(과속·신호·구간단속·어린이 보호구역)
+  const P = F.P;
+  const raw = [[37.5690, P.A[0] + 0.00009, 2, 50, 0, 0], [P.C[1] - 0.00004, P.C[0] + 0.00004, 1, 0, 0, 0], [P.E[1] - 0.00007, 126.9870, 5, 60, 0, 1000], [P.E[1] - 0.00007, 126.9980, 6, 60, 0, 1000], [37.5730, P.G[0] - 0.00008, 2, 30, 2, 0]].sort((a, b) => a[0] - b[0]);
+  const flat = []; let pl = 0, po = 0;
+  for (const [la, lo, ty, lim, z, sl] of raw) { const a = Math.round(la * 1e5), b = Math.round(lo * 1e5); flat.push(a - pl, b - po, ty, lim, z, sl); pl = a; po = b; }
+  await context.route(/github\.io\/nav\/cameras\.json/, r => r.fulfill({ contentType: 'application/json', body: JSON.stringify({ v: 1, date: '시험', d: flat }) }));
   const log = await mock.install(context);
   await context.addInitScript(() => { window.__said = []; if (window.speechSynthesis) { speechSynthesis.speak = u => window.__said.push(u.text); speechSynthesis.cancel = () => {}; } });
   const page = await context.newPage();
@@ -41,10 +47,17 @@ const TYPES = { html: 'text/html; charset=euc-kr', json: 'application/json', js:
   await page.waitForSelector('.list .item'); await page.click('.list .item');
   await page.click('text=여기로 길 안내');
   await page.waitForSelector('.rcard');
-  await page.evaluate(() => { window.__simFactor = 6; });
+  console.log('카메라 자료:', await page.evaluate(() => { const s = window.__navi; return document.querySelector('.rcard__ease') ? document.querySelector('.rcard__ease').textContent : '-'; }));
+  await page.screenshot({ path: path.join(OUT, 'web-2a-preview-cams.png') });
+  await page.evaluate(() => { window.__simFactor = 4; });
   await page.click('text=모의 주행');
-  await page.waitForTimeout(4000);
+  await page.waitForSelector('#cambox:not([hidden])', { timeout: 60000 }).catch(() => null);
+  await page.waitForTimeout(600);
   await page.screenshot({ path: path.join(OUT, 'web-2-guide.png') });
+  await page.waitForFunction(() => /구간단속/.test(document.querySelector('#camTitle').textContent) && document.querySelector('#camTitle').textContent.includes('평균'), null, { timeout: 90000 }).catch(() => null);
+  await page.screenshot({ path: path.join(OUT, 'web-2b-section.png') });
+  await page.waitForTimeout(8000);
+  console.log('카메라 음성:', (await page.evaluate(() => window.__said.filter(s => /카메라|구간단속|제한속도/.test(s)))).join(' / '));
   console.log('음성:', (await page.evaluate(() => window.__said.filter(s => s.trim()).slice(0, 3))).join(' / '));
   await page.click('#gEnd'); await page.click('.dialog .btn--danger');
   await page.click('#btnSettings'); await page.waitForTimeout(300);

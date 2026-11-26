@@ -432,6 +432,7 @@ async function computeRoutes() {
     }
     const ranked = rankRoutes(all, { pref: t.pref, easyPrefer: store.settings.easyPrefer, easyMin: store.settings.easyMin });
     t.routes = ranked.routes; t.info = ranked.info; t.sel = 0; t.warn = r.warn || ''; t.engine = r.engine;
+    attachCams(t.routes);
   } catch (e) {
     if (ctl.signal.aborted || S.trip !== t) return;
     t.err = e.noPath ? '이 조건으로 갈 수 있는 길을 찾지 못했습니다. 경로 옵션을 바꾸거나 출발·도착 위치를 도로 가까이로 옮겨 보세요.' : '경로 서버에 연결하지 못했습니다. 인터넷 연결을 확인한 뒤 다시 시도하세요.';
@@ -440,6 +441,7 @@ async function computeRoutes() {
   if (S.screen === 'preview') renderSheet();
   if (t.routes.length) {
     MV.setRoutes(t.routes, t.sel);
+    MV.setCams(t.routes[t.sel].cams);
     MV.fit(t.routes.flatMap(r => [r.coords[0], ...r.coords.filter((_, i) => i % 20 === 0), r.coords[r.coords.length - 1]]));
   }
 }
@@ -479,7 +481,7 @@ function previewSheet() {
         h('span', { class: 'rcard__eta num', text: fmtClock(Date.now() + dur * 1000) + ' 도착' }),
         h('span', { class: 'rcard__info num' }, fmtDistStr(r.distance),
           store.settings.showFuel ? h('span', { text: '· 유류비 약 ' + fmtWon(fuelCost(r.distance)) }) : null),
-        r.ease ? h('span', { class: 'rcard__ease num', text: `회전 ${r.ease.turns}번${r.ease.left + r.ease.uturn ? ` (좌회전·유턴 ${r.ease.left + r.ease.uturn})` : ''} · 큰길 ${Math.round((1 - r.ease.smallShare) * 100)}%` }) : null,
+        r.ease ? h('span', { class: 'rcard__ease num', text: `회전 ${r.ease.turns}번${r.ease.left + r.ease.uturn ? ` (좌회전·유턴 ${r.ease.left + r.ease.uturn})` : ''} · 큰길 ${Math.round((1 - r.ease.smallShare) * 100)}%${r.cams ? ` · 단속 카메라 ${camCount(r.cams)}곳` : ''}` }) : null,
         tags.length ? h('span', { class: 'rcard__tags' }, ...tags) : null,
         r.roads.length ? h('span', { class: 'rcard__via', text: r.roads.join(' · ') + ' 경유' }) : null));
     });
@@ -497,9 +499,17 @@ function previewSheet() {
   return out;
 }
 
+// 경로마다 그 위에 있는 단속 카메라를 붙여 둔다(카메라 자료를 아직 못 받았으면 건너뜀)
+function attachCams(routes) {
+  if (!CamDB.ready) return;
+  for (const r of routes) r.cams = camsForRoute(r, { signal: store.settings.camSignal });
+}
+const camCount = cams => cams.filter(c => c.t !== 6).length;
+
 function selectRoute(i) {
   const t = S.trip;
   t.sel = i;
   MV.setRoutes(t.routes, i);
+  MV.setCams(t.routes[i].cams);
   $$('.rcard').forEach((b, k) => { b.setAttribute('aria-pressed', k === i ? 'true' : 'false'); b.setAttribute('aria-checked', k === i ? 'true' : 'false'); });
 }

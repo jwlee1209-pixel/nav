@@ -9,7 +9,7 @@
 <meta name="apple-mobile-web-app-title" content="&#xae38;&#xc7a1;&#xc774; &#xb0b4;&#xbe44;">
 <meta name="description" content="&#xbb34;&#xb8cc; &#xc9c0;&#xb3c4;(OpenStreetMap)&#xb85c; &#xae38;&#xc744; &#xcc3e;&#xace0; &#xd55c;&#xad6d;&#xc5b4; &#xc74c;&#xc131;&#xc73c;&#xb85c; &#xc548;&#xb0b4;&#xd558;&#xb294; &#xac1c;&#xc778;&#xc6a9; &#xcc28;&#xb7c9; &#xb0b4;&#xbe44;&#xac8c;&#xc774;&#xc158;">
 <title>&#xae38;&#xc7a1;&#xc774; &#xb0b4;&#xbe44;</title>
-<meta name="generator" content="&#xae38;&#xc7a1;&#xc774; &#xb0b4;&#xbe44; v1.3">
+<meta name="generator" content="&#xae38;&#xc7a1;&#xc774; &#xb0b4;&#xbe44; v1.4">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230B5CAD'/%3E%3Cpath d='M11 25V15.5a3.5 3.5 0 0 1 3.5-3.5H20' fill='none' stroke='%23fff' stroke-width='3.4' stroke-linecap='round'/%3E%3Cpath d='M19 7.2 25.5 12 19 16.8z' fill='%23fff'/%3E%3C/svg%3E">
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
@@ -196,6 +196,20 @@ svg { display: block; flex: none; }
 .speed b { font-size: 23px; font-weight: 800; font-variant-numeric: tabular-nums; }
 .speed span { font-size: 10.5px; color: var(--text-3); margin-top: 2px; font-weight: 600; }
 
+/* \c548 \b0b4  \c911 : \b2e8 \c18d  \ce74 \ba54 \b77c \b7 \c81c \d55c \c18d \b3c4  */
+.cambox { position: absolute; z-index: 6; left: var(--sl); bottom: calc(var(--gbar-h, 0px) + var(--sb) + 88px); display: flex; align-items: center; gap: 10px; padding: 6px 14px 6px 6px; border-radius: 40px; background: var(--surface); box-shadow: var(--shadow); max-width: calc(100% - 100px); }
+.limsign { width: 56px; height: 56px; border-radius: 50%; background: #fff; border: 6px solid #D32F2F; display: grid; place-items: center; flex: none; }
+.limsign b { font-size: 21px; font-weight: 800; color: #111; letter-spacing: -.03em; font-variant-numeric: tabular-nums; }
+.limsign.sig b { font-size: 13px; }
+.cambox__txt { display: flex; flex-direction: column; min-width: 0; line-height: 1.25; }
+.cambox__txt b { font-size: 14.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cambox__txt span { font-size: 13.5px; color: var(--text-2); font-weight: 700; white-space: nowrap; }
+.cambox.sec .limsign { border-color: #7A56D6; }
+.speed.over { background: #D32F2F; color: #fff; animation: overblink 1s steps(2, start) infinite; }
+.speed.over span { color: rgba(255,255,255,.85); }
+@keyframes overblink { 50% { background: #8E1B1B; } }
+#app:not([data-screen="guide"]) .cambox { display: none; }
+
 /* \c548 \b0b4  \c911 : \c544 \b798  \b9c9 \b300  */
 .gbar { position: absolute; z-index: 7; left: 0; right: 0; bottom: 0; background: var(--surface); box-shadow: 0 -6px 24px rgba(0, 0, 0, .18); border-radius: 20px 20px 0 0; padding: 12px var(--sr) calc(12px + var(--sb)) var(--sl); display: flex; align-items: center; gap: 10px 12px; flex-wrap: wrap; }
 .gbar__stats { flex: 1 1 auto; min-width: 0; display: grid; grid-template-columns: auto 1fr; column-gap: 12px; align-items: center; }
@@ -283,6 +297,7 @@ input[type="range"] { width: 180px; accent-color: var(--accent); }
   .banner { left: 16px; right: auto; width: var(--col); }
   .caption { left: calc(16px + var(--col) / 2); top: calc(var(--mp-h, 120px) + 72px); max-width: var(--col); }
   .speed { left: calc(16px + var(--col) + 16px); bottom: 16px; }
+  .cambox { left: calc(16px + var(--col) + 92px); bottom: 20px; }
   .recenter { bottom: 16px; }
   .fabs { bottom: 24px; }
   .maplibregl-ctrl-bottom-left { left: calc(var(--col) + 40px); bottom: 0; }
@@ -325,6 +340,10 @@ input[type="range"] { width: 180px; accent-color: var(--accent); }
     <button type="button" id="btnLocate" class="fab" aria-label="&#xb0b4; &#xc704;&#xce58;&#xb85c; &#xc774;&#xb3d9;"></button>
   </div>
   <div id="speed" class="speed" aria-label="&#xd604;&#xc7ac; &#xc18d;&#xb3c4;"><b id="spd">0</b><span>km/h</span></div>
+  <div id="cambox" class="cambox" role="status" hidden>
+    <div class="limsign" aria-label="&#xc81c;&#xd55c;&#xc18d;&#xb3c4;"><b id="limNum"></b></div>
+    <div class="cambox__txt"><b id="camTitle"></b><span id="camDist" class="num"></span></div>
+  </div>
   <button type="button" id="btnRecenter" class="fab fab--wide recenter" hidden></button>
 
   <footer id="gbar" class="gbar">
@@ -413,7 +432,7 @@ return maplibregl$1;
 </script>
 <script>(function () {
 'use strict';
-const APP_VERSION = '1.3';
+const APP_VERSION = '1.4';
 // ===== 00-util.js =====
 // \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 \uacf5\ud1b5 \ub3c4\uad6c \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
 const $ = (s, r = document) => r.querySelector(s);
@@ -671,6 +690,13 @@ function projSeg(p, a, b) {
   return { t, d: Math.hypot(ax + dx * t, ay + dy * t) };
 }
 
+// \uc810 p \uac00 a\u2192b \uc9c4\ud589 \ubc29\ud5a5\uc758 \uc624\ub978\ucabd\uc774\uba74 +1, \uc67c\ucabd\uc774\uba74 -1
+function sideOfLine(p, a, b) {
+  const kx = Math.cos(p[1] * RAD);
+  const vx = (b[0] - a[0]) * kx, vy = b[1] - a[1], wx = (p[0] - a[0]) * kx, wy = p[1] - a[1];
+  return vx * wy - vy * wx < 0 ? 1 : -1;
+}
+
 function bboxOf(coords) {
   let a = Infinity, b = Infinity, c = -Infinity, d = -Infinity;
   for (const [x, y] of coords) { if (x < a) a = x; if (y < b) b = y; if (x > c) c = x; if (y > d) d = y; }
@@ -706,6 +732,9 @@ const DEFAULT_SETTINGS = {
   suggest: true,
   easyPrefer: true,      // \ube60\ub978 \uae38\uc774 \uae30\uc900 \uc2dc\uac04 \uc774\uc0c1 \ube60\ub974\uc9c0 \uc54a\uc73c\uba74 \uc6b4\uc804\ud558\uae30 \uc26c\uc6b4 \uae38\uc744 \ucd94\ucc9c
   easyMin: 10,           // \uae30\uc900 \uc2dc\uac04(\ubd84)
+  camVoice: true,        // \ub2e8\uc18d \uce74\uba54\ub77c \uc74c\uc131 \uc548\ub0b4
+  camSignal: true,       // \uc2e0\ud638 \ub2e8\uc18d \uce74\uba54\ub77c\ub3c4 \uc548\ub0b4
+  overWarn: true,        // \uc81c\ud55c\uc18d\ub3c4 \ucd08\uacfc \uacbd\uace0
 };
 
 const store = {
@@ -1778,6 +1807,137 @@ class Guide {
   rerouteFailed() { this.rerouting = false; this.offN = 0; this.offT = 0; }
 }
 
+// ===== 07b-cams.js =====
+// \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 \ub2e8\uc18d \uce74\uba54\ub77c \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
+// \uc790\ub8cc: \uacbd\ucc30\uccad\u00b7\uc9c0\ubc29\uc790\uce58\ub2e8\uccb4 \u300c\uc804\uad6d\ubb34\uc778\uad50\ud1b5\ub2e8\uc18d\uce74\uba54\ub77c\ud45c\uc900\ub370\uc774\ud130\u300d(\uacf5\uacf5\ub370\uc774\ud130\ud3ec\ud138) \u2192 tools/cameras.py \ub85c \ub9cc\ub4e0 cameras.json
+// \uc885\ub958: 1 \uc2e0\ud638, 2 \uacfc\uc18d, 3 \uc2e0\ud638\u00b7\uacfc\uc18d, 5 \uad6c\uac04\ub2e8\uc18d \uc2dc\uc791, 6 \uad6c\uac04\ub2e8\uc18d \ub05d, 9 \uae30\ud0c0(\uc81c\ud55c\uc18d\ub3c4 \uc788\uc74c)
+const CAM_KO = { 1: '\uc2e0\ud638 \ub2e8\uc18d \uce74\uba54\ub77c', 2: '\uacfc\uc18d \ub2e8\uc18d \uce74\uba54\ub77c', 3: '\uc2e0\ud638\u00b7\uacfc\uc18d \ub2e8\uc18d \uce74\uba54\ub77c', 5: '\uad6c\uac04\ub2e8\uc18d \uc2dc\uc791', 6: '\uad6c\uac04\ub2e8\uc18d \ub05d', 9: '\ub2e8\uc18d \uce74\uba54\ub77c' };
+const CAM_CELL = 0.01;
+const camCell = (lat, lon) => Math.floor(lat / CAM_CELL) * 100000 + Math.floor(lon / CAM_CELL);
+
+const CamDB = {
+  ready: false, n: 0, date: '', src: '', err: '', grid: new Map(),
+  load() {
+    if (this.loading) return this.loading;
+    // \ud30c\uc77c\ub85c \uc5f0 \ud654\uba74\uc740 \uc606 \ud30c\uc77c\uc744 \uc77d\uc744 \uc218 \uc5c6\ub2e4(\ube0c\ub77c\uc6b0\uc800 \ubcf4\uc548) \u2192 \uce74\uba54\ub77c \uae30\ub2a5 \ub054
+    if (typeof location !== 'undefined' && /^(file|content):$/.test(location.protocol)) { this.err = 'localfile'; return (this.loading = Promise.resolve()); }
+    this.loading = fetchJSON('cameras.json', { timeout: 25000 }).then(d => this.decode(d)).catch(e => { this.err = e.message || 'load'; });
+    return this.loading;
+  },
+  decode(d) {
+    const a = d.d || [], n = Math.floor(a.length / 6);
+    this.lat = new Float64Array(n); this.lon = new Float64Array(n);
+    this.type = new Uint8Array(n); this.lim = new Uint8Array(n); this.zone = new Uint8Array(n); this.slen = new Uint32Array(n);
+    this.grid = new Map();
+    let la = 0, lo = 0;
+    for (let i = 0; i < n; i++) {
+      la += a[i * 6]; lo += a[i * 6 + 1];
+      this.lat[i] = la / 1e5; this.lon[i] = lo / 1e5;
+      this.type[i] = a[i * 6 + 2]; this.lim[i] = a[i * 6 + 3]; this.zone[i] = a[i * 6 + 4]; this.slen[i] = a[i * 6 + 5];
+      const k = camCell(this.lat[i], this.lon[i]);
+      let arr = this.grid.get(k); if (!arr) this.grid.set(k, arr = []); arr.push(i);
+    }
+    this.n = n; this.date = d.date || ''; this.src = d.src || ''; this.ready = true;
+  },
+};
+
+// \uacbd\ub85c \uc704 \uce74\uba54\ub77c \ucc3e\uae30: \uacbd\ub85c\uc120\uc5d0\uc11c \uc624\ub978\ucabd 30m\u00b7\uc67c\ucabd 9m \uc548(\ubc18\ub300 \ucc28\ub85c \uce74\uba54\ub77c\ub294 \ub300\uac1c \uc67c\ucabd \uba40\ub9ac \uc788\uc74c)
+function camsForRoute(route, { signal = true } = {}) {
+  if (!CamDB.ready || !route) return [];
+  const { coords, cum } = route;
+  const best = new Map();
+  const M = 0.0004;
+  for (let i = 0; i < coords.length - 1; i++) {
+    const a = coords[i], b = coords[i + 1], L = cum[i + 1] - cum[i];
+    if (L <= 0) continue;
+    const la0 = Math.min(a[1], b[1]) - M, la1 = Math.max(a[1], b[1]) + M, lo0 = Math.min(a[0], b[0]) - M, lo1 = Math.max(a[0], b[0]) + M;
+    for (let cy = Math.floor(la0 / CAM_CELL); cy <= Math.floor(la1 / CAM_CELL); cy++) {
+      for (let cx = Math.floor(lo0 / CAM_CELL); cx <= Math.floor(lo1 / CAM_CELL); cx++) {
+        const arr = CamDB.grid.get(cy * 100000 + cx);
+        if (!arr) continue;
+        for (const j of arr) {
+          const p = [CamDB.lon[j], CamDB.lat[j]];
+          if (p[1] < la0 || p[1] > la1 || p[0] < lo0 || p[0] > lo1) continue;
+          const pr = projSeg(p, a, b);
+          if (pr.d > 32) continue;
+          const cur = best.get(j);
+          if (!cur || pr.d < cur.dist) best.set(j, { d: cum[i] + pr.t * L, dist: pr.d, off: pr.d * sideOfLine(p, a, b) });
+        }
+      }
+    }
+  }
+  const list = [];
+  for (const [j, v] of best) {
+    if (v.off < -9 || v.off > 30) continue;
+    const t = CamDB.type[j];
+    if (t === 1 && !signal) continue;
+    list.push({ i: j, d: v.d, off: v.off, t, lim: CamDB.lim[j], zone: CamDB.zone[j], slen: CamDB.slen[j], lon: CamDB.lon[j], lat: CamDB.lat[j] });
+  }
+  list.sort((x, y) => x.d - y.d);
+  const out = [];
+  for (const c of list) { const p = out[out.length - 1]; if (p && p.t === c.t && c.d - p.d < 60) continue; out.push(c); }
+  // \uad6c\uac04\ub2e8\uc18d: \uc2dc\uc791\uc810\uacfc \uacbd\ub85c \uc704\uc758 \ub05d\uc810\uc744 \uc9dd\uc9d3\uae30(\uc5c6\uc73c\uba74 \uc790\ub8cc\uc758 \uad6c\uac04 \uae38\uc774\ub85c)
+  for (let k = 0; k < out.length; k++) {
+    const c = out[k];
+    if (c.t !== 5) continue;
+    const want = c.slen || 0;
+    for (let m = k + 1; m < out.length; m++) {
+      const e = out[m], gap = e.d - c.d;
+      if (want && gap > want * 1.4 + 800) break;
+      if (e.t === 6 && gap > 200) { c.endD = e.d; e.paired = true; break; }
+    }
+    if (c.endD == null && want) c.endD = c.d + want;
+  }
+  return out.filter(c => c.t !== 6 || c.paired);
+}
+
+function camPhrase(c, dist) {
+  const dw = distWords(dist);
+  if (c.t === 5) return `${dw} \uc55e \uad6c\uac04\ub2e8\uc18d \uc2dc\uc791\uc785\ub2c8\ub2e4. \uc81c\ud55c\uc18d\ub3c4 ${c.lim}\ud0ac\ub85c\ubbf8\ud130${c.endD ? ', \uad6c\uac04 \uae38\uc774 ' + distWords(c.endD - c.d) : ''}\uc785\ub2c8\ub2e4`;
+  if (c.t === 6) return `${dw} \uc55e \uad6c\uac04\ub2e8\uc18d \uc885\ub8cc \uc9c0\uc810\uc785\ub2c8\ub2e4`;
+  const zone = c.zone === 2 ? '\uc5b4\ub9b0\uc774 \ubcf4\ud638\uad6c\uc5ed, ' : c.zone === 1 ? '\ub178\uc778 \ubcf4\ud638\uad6c\uc5ed, ' : '';
+  return `${zone}${dw} \uc55e ${CAM_KO[c.t] || '\ub2e8\uc18d \uce74\uba54\ub77c'}\uc785\ub2c8\ub2e4${c.lim ? '. \uc81c\ud55c\uc18d\ub3c4 ' + c.lim + '\ud0ac\ub85c\ubbf8\ud130\uc785\ub2c8\ub2e4' : ''}`;
+}
+
+// \uc548\ub0b4 \uc911 \uce74\uba54\ub77c \uc54c\ub9bc\u00b7\uad6c\uac04\ub2e8\uc18d \ud3c9\uade0 \uc18d\ub3c4\u00b7\uc81c\ud55c\uc18d\ub3c4 \ucd08\uacfc \uacbd\uace0
+class CamGuide {
+  constructor(cams, o) { this.c = cams; this.o = o; this.k = 0; this.said = new Set(); this.warned = new Set(); this.sec = null; }
+  say(t, opt) { if (this.o.speak) this.o.speak(t, opt); }
+  update(d, v, now) {
+    const set = this.o.settings ? this.o.settings() : {};
+    const kmh = v * 3.6;
+    while (this.k < this.c.length && this.c[this.k].d < d - 15) {
+      const c = this.c[this.k++];
+      if (c.t === 5 && c.endD && !this.sec) this.sec = { id: c.i, lim: c.lim, end: c.endD, d0: c.d, t0: now };
+    }
+    let sec = null;
+    if (this.sec) {
+      const s = this.sec;
+      const avg = (d - s.d0) / Math.max(1, (now - s.t0) / 1000) * 3.6;
+      if (d >= s.end) {
+        if (set.camVoice !== false) this.say(`\uad6c\uac04\ub2e8\uc18d\uc774 \ub05d\ub0ac\uc2b5\ub2c8\ub2e4${avg > 5 && d - s.d0 > 500 ? '. \ud3c9\uade0 \uc18d\ub3c4\ub294 ' + Math.round(avg) + '\ud0ac\ub85c\ubbf8\ud130\uc600\uc2b5\ub2c8\ub2e4' : ''}`);
+        this.sec = null;
+      } else {
+        sec = { lim: s.lim, avg: d - s.d0 > 300 ? avg : null, left: s.end - d };
+        if (sec.avg && sec.avg > s.lim + 1 && !s.warnAvg && set.overWarn !== false) { s.warnAvg = true; this.say('\uad6c\uac04 \ud3c9\uade0 \uc18d\ub3c4\uac00 \uc81c\ud55c\uc18d\ub3c4\ub97c \ub118\uc5c8\uc2b5\ub2c8\ub2e4. \uc18d\ub3c4\ub97c \uc904\uc774\uc138\uc694', { urgent: true }); }
+      }
+    }
+    const c = this.c[this.k];
+    const ahead = c ? { cam: c, dist: c.d - d } : null;
+    if (ahead && set.camVoice !== false && !this.said.has(c.i)) {
+      const stage = (c.lim >= 80 || kmh >= 70) ? 600 : 300;
+      if (ahead.dist <= stage + v * 2 && ahead.dist > 40) { this.said.add(c.i); this.say(camPhrase(c, ahead.dist)); }
+    }
+    const limNow = sec ? sec.lim : (ahead && ahead.dist < 600 && ahead.cam.lim) || 0;
+    const over = limNow > 0 && kmh > limNow + 3;
+    if (over && set.overWarn !== false) {
+      const key = sec ? 's' + this.sec.id : 'c' + c.i;
+      if (!this.warned.has(key)) { this.warned.add(key); this.say('\uc81c\ud55c\uc18d\ub3c4\ub97c \ub118\uc5c8\uc2b5\ub2c8\ub2e4. \uc18d\ub3c4\ub97c \uc904\uc774\uc138\uc694', { urgent: true }); }
+    }
+    return { ahead: ahead && ahead.dist < 1000 ? ahead : null, limNow, over, sec };
+  }
+}
+
 // ===== 08-voice.js =====
 // \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 \uc74c\uc131 \uc548\ub0b4(\ube0c\ub77c\uc6b0\uc800 \ub0b4\uc7a5 \uc74c\uc131) \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
 const Voice = {
@@ -1899,6 +2059,7 @@ const PAL = {
     label: '#2A303A', halo: '#FFFFFF', roadLabel: '#46505F', placeLabel: '#141A22', poiLabel: '#5D6675', waterLabel: '#356A9C',
     route: '#2A62F4', routeCase: '#1636A0', alt: '#9FB0CF', altCase: '#71839F', arrow: '#FFFFFF',
     acc: 'rgba(42,98,244,0.12)', ptHome: '#0B5CAD', ptWork: '#0E7A4C', ptFav: '#D9822B', ptHalo: '#FFFFFF',
+    camFill: '#FFFFFF', camSpd: '#D32F2F', camSig: '#E07B00', camSec: '#7A56D6', camText: '#141A22',
   },
   night: {
     bg: '#0F151C', resid: '#121921', park: '#12231B', wood: '#10201A', grass: '#131F1A', sand: '#1B1A16',
@@ -1909,6 +2070,7 @@ const PAL = {
     label: '#C7D1DD', halo: '#0A0F14', roadLabel: '#9CA9B8', placeLabel: '#E4EAF0', poiLabel: '#8693A3', waterLabel: '#6A98C6',
     route: '#4D8BFF', routeCase: '#0C2A6E', alt: '#3B4A63', altCase: '#1E2737', arrow: '#FFFFFF',
     acc: 'rgba(77,139,255,0.16)', ptHome: '#4F9BEB', ptWork: '#3DBB86', ptFav: '#F0A04B', ptHalo: '#0A0F14',
+    camFill: '#E9EEF3', camSpd: '#FF5A5A', camSig: '#FF9F2E', camSec: '#A98BFF', camText: '#0E141B',
   },
 };
 
@@ -1973,6 +2135,11 @@ function mapLayers(P) {
     { id: 'turn-head', type: 'symbol', source: 'turn', filter: ['==', ['geometry-type'], 'Point'], minzoom: 13,
       layout: { 'icon-image': 'nv-head', 'icon-size': ['interpolate', ['linear'], ['zoom'], 14, 0.45, 18, 1.1], 'icon-rotate': ['get', 'b'], 'icon-rotation-alignment': 'map', 'icon-pitch-alignment': 'map', 'icon-allow-overlap': true, 'icon-ignore-placement': true } },
     { id: 'me-acc', type: 'fill', source: 'acc', paint: { 'fill-color': P.acc } },
+    // \uacbd\ub85c \uc704 \ub2e8\uc18d \uce74\uba54\ub77c(\ud770 \uc6d0 + \uc81c\ud55c\uc18d\ub3c4)
+    { id: 'cams-dot', type: 'circle', source: 'cams', minzoom: 11, paint: { 'circle-radius': ['interpolate', ['linear'], ['zoom'], 11, 5, 16, 11], 'circle-color': P.camFill,
+      'circle-stroke-color': ['match', ['get', 't'], 1, P.camSig, 5, P.camSec, 6, P.camSec, P.camSpd], 'circle-stroke-width': ['interpolate', ['linear'], ['zoom'], 11, 2, 16, 3.2] } },
+    { id: 'cams-num', type: 'symbol', source: 'cams', minzoom: 13, layout: { 'text-field': ['case', ['>', ['get', 'lim'], 0], ['to-string', ['get', 'lim']], '\uc2e0\ud638'], 'text-font': ['Noto Sans Bold'],
+      'text-size': ['interpolate', ['linear'], ['zoom'], 13, 8.5, 16, 11.5], 'text-allow-overlap': true, 'text-ignore-placement': true }, paint: { 'text-color': P.camText } },
     // \uae00\uc790
     { id: 'water-label', type: 'symbol', source: 'omt', 'source-layer': 'water_name', layout: { 'text-field': KO_NAME, 'text-font': ['Noto Sans Regular'], 'text-size': 12, 'text-max-width': 8 }, paint: text(12, P.waterLabel) },
     { id: 'road-label', type: 'symbol', source: 'omt', 'source-layer': 'transportation_name', minzoom: 12,
@@ -2014,6 +2181,7 @@ function buildStyle(theme) {
       acc: { type: 'geojson', data: empty },
       pts: { type: 'geojson', data: empty },
       hits: { type: 'geojson', data: empty },
+      cams: { type: 'geojson', data: empty },
     },
     layers: mapLayers(P),
   };
@@ -2127,7 +2295,7 @@ const MV = {
   setRemaining(coords) {
     this.setData('routes', { type: 'FeatureCollection', features: coords && coords.length > 1 ? [{ type: 'Feature', properties: { idx: 0, sel: true }, geometry: { type: 'LineString', coordinates: coords } }] : [] });
   },
-  clearRoutes() { this.setData('routes', { type: 'FeatureCollection', features: [] }); this.setTurn(null); },
+  clearRoutes() { this.setData('routes', { type: 'FeatureCollection', features: [] }); this.setTurn(null); this.setCams(null); },
 
   // \ub2e4\uc74c \ud68c\uc804 \uc9c0\uc810\uc758 \ud770 \ud654\uc0b4\ud45c
   setTurn(route, step) {
@@ -2148,6 +2316,9 @@ const MV = {
 
   setPts(list) {
     this.setData('pts', { type: 'FeatureCollection', features: list.map(p => ({ type: 'Feature', properties: { kind: p.kind, name: p.label || p.name, id: p.id || '', lat: p.lat, lon: p.lon, pname: p.name, addr: p.addr || '' }, geometry: { type: 'Point', coordinates: [p.lon, p.lat] } })) });
+  },
+  setCams(list) {
+    this.setData('cams', { type: 'FeatureCollection', features: (list || []).filter(c => c.t !== 6).map(c => ({ type: 'Feature', properties: { t: c.t, lim: c.lim }, geometry: { type: 'Point', coordinates: [c.lon, c.lat] } })) });
   },
   setHits(list) {
     this.setData('hits', { type: 'FeatureCollection', features: (list || []).map((p, i) => ({ type: 'Feature', properties: { n: String(i + 1), i }, geometry: { type: 'Point', coordinates: [p.lon, p.lat] } })) });
@@ -2689,6 +2860,7 @@ async function computeRoutes() {
     }
     const ranked = rankRoutes(all, { pref: t.pref, easyPrefer: store.settings.easyPrefer, easyMin: store.settings.easyMin });
     t.routes = ranked.routes; t.info = ranked.info; t.sel = 0; t.warn = r.warn || ''; t.engine = r.engine;
+    attachCams(t.routes);
   } catch (e) {
     if (ctl.signal.aborted || S.trip !== t) return;
     t.err = e.noPath ? '\uc774 \uc870\uac74\uc73c\ub85c \uac08 \uc218 \uc788\ub294 \uae38\uc744 \ucc3e\uc9c0 \ubabb\ud588\uc2b5\ub2c8\ub2e4. \uacbd\ub85c \uc635\uc158\uc744 \ubc14\uafb8\uac70\ub098 \ucd9c\ubc1c\u00b7\ub3c4\ucc29 \uc704\uce58\ub97c \ub3c4\ub85c \uac00\uae4c\uc774\ub85c \uc62e\uaca8 \ubcf4\uc138\uc694.' : '\uacbd\ub85c \uc11c\ubc84\uc5d0 \uc5f0\uacb0\ud558\uc9c0 \ubabb\ud588\uc2b5\ub2c8\ub2e4. \uc778\ud130\ub137 \uc5f0\uacb0\uc744 \ud655\uc778\ud55c \ub4a4 \ub2e4\uc2dc \uc2dc\ub3c4\ud558\uc138\uc694.';
@@ -2697,6 +2869,7 @@ async function computeRoutes() {
   if (S.screen === 'preview') renderSheet();
   if (t.routes.length) {
     MV.setRoutes(t.routes, t.sel);
+    MV.setCams(t.routes[t.sel].cams);
     MV.fit(t.routes.flatMap(r => [r.coords[0], ...r.coords.filter((_, i) => i % 20 === 0), r.coords[r.coords.length - 1]]));
   }
 }
@@ -2736,7 +2909,7 @@ function previewSheet() {
         h('span', { class: 'rcard__eta num', text: fmtClock(Date.now() + dur * 1000) + ' \ub3c4\ucc29' }),
         h('span', { class: 'rcard__info num' }, fmtDistStr(r.distance),
           store.settings.showFuel ? h('span', { text: '\u00b7 \uc720\ub958\ube44 \uc57d ' + fmtWon(fuelCost(r.distance)) }) : null),
-        r.ease ? h('span', { class: 'rcard__ease num', text: `\ud68c\uc804 ${r.ease.turns}\ubc88${r.ease.left + r.ease.uturn ? ` (\uc88c\ud68c\uc804\u00b7\uc720\ud134 ${r.ease.left + r.ease.uturn})` : ''} \u00b7 \ud070\uae38 ${Math.round((1 - r.ease.smallShare) * 100)}%` }) : null,
+        r.ease ? h('span', { class: 'rcard__ease num', text: `\ud68c\uc804 ${r.ease.turns}\ubc88${r.ease.left + r.ease.uturn ? ` (\uc88c\ud68c\uc804\u00b7\uc720\ud134 ${r.ease.left + r.ease.uturn})` : ''} \u00b7 \ud070\uae38 ${Math.round((1 - r.ease.smallShare) * 100)}%${r.cams ? ` \u00b7 \ub2e8\uc18d \uce74\uba54\ub77c ${camCount(r.cams)}\uacf3` : ''}` }) : null,
         tags.length ? h('span', { class: 'rcard__tags' }, ...tags) : null,
         r.roads.length ? h('span', { class: 'rcard__via', text: r.roads.join(' \u00b7 ') + ' \uacbd\uc720' }) : null));
     });
@@ -2754,10 +2927,18 @@ function previewSheet() {
   return out;
 }
 
+// \uacbd\ub85c\ub9c8\ub2e4 \uadf8 \uc704\uc5d0 \uc788\ub294 \ub2e8\uc18d \uce74\uba54\ub77c\ub97c \ubd99\uc5ec \ub454\ub2e4(\uce74\uba54\ub77c \uc790\ub8cc\ub97c \uc544\uc9c1 \ubabb \ubc1b\uc558\uc73c\uba74 \uac74\ub108\ub700)
+function attachCams(routes) {
+  if (!CamDB.ready) return;
+  for (const r of routes) r.cams = camsForRoute(r, { signal: store.settings.camSignal });
+}
+const camCount = cams => cams.filter(c => c.t !== 6).length;
+
 function selectRoute(i) {
   const t = S.trip;
   t.sel = i;
   MV.setRoutes(t.routes, i);
+  MV.setCams(t.routes[i].cams);
   $$('.rcard').forEach((b, k) => { b.setAttribute('aria-pressed', k === i ? 'true' : 'false'); b.setAttribute('aria-checked', k === i ? 'true' : 'false'); });
 }
 
@@ -2847,6 +3028,7 @@ async function startNav(sim) {
     lastFixT: 0, lastSt: null, simObj: null, rerouteCtl: null, ended: false,
   };
   S.nav.guide = makeGuide(route, false);
+  setNavCams(route);
   if (!sim) addRecent(t.dest);
   MV.clearRoutes();
   MV.setTripMarks(null, t.stops, t.dest);
@@ -2872,6 +3054,35 @@ async function startNav(sim) {
     S.nav.simObj = new Sim(route, { factor: f, onFix: fx => navFix(fx) });
     S.nav.simObj.start();
   } else if (S.me) navFix({ ...S.me, t: Date.now() });
+}
+
+function setNavCams(route) {
+  const n = S.nav;
+  if (!n) return;
+  n.cams = route.cams || (CamDB.ready ? camsForRoute(route, { signal: store.settings.camSignal }) : []);
+  n.camGuide = new CamGuide(n.cams, { speak: (txt, o) => Voice.say(txt, o), settings: () => store.settings });
+  n.camK = -1;
+  MV.setCams(n.cams);
+}
+
+function renderCam(cs) {
+  const box = $('#cambox'), spd = $('#speed');
+  spd.classList.toggle('over', !!cs.over);
+  const show = cs.sec || (cs.ahead && cs.ahead.dist < 600);
+  if (!show) { box.hidden = true; return; }
+  const c = cs.ahead && cs.ahead.cam;
+  const lim = cs.sec ? cs.sec.lim : (c && c.lim) || 0;
+  box.classList.toggle('sec', !!cs.sec);
+  $('.limsign', box).classList.toggle('sig', !lim);
+  $('#limNum').textContent = lim ? String(lim) : '\uc2e0\ud638';
+  if (cs.sec) {
+    $('#camTitle').textContent = '\uad6c\uac04\ub2e8\uc18d' + (cs.sec.avg ? ` \u00b7 \ud3c9\uade0 ${Math.round(cs.sec.avg)}km/h` : '');
+    $('#camDist').textContent = `\ub0a8\uc740 \uad6c\uac04 ${fmtDistStr(cs.sec.left)}`;
+  } else {
+    $('#camTitle').textContent = (c.zone === 2 ? '\uc5b4\ub9b0\uc774 \ubcf4\ud638\uad6c\uc5ed \u00b7 ' : c.zone === 1 ? '\ub178\uc778 \ubcf4\ud638\uad6c\uc5ed \u00b7 ' : '') + (CAM_KO[c.t] || '\ub2e8\uc18d \uce74\uba54\ub77c').replace(' \uce74\uba54\ub77c', '');
+    $('#camDist').textContent = fmtDistStr(Math.max(0, cs.ahead.dist)) + ' \uc55e';
+  }
+  box.hidden = false;
 }
 
 function makeGuide(route, rerouted) {
@@ -2910,6 +3121,11 @@ function navFix(fix) {
     n.remDrawn = true;
   }
   MV.setTurn(n.route, st.nextDist < 700 ? st.next : null);
+  if (n.camGuide) {
+    const cs = n.camGuide.update(st.d, st.speed, fix.t || Date.now());
+    renderCam(cs);
+    if (n.camGuide.k !== n.camK) { n.camK = n.camGuide.k; MV.setCams(n.cams.slice(n.camGuide.k)); }
+  }
   const kmh = st.speed * 3.6;
   let z = kmh < 20 ? 17.3 : kmh < 50 ? 17.3 - (kmh - 20) / 30 * 0.7 : kmh < 90 ? 16.6 - (kmh - 50) / 40 * 0.9 : 15.5;
   if (st.nextDist < 250 && st.next.kind !== 'arrive') z = Math.max(z, 17.2);
@@ -2968,6 +3184,7 @@ async function reroute(at) {
     n.route = r.routes[0];
     n.route.p = personalize(n.route);
     n.rr++;
+    setNavCams(n.route);
     n.remDrawn = false;
     n.guide = makeGuide(n.route, true);
     n.guide.intro();
@@ -2997,6 +3214,7 @@ function finishNav(arrived) {
     saveStore(true);
   }
   S.nav = null; S.trip = null;
+  $('#cambox').hidden = true; $('#speed').classList.remove('over');
   MV.stopGuideCam();
   MV.clearRoutes();
   MV.setTripMarks(null, [], null);
@@ -3072,6 +3290,11 @@ function openSettings() {
       row('\ub9d0\ud558\uae30 \uc18d\ub3c4', null, rate),
       row('\uc548\ub0b4 \ube48\ub3c4', '\uac04\ub2e8: \ud68c\uc804 \uc9c1\uc804 \uc704\uc8fc \u00b7 \uc790\uc138\ud788: 1km\u00b7500m\u00b7300m \ubaa8\ub450', seg([['brief', '\uac04\ub2e8'], ['normal', '\ubcf4\ud1b5'], ['detail', '\uc790\uc138\ud788']], st.verbosity, k => setS('verbosity', k), '\uc548\ub0b4 \ube48\ub3c4')),
       row('\ub4e4\uc5b4 \ubcf4\uae30', null, h('button', { class: 'btn btn--sm', type: 'button', text: '300\ubbf8\ud130 \uc55e \uc6b0\ud68c\uc804', onclick: () => { Voice.unlock(); Voice.say('300\ubbf8\ud130 \uc55e\uc5d0\uc11c \uc6b0\ud68c\uc804\uc785\ub2c8\ub2e4', { force: true, urgent: true }); } }))),
+    h('section', { class: 'group' }, h('h2', { text: '\ub2e8\uc18d \uce74\uba54\ub77c' }),
+      row('\uce74\uba54\ub77c \uc74c\uc131 \uc548\ub0b4', '\uace0\uc18d\ub3c4\ub85c 600m\u00b7\uc77c\ubc18\ub3c4\ub85c 300m \uc55e\uc5d0\uc11c \uc54c\ub824 \uc90d\ub2c8\ub2e4', sw(st.camVoice, v => setS('camVoice', v), '\uce74\uba54\ub77c \uc74c\uc131 \uc548\ub0b4')),
+      row('\uc2e0\ud638 \ub2e8\uc18d \uce74\uba54\ub77c\ub3c4 \uc548\ub0b4', '\ub044\uba74 \uacfc\uc18d\u00b7\uad6c\uac04\ub2e8\uc18d \uce74\uba54\ub77c\ub9cc \uc548\ub0b4\ud569\ub2c8\ub2e4(\ub2e4\uc74c \uacbd\ub85c\ubd80\ud130)', sw(st.camSignal, v => setS('camSignal', v), '\uc2e0\ud638 \ub2e8\uc18d \uce74\uba54\ub77c \uc548\ub0b4')),
+      row('\uc81c\ud55c\uc18d\ub3c4 \ucd08\uacfc \uacbd\uace0', '\uce74\uba54\ub77c \uc55e\u00b7\uad6c\uac04\ub2e8\uc18d \uc911 \uc81c\ud55c\uc18d\ub3c4\ub97c \ub118\uc73c\uba74 \uc18d\ub3c4 \ud45c\uc2dc\uac00 \ube68\uac1c\uc9c0\uace0 \uc74c\uc131\uc73c\ub85c \uc54c\ub9bd\ub2c8\ub2e4', sw(st.overWarn, v => setS('overWarn', v), '\uc81c\ud55c\uc18d\ub3c4 \ucd08\uacfc \uacbd\uace0')),
+      row('\uce74\uba54\ub77c \uc790\ub8cc', CamDB.ready ? `${CamDB.n.toLocaleString('ko-KR')}\ub300 \u00b7 ${CamDB.date || ''} \uae30\uc900 \u00b7 \ubc18\ub144\ub9c8\ub2e4 \uac31\uc2e0\ub418\ub294 \uacf5\uacf5 \uc790\ub8cc\ub77c \uc0c8\ub85c \uc0dd\uae34 \uce74\uba54\ub77c\uc640 \uc774\ub3d9\uc2dd \ub2e8\uc18d\uc740 \ube60\uc9c8 \uc218 \uc788\uc2b5\ub2c8\ub2e4` : CamDB.err ? (isLocalFile() ? '\ud30c\uc77c\ub85c \uc5f4\uba74 \uce74\uba54\ub77c \uc790\ub8cc\ub97c \uc4f8 \uc218 \uc5c6\uc2b5\ub2c8\ub2e4. \uc571 \uc8fc\uc18c\ub85c \uc5ec\uc138\uc694.' : '\uce74\uba54\ub77c \uc790\ub8cc\ub97c \ubd88\ub7ec\uc624\uc9c0 \ubabb\ud588\uc2b5\ub2c8\ub2e4. \uc778\ud130\ub137 \uc5f0\uacb0\uc744 \ud655\uc778\ud558\uc138\uc694.') : '\ubd88\ub7ec\uc624\ub294 \uc911\u2026', h('span'))),
     h('section', { class: 'group' }, h('h2', { text: '\ud654\uba74' }),
       row('\uc9c0\ub3c4 \ubc1d\uae30', '\uc790\ub3d9: \ud574\uac00 \uc9c0\uba74 \uc57c\uac04 \uc9c0\ub3c4\ub85c \ubc14\uafc9\ub2c8\ub2e4', seg([['auto', '\uc790\ub3d9'], ['day', '\uc8fc\uac04'], ['night', '\uc57c\uac04']], st.theme, k => { setS('theme', k); applyTheme(); }, '\uc9c0\ub3c4 \ubc1d\uae30')),
       row('\uc548\ub0b4 \uc911 \uc9c0\ub3c4 \ubc29\ud5a5', null, seg([['1', '\uc9c4\ud589 \ubc29\ud5a5 \uc704'], ['0', '\ubd81\ucabd \uc704']], st.headingUp ? '1' : '0', k => { setS('headingUp', k === '1'); MV.headingUp = k === '1'; }, '\uc9c0\ub3c4 \ubc29\ud5a5')),
@@ -3097,7 +3320,8 @@ function openSettings() {
       h('p', null, '\uc9c0\ub3c4: ', h('a', { href: 'https://openfreemap.org', target: '_blank', rel: 'noopener', text: 'OpenFreeMap' }), ' \u00b7 ', h('a', { href: 'https://www.openmaptiles.org/', target: '_blank', rel: 'noopener', text: 'OpenMapTiles' }), ' \u00b7 \uc9c0\ub3c4 \ub370\uc774\ud130 ', h('a', { href: 'https://www.openstreetmap.org/copyright', target: '_blank', rel: 'noopener', text: '\u00a9 OpenStreetMap \uae30\uc5ec\uc790' })),
       h('p', null, '\uacbd\ub85c: ', h('a', { href: 'https://valhalla.github.io/valhalla/', target: '_blank', rel: 'noopener', text: 'Valhalla' }), ' \u00b7 ', h('a', { href: 'https://routing.openstreetmap.de/about.html', target: '_blank', rel: 'noopener', text: 'OSRM' }), ' (FOSSGIS \uacf5\uac1c \uc11c\ubc84, \ucd08\ub2f9 1\ud68c \uc774\ud558\u00b7\uac00\ubcbc\uc6b4 \uac1c\uc778 \uc0ac\uc6a9)'),
       h('p', null, '\uac80\uc0c9: ', h('a', { href: 'https://photon.komoot.io', target: '_blank', rel: 'noopener', text: 'Photon(komoot)' }), ' \u00b7 Nominatim \u2014 ', h('a', { href: 'https://operations.osmfoundation.org/policies/nominatim/', target: '_blank', rel: 'noopener', text: 'Nominatim \uc774\uc6a9 \uc815\ucc45' }), '(\uc790\ub3d9\uc644\uc131 \uae08\uc9c0, \ucd08\ub2f9 1\ud68c \uc774\ud558, \uacb0\uacfc \uc800\uc7a5 \ud6c4 \uc7ac\uc0ac\uc6a9)\uc744 \uc9c0\ud0a4\ub3c4\ub85d \uac80\uc0c9 \ubc84\ud2bc\uc744 \ub20c\ub800\uc744 \ub54c\ub9cc \uc694\uccad\ud558\uace0 \uacb0\uacfc\ub97c \uc774 \uae30\uae30\uc5d0 7\uc77c\uac04 \ubcf4\uad00\ud569\ub2c8\ub2e4.'),
-      h('p', null, '\uc2e4\uc2dc\uac04 \uad50\ud1b5\u00b7\ub2e8\uc18d \uce74\uba54\ub77c \uc815\ubcf4\ub294 \uc5c6\uc2b5\ub2c8\ub2e4. \uc548\ub0b4\ub294 \ucc38\uace0\uc6a9\uc774\uba70 \uc2e4\uc81c \ub3c4\ub85c \ud45c\uc9c0\uc640 \uad50\ud1b5 \ubc95\uaddc\ub97c \ub530\ub974\uc138\uc694. \uc6b4\uc804 \uc911\uc5d0\ub294 \ud654\uba74\uc744 \uc870\uc791\ud558\uc9c0 \ub9c8\uc138\uc694.')),
+      h('p', null, '\ub2e8\uc18d \uce74\uba54\ub77c: \uacbd\ucc30\uccad\u00b7\uc9c0\ubc29\uc790\uce58\ub2e8\uccb4 \u300c\uc804\uad6d\ubb34\uc778\uad50\ud1b5\ub2e8\uc18d\uce74\uba54\ub77c\ud45c\uc900\ub370\uc774\ud130\u300d(', h('a', { href: 'https://www.data.go.kr/data/15028200/standard.do', target: '_blank', rel: 'noopener', text: '\uacf5\uacf5\ub370\uc774\ud130\ud3ec\ud138' }), ')'),
+      h('p', null, '\uc2e4\uc2dc\uac04 \uad50\ud1b5 \uc815\ubcf4\uc640 \uc774\ub3d9\uc2dd \ub2e8\uc18d \uc815\ubcf4\ub294 \uc5c6\uc2b5\ub2c8\ub2e4. \uc548\ub0b4\ub294 \ucc38\uace0\uc6a9\uc774\uba70 \uc2e4\uc81c \ub3c4\ub85c \ud45c\uc9c0\uc640 \uad50\ud1b5 \ubc95\uaddc\ub97c \ub530\ub974\uc138\uc694. \uc6b4\uc804 \uc911\uc5d0\ub294 \ud654\uba74\uc744 \uc870\uc791\ud558\uc9c0 \ub9c8\uc138\uc694.')),
   ]);
 }
 
@@ -3260,6 +3484,11 @@ function boot() {
   MV.whenLoaded(hide);
   setTimeout(() => { if (document.body.contains(bootEl)) hide(); }, 6000);
   if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => { /* \uc5c6\uc5b4\ub3c4 \ub3d9\uc791 */ });
+  CamDB.load().then(() => {
+    if (!CamDB.ready) return;
+    if (S.trip && S.trip.routes.length) { attachCams(S.trip.routes); MV.setCams(S.trip.routes[S.trip.sel].cams); if (S.screen === 'preview') renderSheet(); }
+    if (S.nav && !S.nav.cams.length) setNavCams(S.nav.route);
+  });
   window.__navi = { S, store, MV, Voice, navFix, startTrip, finishNav, applyTheme, openSettings, openPlaces, onPos };
 }
 

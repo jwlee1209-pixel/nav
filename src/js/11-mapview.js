@@ -105,7 +105,7 @@ const MV = {
   setRemaining(coords) {
     this.setData('routes', { type: 'FeatureCollection', features: coords && coords.length > 1 ? [{ type: 'Feature', properties: { idx: 0, sel: true }, geometry: { type: 'LineString', coordinates: coords } }] : [] });
   },
-  clearRoutes() { this.setData('routes', { type: 'FeatureCollection', features: [] }); this.setTurn(null); },
+  clearRoutes() { this.setData('routes', { type: 'FeatureCollection', features: [] }); this.setTurn(null); this.setCams(null); },
 
   // 다음 회전 지점의 흰 화살표
   setTurn(route, step) {
@@ -126,6 +126,9 @@ const MV = {
 
   setPts(list) {
     this.setData('pts', { type: 'FeatureCollection', features: list.map(p => ({ type: 'Feature', properties: { kind: p.kind, name: p.label || p.name, id: p.id || '', lat: p.lat, lon: p.lon, pname: p.name, addr: p.addr || '' }, geometry: { type: 'Point', coordinates: [p.lon, p.lat] } })) });
+  },
+  setCams(list) {
+    this.setData('cams', { type: 'FeatureCollection', features: (list || []).filter(c => c.t !== 6).map(c => ({ type: 'Feature', properties: { t: c.t, lim: c.lim }, geometry: { type: 'Point', coordinates: [c.lon, c.lat] } })) });
   },
   setHits(list) {
     this.setData('hits', { type: 'FeatureCollection', features: (list || []).map((p, i) => ({ type: 'Feature', properties: { n: String(i + 1), i }, geometry: { type: 'Point', coordinates: [p.lon, p.lat] } })) });
