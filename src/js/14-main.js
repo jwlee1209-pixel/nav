@@ -363,6 +363,13 @@ async function takeShared() {
 function initPwa() {
   const web = location.protocol === 'https:' && !!document.querySelector('link[rel="manifest"]');
   if (!web) return;
+  // 예전 주소: 새 주소 안내(휴대폰 설치·공유는 새 주소에서만 된다)
+  const moved = document.querySelector('meta[name="moved-to"]');
+  if (moved && /^https:\/\//.test(moved.content)) {
+    const box = $('#wMoved');
+    box.replaceChildren(h('b', { text: '새 주소로 옮겼습니다' }), h('p', { text: '휴대폰에서 앱 설치와 ‘공유 → PPT 편집기’는 새 주소에서만 됩니다.' }), h('a', { class: 'btn primary', href: moved.content, text: '새 주소로 가기' }));
+    box.hidden = false;
+  }
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => { /* 없어도 동작 */ });
   // 설치 단추: 브라우저가 설치할 수 있다고 알려 줄 때만 보인다(이미 설치했거나 앱 창이면 안 보임)
   let evt = null;

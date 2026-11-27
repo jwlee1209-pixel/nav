@@ -207,3 +207,6 @@ select, input[type="number"] { height: 30px; border: 1px solid var(--line); bord
   .dlg .layouts { grid-template-columns: repeat(2, 1fr); }
   #welcome .wbox { padding: 0 4px; }
 }
+#welcome .wmoved { margin: 16px auto 0; max-width: 380px; padding: 12px 14px; border: 1px solid #f3c7b8; background: #fff6f2; border-radius: 10px; }
+#welcome .wmoved p { margin: 4px 0 10px; color: var(--text2); font-size: 13px; }
+#welcome .wmoved a.btn { text-decoration: none; display: inline-flex; }

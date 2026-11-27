@@ -23,6 +23,8 @@ PowerPoint 파일(.pptx, 옛 .ppt)을 브라우저에서 열어 보고 고쳐 �
 - 공유로 받은 파일은 사본이라 ‘저장’은 새 파일로(크롬 132 이상은 저장 위치 고르기, 그 밖에는 다운로드 폴더). 원본에 바로 저장하려면 앱 안의 ‘열기’로 연다(크롬 132 이상).
 - 원리: manifest `share_target`(POST multipart, PowerPoint 형식) → 서비스 워커가 `share` 로 온 파일을 캐시(pptshare)에 잠시 두고 `?share=1` 로 화면을 연다 → 화면이 꺼내 열고 지운다.
 - 좁은 화면: 도구 막대 한 줄(옆으로 밀기), 슬라이드 목록은 아래 가로 띠, 손가락용 큰 손잡이.
+- **주의(v1.3):** 다른 설치 앱의 범위 안에 두면 안 된다. `/nav/ppt/` 는 길잡이 내비(범위 `/nav/`) 안이라, 내비를 설치한 휴대폰의 크롬은 이 화면을 내비의 일부로 보고 PPT 편집기를 따로 설치하지 않는다(설치 단추·설치 알림 없음) → 공유 목록에도 안 나온다. 그래서 독립 주소(`/ppt/`, 저장소 `ppt`)로 옮기고, 예전 주소에는 ‘새 주소’ 안내를 띄운다.
+- 공유 받는 형식에 `application/octet-stream`·`application/zip` 도 넣었다(형식을 모르는 앱이 보내는 경우). 열 때 내용으로 PowerPoint 인지 다시 확인한다.
 
 ## 기능
 - 그리기: 테마·마스터·레이아웃 상속, 도형 100여 종, 그림(자르기), 표(표 스타일), 차트(보기), SmartArt(보기), 그룹, 그림자, 글자 자동 맞춤.
@@ -39,8 +41,9 @@ PowerPoint 파일(.pptx, 옛 .ppt)을 브라우저에서 열어 보고 고쳐 �
 
 ## 개발
 ```
-node build.js 1.2         # dist/PPT편집기_v1.2.html (+ dist/index.html), 웹 판 dist/web/ppt/
-node build.js 1.2 --pages ../nav/docs/ppt   # 웹 판을 GitHub Pages 폴더로 복사
+node build.js 1.3         # dist/PPT편집기_v1.3.html (+ dist/index.html), 웹 판 dist/web/ppt/ (앱 id 기본 /nav/ppt/)
+node build.js 1.3 --id /ppt/ --pages ../ppt/docs        # 독립 주소(저장소 ppt, https://jwlee1209-pixel.github.io/ppt/)
+node build.js 1.3 --moved https://jwlee1209-pixel.github.io/ppt/ --pages ../nav/docs/ppt   # 예전 주소: 새 주소 안내
 node tools/icons.js       # 앱 아이콘(src/web/*.png, icon.svg)
 python3 tools/make_template.py   # 새 발표 자료 서식(src/template/blank.pptx, notesMaster.xml)
 node test/smoke.js        # 시험 파일 모두 열기·슬라이드 그림(test/out) — python3 test/cmp.py 로 LibreOffice 그림과 나란히

@@ -5,10 +5,15 @@
 const fs = require('fs'), path = require('path');
 const root = __dirname;
 const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
+// 옵션: --pages 폴더(웹 판 복사), --id 경로(앱 정체성, 웹 주소의 경로와 같게), --moved 주소(예전 주소에 ‘새 주소’ 안내)
 const args = process.argv.slice(2);
-const pi = args.indexOf('--pages');
-const pagesDir = pi >= 0 ? path.resolve(args[pi + 1]) : null;
-const ver = args.find((a, i) => !a.startsWith('--') && (pi < 0 || i !== pi + 1)) || pkg.appVersion;
+const optIdx = new Set();
+const opt = name => { const i = args.indexOf(name); if (i < 0) return null; optIdx.add(i); optIdx.add(i + 1); return args[i + 1]; };
+const pagesArg = opt('--pages');
+const pagesDir = pagesArg ? path.resolve(pagesArg) : null;
+const appId = opt('--id') || '/nav/ppt/';
+const movedTo = opt('--moved');
+const ver = args.find((a, i) => !optIdx.has(i) && !a.startsWith('--')) || pkg.appVersion;
 const src = p => fs.readFileSync(path.join(root, 'src', p), 'utf8');
 const jsDir = path.join(root, 'src', 'js');
 const files = fs.readdirSync(jsDir).filter(f => f.endsWith('.js')).sort();
@@ -41,10 +46,12 @@ fs.writeFileSync(path.join(root, 'dist', 'index.html'), single);
 const web = path.join(root, 'dist', 'web', 'ppt');
 fs.rmSync(path.join(root, 'dist', 'web'), { recursive: true, force: true });
 fs.mkdirSync(web, { recursive: true });
-fs.writeFileSync(path.join(web, 'index.html'), html.replace(WEBHEAD, '<link rel="manifest" href="manifest.json">\n<meta name="theme-color" content="#ffffff">\n<link rel="apple-touch-icon" href="apple-touch-icon.png">'));
+const webHead = ['<link rel="manifest" href="manifest.json">', '<meta name="theme-color" content="#ffffff">', '<link rel="apple-touch-icon" href="apple-touch-icon.png">'];
+if (movedTo) webHead.push(`<meta name="moved-to" content="${movedTo.replace(/"/g, '&quot;')}">`);
+fs.writeFileSync(path.join(web, 'index.html'), html.replace(WEBHEAD, webHead.join('\n')));
 const icon = (s, sz, purpose) => ({ src: s, sizes: `${sz}x${sz}`, type: 'image/png', purpose });
 const manifest = {
-  id: '/nav/ppt/',
+  id: appId,
   name: 'PPT 편집기', short_name: 'PPT 편집기',
   description: 'PowerPoint 파일(.pptx, .ppt)을 열어 고치고 저장·슬라이드 쇼·PDF',
   lang: 'ko', dir: 'ltr', start_url: './', scope: './', display: 'standalone',
@@ -70,13 +77,15 @@ const manifest = {
       'application/vnd.openxmlformats-officedocument.presentationml.slideshow', 'application/vnd.openxmlformats-officedocument.presentationml.template',
       'application/vnd.ms-powerpoint.presentation.macroEnabled.12',
       '.pptx', '.ppt', '.ppsx', '.pps', '.potx', '.pot', '.pptm',
+      // 카카오톡 등 형식을 모르는 앱이 보내는 경우(내용으로 PowerPoint 인지 다시 확인한다)
+      'application/octet-stream', 'application/zip', 'application/x-zip-compressed',
     ] }] },
   },
 };
 fs.writeFileSync(path.join(web, 'manifest.json'), JSON.stringify(manifest, null, 2) + '\n');
 fs.writeFileSync(path.join(web, 'sw.js'), src('web/sw.js.tpl').replace('__VER__', ver));
 for (const f of ['icon-192.png', 'icon-512.png', 'icon-maskable-512.png', 'apple-touch-icon.png']) fs.copyFileSync(path.join(root, 'src', 'web', f), path.join(web, f));
-console.log(`빌드: ${name} ${(Buffer.byteLength(single) / 1024).toFixed(0)}KB, 웹 판 dist/web/ppt (${fs.readdirSync(web).length}개 파일), 모듈 ${files.length}개`);
+console.log(`빌드: ${name} ${(Buffer.byteLength(single) / 1024).toFixed(0)}KB, 웹 판 dist/web/ppt (${fs.readdirSync(web).length}개 파일, 앱 id ${appId}${movedTo ? ', 새 주소 안내 ' + movedTo : ''}), 모듈 ${files.length}개`);
 
 if (pagesDir) {
   fs.rmSync(pagesDir, { recursive: true, force: true });
