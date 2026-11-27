@@ -1,7 +1,7 @@
 // 빌드: node build.js [버전] [--pages 폴더]
 //  · dist/PPT편집기_v버전.html : 파일 하나로 여는 판(인터넷 없이 동작)
 //  · dist/web/ppt/             : 웹 주소에 올리는 판(설치형 앱: manifest·서비스 워커·아이콘, 파일 연결)
-//  · --pages 폴더              : dist/web/ppt/ 를 그 폴더로 복사(GitHub Pages: nav 저장소 docs/ppt)
+//  · --pages 폴더              : dist/web/ppt/ 를 그 폴더로 복사(GitHub Pages: apps 저장소 docs/ppt)
 const fs = require('fs'), path = require('path');
 const root = __dirname;
 const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
@@ -11,7 +11,7 @@ const optIdx = new Set();
 const opt = name => { const i = args.indexOf(name); if (i < 0) return null; optIdx.add(i); optIdx.add(i + 1); return args[i + 1]; };
 const pagesArg = opt('--pages');
 const pagesDir = pagesArg ? path.resolve(pagesArg) : null;
-const appId = opt('--id') || '/nav/ppt/';
+const appId = opt('--id') || '/apps/ppt/';
 const movedTo = opt('--moved');
 const ver = args.find((a, i) => !optIdx.has(i) && !a.startsWith('--')) || pkg.appVersion;
 const src = p => fs.readFileSync(path.join(root, 'src', p), 'utf8');

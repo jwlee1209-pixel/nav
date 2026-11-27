@@ -5026,7 +5026,8 @@ async function takeShared() {
   if (keys.length > 1) toast(`파일 ${keys.length}개 중 첫 파일만 열었습니다. 나머지는 하나씩 공유하세요.`, 5000);
 }
 function initPwa() {
-  const web = location.protocol === 'https:' && !!document.querySelector('link[rel="manifest"]');
+  // 웹 판(manifest 있음)을 https 주소나 이 컴퓨터(localhost, 시험)에서 열었을 때만. 파일로 연 판은 아님
+  const web = window.isSecureContext && /^https?:$/.test(location.protocol) && !!document.querySelector('link[rel="manifest"]');
   if (!web) return;
   // 예전 주소: 새 주소 안내(휴대폰 설치·공유는 새 주소에서만 된다)
   const moved = document.querySelector('meta[name="moved-to"]');
