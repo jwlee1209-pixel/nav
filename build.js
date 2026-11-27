@@ -60,9 +60,10 @@ for (const f of ['icon-192.png', 'icon-512.png', 'icon-maskable-512.png', 'apple
 fs.writeFileSync(path.join(dist, 'index.html'), html);   // 예전 위치 호환
 
 // GitHub Pages 로 내보낼 폴더(docs/): https://jwlee1209-pixel.github.io/nav/
+// docs/ 바로 아래 파일만 새로 쓴다. 하위 폴더(ppt/ = PPT 편집기 등 같은 사이트의 다른 앱)는 그대로 둔다.
 const docs = path.join(__dirname, 'docs');
-fs.rmSync(docs, { recursive: true, force: true });
 fs.mkdirSync(docs, { recursive: true });
+for (const f of fs.readdirSync(docs)) { const p = path.join(docs, f); if (fs.statSync(p).isFile()) fs.rmSync(p); }
 for (const f of fs.readdirSync(web)) fs.copyFileSync(path.join(web, f), path.join(docs, f));
 fs.writeFileSync(path.join(docs, '.nojekyll'), '');
 
