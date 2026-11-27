@@ -12,7 +12,8 @@ function startShow(fromCurrent) {
   SHOW.on = true; SHOW.end = false; SHOW.typed = '';
   const el = $('#show');
   el.hidden = false;
-  if (el.requestFullscreen) el.requestFullscreen().catch(() => {});
+  // 전체 화면 요청은 늦게 끝날 수 있다: 그 사이 쇼를 끝냈으면 바로 빠져나온다
+  if (el.requestFullscreen) el.requestFullscreen().then(() => { if (!SHOW.on && document.fullscreenElement) document.exitFullscreen().catch(() => {}); }).catch(() => {});
   showDraw();
 }
 function showDraw() {
@@ -74,7 +75,10 @@ function initShow() {
   let tx = null;
   el.addEventListener('touchstart', e => { tx = e.touches[0].clientX; }, { passive: true });
   el.addEventListener('touchend', e => { if (tx == null) return; const dx = e.changedTouches[0].clientX - tx; tx = null; if (Math.abs(dx) > 40) { showGo(dx < 0 ? 1 : -1); e.preventDefault(); } }, { passive: false });
-  document.addEventListener('fullscreenchange', () => { if (!document.fullscreenElement && SHOW.on) endShow(); });
+  document.addEventListener('fullscreenchange', () => {
+    if (!document.fullscreenElement && SHOW.on) endShow();
+    else if (document.fullscreenElement && !SHOW.on) document.exitFullscreen().catch(() => {});
+  });
   addEventListener('resize', () => { if (SHOW.on) showDraw(); });
 }
 

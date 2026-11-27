@@ -254,7 +254,10 @@ async function duplicateSlide() {
 async function clonePartForSlide(src, newPath, seen) {
   const pkg = S.deck.pkg;
   seen.set(src, newPath);
-  pkg.setDoc(newPath, parseXML(xmlString(pkg.doc(src))));
+  const nd = parseXML(xmlString(pkg.doc(src)));
+  // 슬라이드 고유 번호(p14:creationId)는 새로
+  for (const e of nd.getElementsByTagName('*')) if (ln(e) === 'creationId' && e.hasAttribute('val') && /^\d+$/.test(e.getAttribute('val'))) e.setAttribute('val', String(1 + Math.floor(Math.random() * 4294967294)));
+  pkg.setDoc(newPath, nd);
   pkg.setOverride(newPath, CT.slide);
   const rd = parseXML(`<Relationships xmlns="${NS.rel}"/>`);
   for (const r of pkg.rels(src)) {

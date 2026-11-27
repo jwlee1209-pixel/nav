@@ -92,17 +92,23 @@ function onPointerDown(e) {
   if (!S.deck || (e.button !== 0 && e.pointerType === 'mouse')) return;
   const ed = S.editing;
   if (ed && ed.node.contains(e.target)) return;
-  if (ed) endTextEdit(true);
-  if (!e.target.closest('#stageWrap')) return;
+  let target = e.target;
+  if (ed) {
+    endTextEdit(true);
+    // 다시 그려져 눌린 요소가 바뀌었으면 그 자리의 새 요소로
+    if (!target.isConnected) target = document.elementFromPoint(e.clientX, e.clientY) || target;
+  }
+  if (!target.closest || !target.closest('#stageWrap')) return;
   const p = slidePt(e);
-  const hd = e.target.closest('.hd');
+  const hd = target.closest('.hd');
   if (hd && S.sel.length === 1) { startHandle(hd.dataset.h, p, e); return; }
-  const node = e.target.closest('.slide.edit .obj');
+  const node = target.closest('.slide.edit .obj');
   if (node) {
     const x = node._x;
+    const was = S.sel.length === 1 && S.sel[0] === x;
     if (e.shiftKey || e.ctrlKey || e.metaKey) { select(S.sel.includes(x) ? S.sel.filter(s => s !== x) : [...S.sel, x]); if (!S.sel.includes(x)) return; }
     else if (!S.sel.includes(x)) select([x]);
-    drag = { kind: 'move', p0: p, moved: false, items: S.sel.map(s => ({ x: s, n: nodeOf(s), l: parseFloat(nodeOf(s).style.left), t: parseFloat(nodeOf(s).style.top) })) };
+    drag = { kind: 'move', p0: p, moved: false, was, empty: node.classList.contains('empty-ph'), cx: e.clientX, cy: e.clientY, items: S.sel.map(s => ({ x: s, n: nodeOf(s), l: parseFloat(nodeOf(s).style.left), t: parseFloat(nodeOf(s).style.top) })) };
   } else {
     if (!(e.shiftKey || e.ctrlKey)) select([]);
     drag = { kind: 'marquee', p0: p, keep: e.shiftKey || e.ctrlKey ? S.sel.slice() : [] };
@@ -131,10 +137,16 @@ function onPointerMove(e) {
     previewBox(drag.cur);
   }
 }
-function onPointerUp() {
+function onPointerUp(e) {
   const d = drag; drag = null;
   if (!d) return;
   drawGuides([]);
+  // 이미 고른 도형의 글자를 한 번 더 누르거나, 빈 개체 틀을 누르면 바로 글자 편집
+  if (d.kind === 'move' && !d.moved && (d.was || d.empty) && S.sel.length === 1 && e && !e.shiftKey && !e.ctrlKey && !e.metaKey) {
+    const n = nodeOf(S.sel[0]);
+    const onText = n && n._tx && (d.empty || [...n._tx.querySelectorAll('.r')].some(r => { const b = r.getBoundingClientRect(); return d.cx >= b.left - 2 && d.cx <= b.right + 2 && d.cy >= b.top - 2 && d.cy <= b.bottom + 2; }));
+    if (onText) { startTextEdit(n._tx, n, S.sel[0], { clientX: d.cx, clientY: d.cy }); return; }
+  }
   if (d.kind === 'move' && d.moved && (d.dx || d.dy)) {
     act('이동', () => {
       touch(curPart());
@@ -786,7 +798,7 @@ function pasteClip() {
       const map = {};
       for (const r of it.rels) map[r.id] = pkg.addRel(part, r.type, r.target, r.external);
       for (const e of [x, ...x.getElementsByTagName('*')]) for (const a of [...e.attributes]) if (a.namespaceURI === NS.r && map[a.value]) e.setAttributeNS(NS.r, a.name, map[a.value]);
-      for (const e of [x, ...x.getElementsByTagName('*')]) if (ln(e) === 'cNvPr') e.setAttribute('id', String(id++));
+      for (const e of [x, ...x.getElementsByTagName('*')]) if (ln(e) === 'cNvPr') { e.setAttribute('id', String(id++)); const xl = kid(e, 'extLst'); if (xl) xl.remove(); }   // 만든 시각 id(creationId)는 겹치지 않게 뺀다
       tree.append(x);
       const pl = altPick(x);
       if (same) { const b = getBox(pl); if (b) setBox(pl, { ...b, x: b.x + 190500, y: b.y + 190500 }); }

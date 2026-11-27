@@ -1,0 +1,63 @@
+// 화면 동작 시험: 눌러서 글자 편집, 편집 중 다른 도형 누르기, 오른쪽 단추 메뉴, 숨기기, 도움말
+const { chromium } = require('playwright');
+const fs = require('fs'), path = require('path');
+let fails = 0;
+const ok = (c, m) => { console.log((c ? '  ✓ ' : '  ✗ ') + m); if (!c) fails++; };
+(async () => {
+  const browser = await chromium.launch();
+  const page = await browser.newPage({ viewport: { width: 1400, height: 900 } });
+  const errs = []; page.on('pageerror', e => errs.push(e.message));
+  await page.goto('file://' + path.join(__dirname, '..', 'dist', 'index.html'));
+  const b64 = fs.readFileSync(path.join(__dirname, 'fixtures', 'basic.pptx')).toString('base64');
+  await page.evaluate(async b64 => { const bin = atob(b64); const u = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i); await window.__ppt.openBuffer(u.buffer, 'b.pptx'); }, b64);
+  await page.evaluate(() => window.__ppt.goSlide(2));
+  const at = name => page.evaluate(name => { const n = [...document.querySelectorAll('#slideHost .slide > .obj')].find(n => n.textContent.trim() === name); const r = (n.querySelector('.r') || n).getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; }, name);
+  let p = await at('사각형');
+  await page.mouse.click(p.x, p.y);
+  ok(await page.evaluate(() => window.__ppt.S.sel.length === 1 && !window.__ppt.S.editing), '한 번 누르면 선택');
+  await page.mouse.click(p.x, p.y);
+  ok(await page.evaluate(() => !!window.__ppt.S.editing), '고른 도형 글자를 한 번 더 누르면 편집');
+  await page.keyboard.type('!');
+  const q = await at('타원');
+  await page.mouse.click(q.x, q.y);
+  const st = await page.evaluate(() => { const P = window.__ppt; const x = P.S.sel[0]; return { ed: !!P.S.editing, n: P.S.sel.length, t: x && x.textContent }; });
+  ok(!st.ed && st.n === 1 && /타원/.test(st.t), '편집 중 다른 도형 누르면 그 도형 선택');
+  ok(await page.evaluate(() => new XMLSerializer().serializeToString(window.__ppt.S.deck.pkg.doc(window.__ppt.S.deck.slides[2])).includes('!')), '앞 편집 내용 저장');
+  // 오른쪽 단추
+  await page.mouse.click(q.x, q.y, { button: 'right' });
+  ok(await page.evaluate(() => !document.querySelector('#ctxMenu').hidden), '도형 메뉴 보임');
+  const before = await page.evaluate(() => document.querySelectorAll('#slideHost .slide > .obj').length);
+  await page.click('#ctxMenu button:has-text("복제")');
+  const after = await page.evaluate(() => document.querySelectorAll('#slideHost .slide > .obj').length);
+  ok(after === before + 1, '메뉴로 복제');
+  const th = await page.evaluate(() => { const r = document.querySelector('#thumbs .thumb[data-i="1"]').getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; });
+  await page.mouse.click(th.x, th.y, { button: 'right' });
+  await page.click('#ctxMenu button:has-text("슬라이드 숨기기")');
+  ok(await page.evaluate(() => window.__ppt.S.deck.pkg.doc(window.__ppt.S.deck.slides[1]).documentElement.getAttribute('show') === '0' && document.querySelector('#thumbs .thumb[data-i="1"]').classList.contains('hid')), '슬라이드 숨기기');
+  await page.keyboard.press('F5');
+  ok(await page.evaluate(() => document.querySelector('#showInfo').textContent.endsWith('/ 5')), '쇼에서 숨긴 슬라이드 빼기');
+  await page.keyboard.press('Escape');
+  await page.waitForFunction(() => !document.fullscreenElement);
+  // 빈 개체 틀: 한 번 누르면 바로 편집
+  await page.keyboard.press('Control+m');
+  const ph = await page.evaluate(() => { const r = document.querySelector('#slideHost .slide > .obj.empty-ph').getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; });
+  await page.mouse.click(ph.x, ph.y);
+  ok(await page.evaluate(() => !!window.__ppt.S.editing), '빈 개체 틀 한 번 누르면 편집');
+  await page.keyboard.type('제목 바로 쓰기');
+  await page.keyboard.press('Escape');
+  ok(await page.evaluate(() => new XMLSerializer().serializeToString(window.__ppt.S.deck.pkg.doc(window.__ppt.S.deck.slides[window.__ppt.S.cur])).includes('제목 바로 쓰기')), '빈 개체 틀 글 저장');
+  await page.click('#bHelp');
+  ok(await page.evaluate(() => !document.querySelector('#dialog').hidden && document.querySelectorAll('#dialog .keys tr').length > 10), '도움말');
+  await page.keyboard.press('Escape');
+  ok(await page.evaluate(() => document.querySelector('#dialog').hidden), 'Esc 로 대화상자 닫기');
+  // 붙여넣기: 편집 중에는 서식 없는 글
+  await page.mouse.click(ph.x, ph.y);
+  await page.evaluate(() => { const dt = new DataTransfer(); dt.setData('text/html', '<b style="color:red;font-size:40px">굵은 빨강</b>'); dt.setData('text/plain', '굵은 빨강'); document.activeElement.dispatchEvent(new ClipboardEvent('paste', { clipboardData: dt, bubbles: true, cancelable: true })); });
+  await page.keyboard.press('Escape');
+  const x = await page.evaluate(() => new XMLSerializer().serializeToString(window.__ppt.S.deck.pkg.doc(window.__ppt.S.deck.slides[window.__ppt.S.cur])));
+  ok(x.includes('굵은 빨강') && !/FF0000/i.test(x), '편집 중 붙여넣기는 글만');
+  console.log(errs.length ? '오류: ' + errs.join('\n') : '페이지 오류 없음');
+  console.log(fails ? `실패 ${fails}개` : '모두 통과');
+  await browser.close();
+  process.exit(fails ? 1 : 0);
+})();

@@ -104,7 +104,8 @@ select, input[type="number"] { height: 30px; border: 1px solid var(--line); bord
 .slide .chartbox text { font-family: var(--font); }
 .slide .empty-ph .tx::before { content: attr(data-prompt); position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: #9aa1aa; font-size: 20px; border: 1px dashed #b9c0c9; }
 .slide .empty-ph.editing .tx::before { display: none; }
-.slide.edit .obj { cursor: move; }
+.slide.edit .obj { cursor: move; touch-action: none; }
+.selbox .hd { touch-action: none; }
 .slide.edit .obj.editing { cursor: text; }
 
 /* 선택 표시 */
@@ -144,7 +145,7 @@ select, input[type="number"] { height: 30px; border: 1px solid var(--line); bord
 #printArea { display: none; }
 @media print {
   html, body { overflow: visible; height: auto; background: #fff; }
-  #app, #show, #dialog, #toast, #dropZone { display: none !important; }
+  #app, #show, #dialog, #toast, #dropZone, #ctxMenu { display: none !important; }
   #printArea { display: block; }
   #printArea .page { position: relative; overflow: hidden; page-break-after: always; break-after: page; }
   #printArea .page:last-child { page-break-after: auto; break-after: auto; }

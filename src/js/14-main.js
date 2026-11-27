@@ -87,7 +87,7 @@ async function openFile() {
 async function openFileObj(f, handle = null) {
   toast(`‘${f.name}’ 여는 중…`, 20000);
   const ok = await openBuffer(await f.arrayBuffer(), f.name, handle);
-  if (ok) toast(`‘${S.file.name}’ — 슬라이드 ${S.deck.slides.length}장`, 2200);
+  if (ok && !/\.(ppt|pps|pot)$/i.test(f.name)) toast(`‘${S.file.name}’ — 슬라이드 ${S.deck.slides.length}장`, 2200);
   else $('#toast').hidden = true;
 }
 

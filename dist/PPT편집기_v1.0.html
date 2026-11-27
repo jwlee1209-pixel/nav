@@ -110,7 +110,8 @@ select, input[type="number"] { height: 30px; border: 1px solid var(--line); bord
 .slide .chartbox text { font-family: var(--font); }
 .slide .empty-ph .tx::before { content: attr(data-prompt); position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: #9aa1aa; font-size: 20px; border: 1px dashed #b9c0c9; }
 .slide .empty-ph.editing .tx::before { display: none; }
-.slide.edit .obj { cursor: move; }
+.slide.edit .obj { cursor: move; touch-action: none; }
+.selbox .hd { touch-action: none; }
 .slide.edit .obj.editing { cursor: text; }
 
 /* 선택 표시 */
@@ -150,7 +151,7 @@ select, input[type="number"] { height: 30px; border: 1px solid var(--line); bord
 #printArea { display: none; }
 @media print {
   html, body { overflow: visible; height: auto; background: #fff; }
-  #app, #show, #dialog, #toast, #dropZone { display: none !important; }
+  #app, #show, #dialog, #toast, #dropZone, #ctxMenu { display: none !important; }
   #printArea { display: block; }
   #printArea .page { position: relative; overflow: hidden; page-break-after: always; break-after: page; }
   #printArea .page:last-child { page-break-after: auto; break-after: auto; }
@@ -2322,17 +2323,23 @@ function onPointerDown(e) {
   if (!S.deck || (e.button !== 0 && e.pointerType === 'mouse')) return;
   const ed = S.editing;
   if (ed && ed.node.contains(e.target)) return;
-  if (ed) endTextEdit(true);
-  if (!e.target.closest('#stageWrap')) return;
+  let target = e.target;
+  if (ed) {
+    endTextEdit(true);
+    // 다시 그려져 눌린 요소가 바뀌었으면 그 자리의 새 요소로
+    if (!target.isConnected) target = document.elementFromPoint(e.clientX, e.clientY) || target;
+  }
+  if (!target.closest || !target.closest('#stageWrap')) return;
   const p = slidePt(e);
-  const hd = e.target.closest('.hd');
+  const hd = target.closest('.hd');
   if (hd && S.sel.length === 1) { startHandle(hd.dataset.h, p, e); return; }
-  const node = e.target.closest('.slide.edit .obj');
+  const node = target.closest('.slide.edit .obj');
   if (node) {
     const x = node._x;
+    const was = S.sel.length === 1 && S.sel[0] === x;
     if (e.shiftKey || e.ctrlKey || e.metaKey) { select(S.sel.includes(x) ? S.sel.filter(s => s !== x) : [...S.sel, x]); if (!S.sel.includes(x)) return; }
     else if (!S.sel.includes(x)) select([x]);
-    drag = { kind: 'move', p0: p, moved: false, items: S.sel.map(s => ({ x: s, n: nodeOf(s), l: parseFloat(nodeOf(s).style.left), t: parseFloat(nodeOf(s).style.top) })) };
+    drag = { kind: 'move', p0: p, moved: false, was, empty: node.classList.contains('empty-ph'), cx: e.clientX, cy: e.clientY, items: S.sel.map(s => ({ x: s, n: nodeOf(s), l: parseFloat(nodeOf(s).style.left), t: parseFloat(nodeOf(s).style.top) })) };
   } else {
     if (!(e.shiftKey || e.ctrlKey)) select([]);
     drag = { kind: 'marquee', p0: p, keep: e.shiftKey || e.ctrlKey ? S.sel.slice() : [] };
@@ -2361,10 +2368,16 @@ function onPointerMove(e) {
     previewBox(drag.cur);
   }
 }
-function onPointerUp() {
+function onPointerUp(e) {
   const d = drag; drag = null;
   if (!d) return;
   drawGuides([]);
+  // 이미 고른 도형의 글자를 한 번 더 누르거나, 빈 개체 틀을 누르면 바로 글자 편집
+  if (d.kind === 'move' && !d.moved && (d.was || d.empty) && S.sel.length === 1 && e && !e.shiftKey && !e.ctrlKey && !e.metaKey) {
+    const n = nodeOf(S.sel[0]);
+    const onText = n && n._tx && (d.empty || [...n._tx.querySelectorAll('.r')].some(r => { const b = r.getBoundingClientRect(); return d.cx >= b.left - 2 && d.cx <= b.right + 2 && d.cy >= b.top - 2 && d.cy <= b.bottom + 2; }));
+    if (onText) { startTextEdit(n._tx, n, S.sel[0], { clientX: d.cx, clientY: d.cy }); return; }
+  }
   if (d.kind === 'move' && d.moved && (d.dx || d.dy)) {
     act('이동', () => {
       touch(curPart());
@@ -3016,7 +3029,7 @@ function pasteClip() {
       const map = {};
       for (const r of it.rels) map[r.id] = pkg.addRel(part, r.type, r.target, r.external);
       for (const e of [x, ...x.getElementsByTagName('*')]) for (const a of [...e.attributes]) if (a.namespaceURI === NS.r && map[a.value]) e.setAttributeNS(NS.r, a.name, map[a.value]);
-      for (const e of [x, ...x.getElementsByTagName('*')]) if (ln(e) === 'cNvPr') e.setAttribute('id', String(id++));
+      for (const e of [x, ...x.getElementsByTagName('*')]) if (ln(e) === 'cNvPr') { e.setAttribute('id', String(id++)); const xl = kid(e, 'extLst'); if (xl) xl.remove(); }   // 만든 시각 id(creationId)는 겹치지 않게 뺀다
       tree.append(x);
       const pl = altPick(x);
       if (same) { const b = getBox(pl); if (b) setBox(pl, { ...b, x: b.x + 190500, y: b.y + 190500 }); }
@@ -3299,7 +3312,10 @@ async function duplicateSlide() {
 async function clonePartForSlide(src, newPath, seen) {
   const pkg = S.deck.pkg;
   seen.set(src, newPath);
-  pkg.setDoc(newPath, parseXML(xmlString(pkg.doc(src))));
+  const nd = parseXML(xmlString(pkg.doc(src)));
+  // 슬라이드 고유 번호(p14:creationId)는 새로
+  for (const e of nd.getElementsByTagName('*')) if (ln(e) === 'creationId' && e.hasAttribute('val') && /^\d+$/.test(e.getAttribute('val'))) e.setAttribute('val', String(1 + Math.floor(Math.random() * 4294967294)));
+  pkg.setDoc(newPath, nd);
   pkg.setOverride(newPath, CT.slide);
   const rd = parseXML(`<Relationships xmlns="${NS.rel}"/>`);
   for (const r of pkg.rels(src)) {
@@ -3627,7 +3643,8 @@ function startShow(fromCurrent) {
   SHOW.on = true; SHOW.end = false; SHOW.typed = '';
   const el = $('#show');
   el.hidden = false;
-  if (el.requestFullscreen) el.requestFullscreen().catch(() => {});
+  // 전체 화면 요청은 늦게 끝날 수 있다: 그 사이 쇼를 끝냈으면 바로 빠져나온다
+  if (el.requestFullscreen) el.requestFullscreen().then(() => { if (!SHOW.on && document.fullscreenElement) document.exitFullscreen().catch(() => {}); }).catch(() => {});
   showDraw();
 }
 function showDraw() {
@@ -3689,7 +3706,10 @@ function initShow() {
   let tx = null;
   el.addEventListener('touchstart', e => { tx = e.touches[0].clientX; }, { passive: true });
   el.addEventListener('touchend', e => { if (tx == null) return; const dx = e.changedTouches[0].clientX - tx; tx = null; if (Math.abs(dx) > 40) { showGo(dx < 0 ? 1 : -1); e.preventDefault(); } }, { passive: false });
-  document.addEventListener('fullscreenchange', () => { if (!document.fullscreenElement && SHOW.on) endShow(); });
+  document.addEventListener('fullscreenchange', () => {
+    if (!document.fullscreenElement && SHOW.on) endShow();
+    else if (document.fullscreenElement && !SHOW.on) document.exitFullscreen().catch(() => {});
+  });
   addEventListener('resize', () => { if (SHOW.on) showDraw(); });
 }
 
@@ -4679,7 +4699,7 @@ async function openFile() {
 async function openFileObj(f, handle = null) {
   toast(`‘${f.name}’ 여는 중…`, 20000);
   const ok = await openBuffer(await f.arrayBuffer(), f.name, handle);
-  if (ok) toast(`‘${S.file.name}’ — 슬라이드 ${S.deck.slides.length}장`, 2200);
+  if (ok && !/\.(ppt|pps|pot)$/i.test(f.name)) toast(`‘${S.file.name}’ — 슬라이드 ${S.deck.slides.length}장`, 2200);
   else $('#toast').hidden = true;
 }
 
