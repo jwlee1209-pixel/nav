@@ -1,0 +1,6 @@
+{
+  "name": "pptedit",
+  "private": true,
+  "appVersion": "1.0",
+  "description": "PPT 편집기: .pptx/.ppt 를 브라우저에서 열어 고치고 .pptx 로 저장"
+}
