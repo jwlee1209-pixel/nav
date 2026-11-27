@@ -27,7 +27,8 @@
 
 ## 같은 사이트의 PPT 편집기
 - 주소: **https://jwlee1209-pixel.github.io/nav/ppt/** — PowerPoint(.pptx, 옛 .ppt) 열기·편집·저장, 슬라이드 쇼, PDF. 파일은 브라우저 안에서만 처리한다.
-- `docs/ppt/index.html` 은 PPT 편집기 빌드 결과(파일 하나)를 그대로 복사한 것이다. 소스는 이 저장소의 `claude/ppt` 브랜치(`node build.js 1.0` → `dist/index.html`).
+- 설치형 앱(v1.1~): 크롬·엣지에서 앱으로 설치하면 파일 탐색기에서 .pptx·.ppt 를 두 번 눌러 연다(manifest `file_handlers`, 연결 프로그램 → PPT 편집기). 자기 서비스 워커(`docs/ppt/sw.js`, 범위 /nav/ppt/, 캐시 pptedit-*)를 쓰고 내비 서비스 워커와 서로 건드리지 않는다.
+- `docs/ppt/` 는 PPT 편집기 웹 판 빌드 결과다(index.html·manifest.json·sw.js·아이콘). 소스는 이 저장소의 `claude/ppt` 브랜치: `node build.js 1.1 --pages <이 저장소>/docs/ppt`.
 - 내비 빌드(`node build.js`)는 `docs/` 바로 아래 파일만 새로 쓰고 `docs/ppt/` 는 그대로 둔다.
 
 ## 개발

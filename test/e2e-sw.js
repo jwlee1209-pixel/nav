@@ -49,7 +49,7 @@ const ok = (c, m) => { console.log((c ? '  ✓ ' : '  ✗ ') + m); if (!c) fails
   page.on('pageerror', e => errs.push(e.message));
   const cacheState = () => page.evaluate(async () => {
     const out = {};
-    for (const k of await caches.keys()) {
+    for (const k of (await caches.keys()).filter(k => k.startsWith('gilnavi-'))) {   // 내비 캐시만(편집기는 자기 캐시 pptedit-* 를 따로 씀)
       const r = await (await caches.open(k)).match('https://jwlee1209-pixel.github.io/nav/');
       const t = r ? await r.text() : '';
       out[k] = t.includes('__ppt') ? 'PPT편집기' : t.includes('generator') ? '내비' : t ? '기타' : '없음';

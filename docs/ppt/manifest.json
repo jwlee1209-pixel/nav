@@ -1,0 +1,66 @@
+{
+  "id": "/nav/ppt/",
+  "name": "PPT 편집기",
+  "short_name": "PPT 편집기",
+  "description": "PowerPoint 파일(.pptx, .ppt)을 열어 고치고 저장·슬라이드 쇼·PDF",
+  "lang": "ko",
+  "dir": "ltr",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#F3F4F6",
+  "theme_color": "#FFFFFF",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "file_handlers": [
+    {
+      "action": "./",
+      "accept": {
+        "application/vnd.openxmlformats-officedocument.presentationml.presentation": [
+          ".pptx"
+        ],
+        "application/vnd.ms-powerpoint": [
+          ".ppt",
+          ".pps",
+          ".pot"
+        ],
+        "application/vnd.openxmlformats-officedocument.presentationml.slideshow": [
+          ".ppsx"
+        ],
+        "application/vnd.openxmlformats-officedocument.presentationml.template": [
+          ".potx"
+        ],
+        "application/vnd.ms-powerpoint.presentation.macroEnabled.12": [
+          ".pptm"
+        ]
+      },
+      "icons": [
+        {
+          "src": "icon-192.png",
+          "sizes": "192x192",
+          "type": "image/png",
+          "purpose": "any"
+        }
+      ],
+      "launch_type": "multiple-clients"
+    }
+  ]
+}
