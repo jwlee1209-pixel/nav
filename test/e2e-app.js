@@ -143,6 +143,46 @@ const ok = (c, m) => { console.log((c ? '  ✓ ' : '  ✗ ') + m); if (!c) fails
   if (fs.existsSync(NAV)) { await page.goto(BASE).catch(() => null); ok(/길잡이 내비/.test(await page.title().catch(() => '')), '내비도 그대로 열림'); }
   offline = false;
 
+  console.log('5. 휴대폰 ‘공유 → PPT 편집기’(Web Share Target)');
+  ok(parsed.share_target && parsed.share_target.method === 'POST' && parsed.share_target.params.files[0].accept.includes('.pptx'), 'manifest 에 공유 받기(share_target) 있음');
+  await page.goto(BASE + 'ppt/');
+  await page.evaluate(() => navigator.serviceWorker.ready);
+  // 안드로이드가 하는 것처럼 파일을 multipart POST 로 보낸다(화면 이동 요청)
+  await page.evaluate(() => { const f = document.createElement('form'); f.id = '__sf'; f.method = 'POST'; f.action = 'share'; f.enctype = 'multipart/form-data'; const i = document.createElement('input'); i.type = 'file'; i.name = 'file'; i.id = '__sfi'; f.append(i); document.body.append(f); });
+  await page.setInputFiles('#__sfi', path.join(__dirname, 'fixtures', 'wide.pptx'));
+  await Promise.all([page.waitForURL(u => /\/nav\/ppt\/(\?share=1)?$/.test(String(u))), page.evaluate(() => document.getElementById('__sf').submit())]);
+  await page.waitForFunction(() => window.__ppt && window.__ppt.S.deck && window.__ppt.S.file.name === 'wide.pptx', null, { timeout: 10000 }).catch(() => null);
+  const sh = await page.evaluate(async () => ({ name: window.__ppt.S.file && window.__ppt.S.file.name, n: window.__ppt.S.deck && window.__ppt.S.deck.slides.length, url: location.href, left: (await (await caches.open('pptshare')).keys()).length }));
+  ok(sh.name === 'wide.pptx' && sh.n === 1, `공유받은 파일 열림(${sh.name}, ${sh.n}장)`);
+  ok(!/share/.test(sh.url), '주소에서 공유 표시를 지움(새로 고침해도 다시 열지 않음)');
+  ok(sh.left === 0, '받아 둔 파일은 열고 나서 지움');
+
+  console.log('6. 휴대폰 화면(좁은 화면) 배치');
+  const mctx = await browser.newContext({ viewport: { width: 412, height: 860 }, deviceScaleFactor: 2.6, isMobile: true, hasTouch: true, locale: 'ko-KR', ignoreHTTPSErrors: true });
+  const mp = await mctx.newPage();
+  mp.on('pageerror', e => errs.push('mobile: ' + e.message));
+  await mp.goto(BASE + 'ppt/');
+  const b64m = fs.readFileSync(path.join(__dirname, 'fixtures', 'basic.pptx')).toString('base64');
+  await mp.evaluate(async b64 => { const bin = atob(b64); const u = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i); await window.__ppt.openBuffer(u.buffer, '발표.pptx'); }, b64m);
+  await mp.waitForTimeout(300);
+  const lay = await mp.evaluate(() => { const r = id => document.getElementById(id).getBoundingClientRect(); const st = r('stage'), sd = r('side'), b1 = r('bar1'); return { stageW: st.width, sideTop: sd.top, stageBottom: st.bottom, sideH: sd.height, bar1H: b1.height, zoom: window.__ppt.S.zoom, horiz: getComputedStyle(document.getElementById('thumbs')).flexDirection }; });
+  console.log('    ', JSON.stringify(lay));
+  ok(lay.stageW > 360 && lay.sideTop > lay.stageBottom && lay.horiz === 'row' && lay.bar1H < 60, '슬라이드는 화면 너비 가득, 목록은 아래 가로 띠, 도구 막대 한 줄');
+  await mp.screenshot({ path: path.join(OUT, 'app-mobile.png') });
+  // 손가락으로 셋째 슬라이드 누르기
+  const t3 = await mp.evaluate(() => { const r = document.querySelector('#thumbs .thumb[data-i="2"]').getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; });
+  await mp.touchscreen.tap(t3.x, t3.y);
+  await mp.waitForTimeout(200);
+  ok(await mp.evaluate(() => window.__ppt.S.cur) === 2, '손가락으로 슬라이드 고르기');
+  // 손가락으로 도형 고르기 → 손잡이 크게
+  const rp = await mp.evaluate(() => { const n = [...document.querySelectorAll('#slideHost .slide > .obj')].find(n => n.textContent.trim() === '사각형'); const r = n.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; });
+  await mp.touchscreen.tap(rp.x, rp.y);
+  await mp.waitForTimeout(150);
+  const hd = await mp.evaluate(() => { const h = document.querySelector('#overlay .hd'); return h ? h.getBoundingClientRect().width : 0; });
+  ok(hd >= 16, `도형 선택 손잡이 크기 ${hd.toFixed(1)}px(손가락용)`);
+  await mp.screenshot({ path: path.join(OUT, 'app-mobile-select.png') });
+  await mctx.close();
+
   console.log(errs.length ? '오류:\n' + [...new Set(errs)].join('\n') : '페이지 오류 없음');
   console.log(fails ? `실패 ${fails}개` : '모두 통과');
   await browser.close();

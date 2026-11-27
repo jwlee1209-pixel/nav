@@ -62,5 +62,33 @@
       ],
       "launch_type": "multiple-clients"
     }
-  ]
+  ],
+  "share_target": {
+    "action": "./share",
+    "method": "POST",
+    "enctype": "multipart/form-data",
+    "params": {
+      "title": "title",
+      "text": "text",
+      "files": [
+        {
+          "name": "file",
+          "accept": [
+            "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+            "application/vnd.ms-powerpoint",
+            "application/vnd.openxmlformats-officedocument.presentationml.slideshow",
+            "application/vnd.openxmlformats-officedocument.presentationml.template",
+            "application/vnd.ms-powerpoint.presentation.macroEnabled.12",
+            ".pptx",
+            ".ppt",
+            ".ppsx",
+            ".pps",
+            ".potx",
+            ".pot",
+            ".pptm"
+          ]
+        }
+      ]
+    }
+  }
 }

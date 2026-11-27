@@ -146,7 +146,8 @@ function sizeStage() {
 function fitZoom() {
   if (!S.deck) return;
   const wrap = $('#stageWrap');
-  const z = Math.min((wrap.clientWidth - 48) / S.deck.W, (wrap.clientHeight - 40) / S.deck.H);
+  const m = innerWidth <= 760 ? 12 : 48;
+  const z = Math.min((wrap.clientWidth - m) / S.deck.W, (wrap.clientHeight - m * 0.8) / S.deck.H);
   S.zoom = clamp(z, 0.1, 4); S.fit = true;
   sizeStage(); drawSel();
 }

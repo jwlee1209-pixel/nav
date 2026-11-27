@@ -177,3 +177,33 @@ select, input[type="number"] { height: 30px; border: 1px solid var(--line); bord
 /* 앱 설치 안내(웹 주소에서만) */
 #welcome .wapp { margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--line2); }
 #welcome .wapp .hint { max-width: 360px; margin: 8px auto 0; }
+
+/* ── 휴대폰(좁은 화면): 도구 막대는 한 줄로 밀어 보기, 슬라이드 목록은 아래 가로 띠 ── */
+@media (max-width: 760px) {
+  .bar { flex-wrap: nowrap; overflow-x: auto; overflow-y: hidden; scrollbar-width: none; gap: 2px; padding: 4px 6px; min-height: 44px; }
+  .bar::-webkit-scrollbar { display: none; }
+  .bar.sub { min-height: 42px; padding: 3px 6px; }
+  .grp { flex: none; padding: 0 4px; }
+  .grp.right { margin-left: 0; }
+  .brand { margin-right: 4px; flex: none; }
+  .brand b, .brand .ver { display: none; }
+  #bar1 .btn > span { display: none; }
+  #bar1 .btn { padding: 0 9px; height: 36px; }
+  .ibtn { width: 36px; height: 36px; }
+  #main { flex-direction: column-reverse; }
+  #side { width: auto; height: 104px; flex-direction: row; border-right: 0; border-top: 1px solid var(--line); }
+  #thumbs { display: flex; flex-direction: row; gap: 8px; overflow-x: auto; overflow-y: hidden; padding: 8px 8px 6px; }
+  .thumb { flex-direction: column; gap: 2px; margin: 0; flex: none; }
+  .thumb .no { width: auto; text-align: left; padding: 0 0 0 2px; line-height: 1; }
+  .thumb.drop-before .tv { box-shadow: -4px 0 0 var(--sel); }
+  .thumb.drop-after .tv { box-shadow: 4px 0 0 var(--sel); }
+  #side .sidebtns { flex-direction: column; justify-content: center; border-top: 0; border-left: 1px solid var(--line2); padding: 4px; order: -1; }
+  #sAdd > span { display: none; }
+  #notes { height: 58px; padding: 6px 8px; }
+  #notes label { display: none; }
+  #status { gap: 10px; font-size: 11px; }
+  #stSel { display: none; }
+  .dlg { min-width: 0; width: calc(100vw - 24px); padding: 16px 14px 12px; }
+  .dlg .layouts { grid-template-columns: repeat(2, 1fr); }
+  #welcome .wbox { padding: 0 4px; }
+}

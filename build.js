@@ -62,6 +62,16 @@ const manifest = {
     icons: [icon('icon-192.png', 192, 'any')],
     launch_type: 'multiple-clients',
   }],
+  // 휴대폰(안드로이드)은 웹 앱을 ‘연결 앱’에 넣을 수 없어, 파일의 ‘공유’ 목록에 넣는다(Web Share Target)
+  share_target: {
+    action: './share', method: 'POST', enctype: 'multipart/form-data',
+    params: { title: 'title', text: 'text', files: [{ name: 'file', accept: [
+      'application/vnd.openxmlformats-officedocument.presentationml.presentation', 'application/vnd.ms-powerpoint',
+      'application/vnd.openxmlformats-officedocument.presentationml.slideshow', 'application/vnd.openxmlformats-officedocument.presentationml.template',
+      'application/vnd.ms-powerpoint.presentation.macroEnabled.12',
+      '.pptx', '.ppt', '.ppsx', '.pps', '.potx', '.pot', '.pptm',
+    ] }] },
+  },
 };
 fs.writeFileSync(path.join(web, 'manifest.json'), JSON.stringify(manifest, null, 2) + '\n');
 fs.writeFileSync(path.join(web, 'sw.js'), src('web/sw.js.tpl').replace('__VER__', ver));

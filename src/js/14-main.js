@@ -143,7 +143,12 @@ function wire() {
   addEventListener('pointercancel', () => { drag = null; drawSel(); });
   wrap.addEventListener('dblclick', onDblClick);
   wrap.addEventListener('wheel', e => { if (e.ctrlKey || e.metaKey) { e.preventDefault(); setZoom(S.zoom * (e.deltaY < 0 ? 1.1 : 1 / 1.1)); } }, { passive: false });
-  addEventListener('resize', () => { if (S.deck && S.fit) fitZoom(); });
+  let wasNarrow = narrow();
+  addEventListener('resize', () => {
+    if (!S.deck) return;
+    if (narrow() !== wasNarrow) { wasNarrow = narrow(); renderThumbs(); }
+    if (S.fit) fitZoom();
+  });
   document.addEventListener('selectionchange', () => {
     const ed = S.editing; if (!ed) return;
     const s = getSelection();
@@ -318,7 +323,7 @@ function showHelp() {
     ['조금씩 옮기기(10배 · 세밀)', '화살표 (Shift · Ctrl)'], ['맞춤선 없이 끌기', 'Alt 누른 채 끌기'], ['비율 유지 크기 · 15° 회전', 'Shift 누른 채 끌기'], ['모두 선택 · 지우기', 'Ctrl+A · Delete'],
     ['새 슬라이드', 'Ctrl+M'], ['이전 · 다음 슬라이드', 'PageUp · PageDown'], ['슬라이드 쇼(처음 · 지금부터)', 'F5 · Shift+F5'], ['쇼: 넘기기 · 끝내기 · 번호로 가기', '→ 또는 누르기 · Esc · 숫자+Enter'], ['확대 · 축소', 'Ctrl+마우스 휠']];
   const tbl = h('table', { class: 'keys' }, rows.map(([a, b]) => h('tr', {}, h('td', { text: a }), h('td', {}, h('kbd', { text: b })))));
-  const note = h('p', { class: 'small', text: '웹 주소에서 크롬·엣지의 ‘앱으로 설치’를 하면 파일 탐색기에서 .pptx·.ppt 를 두 번 눌러 열 수 있습니다(연결 프로그램 → PPT 편집기). 파일은 이 컴퓨터 안에서만 처리됩니다. 차트·SmartArt 는 보기와 위치·크기 바꾸기만 됩니다. 옛 .ppt 는 .pptx 로 바꿔 저장합니다. PDF 는 인쇄 창에서 ‘PDF로 저장’을 고르면 됩니다.' });
+  const note = h('p', { class: 'small', text: '웹 주소에서 ‘앱으로 설치’를 하면 PC 는 파일 탐색기에서 .pptx·.ppt 를 두 번 눌러(연결 프로그램 → PPT 편집기), 휴대폰은 파일의 ‘공유 → PPT 편집기’로 열 수 있습니다. 파일은 이 컴퓨터 안에서만 처리됩니다. 차트·SmartArt 는 보기와 위치·크기 바꾸기만 됩니다. 옛 .ppt 는 .pptx 로 바꿔 저장합니다. PDF 는 인쇄 창에서 ‘PDF로 저장’을 고르면 됩니다.' });
   dialog('PPT 편집기 v' + APP_VERSION + ' — 단축키', h('div', {}, tbl, note), [['닫기', null, true]]);
 }
 
@@ -335,6 +340,25 @@ function initLaunch() {
     catch (e) { console.error(e); toast('파일을 열 수 없습니다: ' + (e.message || e), 4000); return; }
     if (files.length > 1) toast(`파일 ${files.length}개 중 첫 파일만 열었습니다. 나머지는 하나씩 두 번 누르세요.`, 5000);
   });
+}
+// 휴대폰 ‘공유 → PPT 편집기’(Web Share Target): 서비스 워커가 받아 둔 파일을 연다
+const SHARE_CACHE = 'pptshare';
+async function takeShared() {
+  const q = new URLSearchParams(location.search);
+  if (!q.has('share')) return;
+  history.replaceState(null, '', location.pathname);   // 새로 고침해도 다시 열지 않게
+  if (q.get('share') === 'error') { toast('공유받은 파일을 읽지 못했습니다. 앱의 ‘열기’로 열어 보세요.', 5000); return; }
+  let c, keys = [];
+  try { c = await caches.open(SHARE_CACHE); keys = await c.keys(); } catch (e) { /* 저장소 없음 */ }
+  if (!keys.length) { toast('공유받은 파일이 없습니다. 앱의 ‘열기’로 열어 보세요.', 4000); return; }
+  const r = await c.match(keys[0]);
+  let name = decodeURIComponent(r.headers.get('x-name') || '공유받은 파일.pptx');
+  const blob = await r.blob();
+  await Promise.all(keys.map(k => c.delete(k)));
+  if (!/\.[a-z0-9]{3,4}$/i.test(name)) name += '.pptx';
+  if (!(await confirmDiscard())) return;
+  await openFileObj(new File([blob], name, { type: blob.type }), null);
+  if (keys.length > 1) toast(`파일 ${keys.length}개 중 첫 파일만 열었습니다. 나머지는 하나씩 공유하세요.`, 5000);
 }
 function initPwa() {
   const web = location.protocol === 'https:' && !!document.querySelector('link[rel="manifest"]');
@@ -360,3 +384,4 @@ setIcons();
 wire();
 initLaunch();
 initPwa();
+takeShared();

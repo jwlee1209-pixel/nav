@@ -1,5 +1,7 @@
 // ───────────────────────── 슬라이드 목록·추가·복제·삭제·순서·메모 ─────────────────────────
-const THUMB_W = 150;
+// 좁은 화면(휴대폰)은 슬라이드 목록을 아래 가로 띠로, 썸네일도 작게
+const narrow = () => innerWidth <= 760;
+const thumbW = () => (narrow() ? 96 : 150);
 let thumbObs = null;
 
 function renderThumbs() {
@@ -7,7 +9,7 @@ function renderThumbs() {
   if (thumbObs) thumbObs.disconnect();
   box.replaceChildren();
   const d = S.deck;
-  const tw = THUMB_W, th = Math.round(tw * d.H / d.W);
+  const tw = thumbW(), th = Math.round(tw * d.H / d.W);
   thumbObs = 'IntersectionObserver' in window ? new IntersectionObserver(ents => {
     for (const en of ents) if (en.isIntersecting && !en.target._drawn) { drawThumb(en.target); }
   }, { root: box, rootMargin: '300px 0px' }) : null;
@@ -27,7 +29,7 @@ function drawThumb(t) {
   let sl;
   try { sl = renderSlide(d, d.slides[i], { slideNo: i + 1 }); }
   catch (e) { console.warn(e); sl = h('div', { class: 'slide', text: '?' }); }
-  sl.style.transform = `scale(${THUMB_W / d.W})`;
+  sl.style.transform = `scale(${thumbW() / d.W})`;
   t._tv.replaceChildren(sl);
 }
 function updateThumb(i) {
@@ -39,7 +41,7 @@ function updateThumb(i) {
 function markCurThumb() {
   for (const t of $$('#thumbs .thumb')) t.classList.toggle('cur', +t.dataset.i === S.cur);
   const c = $('#thumbs .thumb.cur');
-  if (c) c.scrollIntoView({ block: 'nearest' });
+  if (c) c.scrollIntoView({ block: 'nearest', inline: 'nearest' });
 }
 function goSlide(i) {
   if (!S.deck) return;
@@ -58,19 +60,23 @@ function initThumbs() {
   let dr = null;
   box.addEventListener('pointerdown', e => {
     const t = e.target.closest('.thumb'); if (!t || e.button > 0) return;
-    dr = { t, y0: e.clientY, from: +t.dataset.i, moving: false, to: null };
-    box.setPointerCapture(e.pointerId);
+    // 손가락: 누르기만(끌면 목록이 넘어가게 둔다), 마우스: 끌어서 순서 바꾸기
+    dr = { t, x0: e.clientX, y0: e.clientY, from: +t.dataset.i, moving: false, to: null, touch: e.pointerType === 'touch', h: narrow() };
+    if (!dr.touch) box.setPointerCapture(e.pointerId);
   });
   box.addEventListener('pointermove', e => {
     if (!dr) return;
-    if (!dr.moving && Math.abs(e.clientY - dr.y0) < 6) return;
+    if (dr.touch) { if (Math.hypot(e.clientX - dr.x0, e.clientY - dr.y0) > 8) dr = null; return; }
+    const pos = dr.h ? e.clientX : e.clientY;
+    if (!dr.moving && Math.abs(pos - (dr.h ? dr.x0 : dr.y0)) < 6) return;
     dr.moving = true; dr.t.classList.add('dragging');
     for (const x of $$('#thumbs .thumb')) x.classList.remove('drop-before', 'drop-after');
     const r0 = box.getBoundingClientRect();
-    if (e.clientY < r0.top + 24) box.scrollTop -= 12; else if (e.clientY > r0.bottom - 24) box.scrollTop += 12;
+    if (dr.h) { if (pos < r0.left + 24) box.scrollLeft -= 12; else if (pos > r0.right - 24) box.scrollLeft += 12; }
+    else if (pos < r0.top + 24) box.scrollTop -= 12; else if (pos > r0.bottom - 24) box.scrollTop += 12;
     const list = $$('#thumbs .thumb');
     let to = list.length;
-    for (const x of list) { const r = x.getBoundingClientRect(); if (e.clientY < r.top + r.height / 2) { to = +x.dataset.i; break; } }
+    for (const x of list) { const r = x.getBoundingClientRect(); if (dr.h ? pos < r.left + r.width / 2 : pos < r.top + r.height / 2) { to = +x.dataset.i; break; } }
     dr.to = to;
     if (to < list.length) list[to].classList.add('drop-before'); else list[list.length - 1].classList.add('drop-after');
   });

@@ -14,7 +14,15 @@ PowerPoint 파일(.pptx, 옛 .ppt)을 브라우저에서 열어 보고 고쳐 �
 3. 처음 열 때 브라우저가 ‘PPT 편집기로 이 파일 형식을 열까요?’를 묻는다 → 허용. 처음 저장할 때 ‘파일 수정 허용’을 묻는다 → 허용. 그다음부터 Ctrl+S 는 원본에 바로 저장.
 - 원리: manifest 의 `file_handlers`(.pptx·.ppt·.ppsx·.pps·.potx·.pot·.pptm, 파일마다 새 창)와 `launchQueue` 로 파일 손잡이를 받는다. 옛 .ppt 는 .pptx 로 바꿔 열므로 저장은 새 이름으로 한다(원본 .ppt 는 그대로).
 - 서비스 워커(`sw.js`)는 화면·아이콘만 저장해 두어 인터넷이 끊겨도 앱이 열린다. 사용자 파일은 저장하지 않는다.
-- PowerPoint 로 다시 바꾸려면 연결 프로그램에서 PowerPoint 를 고르면 된다. 휴대폰·태블릿은 이 방식(파일 연결)을 지원하지 않는다.
+- PowerPoint 로 다시 바꾸려면 연결 프로그램에서 PowerPoint 를 고르면 된다.
+
+## 휴대폰(안드로이드)에서 열기(v1.2~)
+- 안드로이드의 ‘연결 앱’ 목록에는 웹 앱이 들어갈 수 없다(크롬의 파일 연결은 PC 전용). 대신 **공유** 목록에 들어간다(Web Share Target).
+1. 크롬(또는 삼성 인터넷)으로 웹 주소를 열고 ‘앱으로 설치’(메뉴 → 앱 설치 / 홈 화면에 추가).
+2. 내 파일(최근 파일)에서 .pptx·.ppt 파일을 길게 누름 → **공유** → **PPT 편집기**.
+- 공유로 받은 파일은 사본이라 ‘저장’은 새 파일로(크롬 132 이상은 저장 위치 고르기, 그 밖에는 다운로드 폴더). 원본에 바로 저장하려면 앱 안의 ‘열기’로 연다(크롬 132 이상).
+- 원리: manifest `share_target`(POST multipart, PowerPoint 형식) → 서비스 워커가 `share` 로 온 파일을 캐시(pptshare)에 잠시 두고 `?share=1` 로 화면을 연다 → 화면이 꺼내 열고 지운다.
+- 좁은 화면: 도구 막대 한 줄(옆으로 밀기), 슬라이드 목록은 아래 가로 띠, 손가락용 큰 손잡이.
 
 ## 기능
 - 그리기: 테마·마스터·레이아웃 상속, 도형 100여 종, 그림(자르기), 표(표 스타일), 차트(보기), SmartArt(보기), 그룹, 그림자, 글자 자동 맞춤.
@@ -31,15 +39,15 @@ PowerPoint 파일(.pptx, 옛 .ppt)을 브라우저에서 열어 보고 고쳐 �
 
 ## 개발
 ```
-node build.js 1.1         # dist/PPT편집기_v1.1.html (+ dist/index.html), 웹 판 dist/web/ppt/
-node build.js 1.1 --pages ../nav/docs/ppt   # 웹 판을 GitHub Pages 폴더로 복사
+node build.js 1.2         # dist/PPT편집기_v1.2.html (+ dist/index.html), 웹 판 dist/web/ppt/
+node build.js 1.2 --pages ../nav/docs/ppt   # 웹 판을 GitHub Pages 폴더로 복사
 node tools/icons.js       # 앱 아이콘(src/web/*.png, icon.svg)
 python3 tools/make_template.py   # 새 발표 자료 서식(src/template/blank.pptx, notesMaster.xml)
 node test/smoke.js        # 시험 파일 모두 열기·슬라이드 그림(test/out) — python3 test/cmp.py 로 LibreOffice 그림과 나란히
 node test/e2e-edit.js     # 실제 마우스·키보드로 편집 → 저장 → python-pptx·LibreOffice 로 확인
 node test/e2e-ui.js       # 눌러서 편집, 오른쪽 단추 메뉴, 숨기기, 도움말, 붙여넣기
 node test/e2e-print.js    # PDF(인쇄) 쪽 수·크기
-node test/e2e-app.js      # 설치형 앱: 설치 가능 판정·파일 연결로 받은 파일 열기·원본 저장·내비와 함께·오프라인
+node test/e2e-app.js      # 설치형 앱: 설치 가능 판정·파일 연결로 받은 파일 열기·원본 저장·내비와 함께·오프라인·휴대폰 공유 받기·좁은 화면
 node tools/pptdump.js 파일.ppt   # .ppt 구조 보기
 ```
 소스: `src/index.html`, `src/app.css`, `src/js/*.js`(번호 순서로 하나의 즉시 실행 함수에 묶임), JSZip 3.10.1 을 파일 안에 넣는다.

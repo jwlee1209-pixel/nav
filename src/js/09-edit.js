@@ -58,7 +58,7 @@ function drawSel() {
   const ov = $('#overlay');
   ov.replaceChildren();
   if (!S.deck) return;
-  const hs = 9 / S.zoom;
+  const hs = (matchMedia('(pointer: coarse)').matches ? 18 : 9) / S.zoom;   // 손가락으로 쓰는 화면은 손잡이를 크게
   ov.style.setProperty('--hs', hs + 'px');
   const one = S.sel.length === 1;
   for (const x of S.sel) {
