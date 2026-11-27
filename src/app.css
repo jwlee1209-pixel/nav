@@ -173,3 +173,7 @@ select, input[type="number"] { height: 30px; border: 1px solid var(--line); bord
 .keys td:last-child { text-align: right; }
 .keys kbd { color: var(--text2); font-size: 12px; }
 .dlg p.small { font-size: 12px; color: var(--text3); margin: 0; }
+
+/* 앱 설치 안내(웹 주소에서만) */
+#welcome .wapp { margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--line2); }
+#welcome .wapp .hint { max-width: 360px; margin: 8px auto 0; }

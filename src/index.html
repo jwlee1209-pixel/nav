@@ -4,6 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>PPT 편집기</title>
+<link rel="icon" href="/*@FAVICON@*/">
+<!--@WEBHEAD@-->
 <style>/*@CSS@*/</style>
 </head>
 <body>
@@ -90,6 +92,10 @@
           <button id="wOpen" class="btn primary lg">파일 열기</button>
           <p class="hint">또는 파일을 이 창에 끌어다 놓으세요</p>
           <button id="wNew" class="btn">새 발표 자료</button>
+          <div id="wApp" class="wapp" hidden>
+            <button id="wInstall" class="btn">앱으로 설치</button>
+            <p class="hint">설치하면 파일 탐색기에서 .pptx·.ppt 파일을 두 번 눌러 바로 열 수 있습니다(연결 프로그램 → PPT 편집기).</p>
+          </div>
         </div>
       </div>
       <div id="stageWrap"><div id="stage"><div id="slideHost"></div><div id="overlay"></div></div></div>

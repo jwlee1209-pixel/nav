@@ -318,8 +318,39 @@ function showHelp() {
     ['조금씩 옮기기(10배 · 세밀)', '화살표 (Shift · Ctrl)'], ['맞춤선 없이 끌기', 'Alt 누른 채 끌기'], ['비율 유지 크기 · 15° 회전', 'Shift 누른 채 끌기'], ['모두 선택 · 지우기', 'Ctrl+A · Delete'],
     ['새 슬라이드', 'Ctrl+M'], ['이전 · 다음 슬라이드', 'PageUp · PageDown'], ['슬라이드 쇼(처음 · 지금부터)', 'F5 · Shift+F5'], ['쇼: 넘기기 · 끝내기 · 번호로 가기', '→ 또는 누르기 · Esc · 숫자+Enter'], ['확대 · 축소', 'Ctrl+마우스 휠']];
   const tbl = h('table', { class: 'keys' }, rows.map(([a, b]) => h('tr', {}, h('td', { text: a }), h('td', {}, h('kbd', { text: b })))));
-  const note = h('p', { class: 'small', text: '파일은 이 컴퓨터 안에서만 처리됩니다. 차트·SmartArt 는 보기와 위치·크기 바꾸기만 됩니다. 옛 .ppt 는 .pptx 로 바꿔 저장합니다. PDF 는 인쇄 창에서 ‘PDF로 저장’을 고르면 됩니다.' });
+  const note = h('p', { class: 'small', text: '웹 주소에서 크롬·엣지의 ‘앱으로 설치’를 하면 파일 탐색기에서 .pptx·.ppt 를 두 번 눌러 열 수 있습니다(연결 프로그램 → PPT 편집기). 파일은 이 컴퓨터 안에서만 처리됩니다. 차트·SmartArt 는 보기와 위치·크기 바꾸기만 됩니다. 옛 .ppt 는 .pptx 로 바꿔 저장합니다. PDF 는 인쇄 창에서 ‘PDF로 저장’을 고르면 됩니다.' });
   dialog('PPT 편집기 v' + APP_VERSION + ' — 단축키', h('div', {}, tbl, note), [['닫기', null, true]]);
+}
+
+// ── 설치형 앱(웹 주소에서만) ──
+// 파일 탐색기에서 두 번 누른 .pptx·.ppt 를 받는다(File Handling API). 받은 파일 손잡이로 원본에 바로 저장할 수 있다.
+function initLaunch() {
+  if (!window.launchQueue || typeof window.launchQueue.setConsumer !== 'function') return;
+  window.launchQueue.setConsumer(async params => {
+    const files = params && params.files ? [...params.files] : [];
+    if (!files.length) return;
+    const fh = files[0];
+    if (!(await confirmDiscard())) return;
+    try { const f = await fh.getFile(); await openFileObj(f, fh); }
+    catch (e) { console.error(e); toast('파일을 열 수 없습니다: ' + (e.message || e), 4000); return; }
+    if (files.length > 1) toast(`파일 ${files.length}개 중 첫 파일만 열었습니다. 나머지는 하나씩 두 번 누르세요.`, 5000);
+  });
+}
+function initPwa() {
+  const web = location.protocol === 'https:' && !!document.querySelector('link[rel="manifest"]');
+  if (!web) return;
+  if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => { /* 없어도 동작 */ });
+  // 설치 단추: 브라우저가 설치할 수 있다고 알려 줄 때만 보인다(이미 설치했거나 앱 창이면 안 보임)
+  let evt = null;
+  addEventListener('beforeinstallprompt', e => { e.preventDefault(); evt = e; $('#wApp').hidden = false; });
+  addEventListener('appinstalled', () => { $('#wApp').hidden = true; toast('설치했습니다. 이제 파일 탐색기에서 .pptx 파일 → 연결 프로그램 → ‘PPT 편집기’를 고르세요.', 7000); });
+  $('#wInstall').addEventListener('click', async () => {
+    if (!evt) return;
+    evt.prompt();
+    const r = await evt.userChoice.catch(() => null);
+    evt = null;
+    if (r && r.outcome === 'accepted') $('#wApp').hidden = true;
+  });
 }
 
 // 시험용 손잡이
@@ -327,3 +358,5 @@ window.__ppt = { S, H, openBuffer, buildPptx, save, newDeck, goSlide, select, ac
 
 setIcons();
 wire();
+initLaunch();
+initPwa();
