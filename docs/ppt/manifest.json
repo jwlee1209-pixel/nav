@@ -85,7 +85,10 @@
             ".pps",
             ".potx",
             ".pot",
-            ".pptm"
+            ".pptm",
+            "application/octet-stream",
+            "application/zip",
+            "application/x-zip-compressed"
           ]
         }
       ]

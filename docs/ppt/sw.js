@@ -1,7 +1,7 @@
 // PPT editor service worker. The page is network-first (always the newest version when online,
 // the saved copy when offline); icons and manifest are cache-first. Only files directly in this
 // folder are handled; files the user opens never leave the browser and are never cached here.
-const CACHE = 'pptedit-v1.2';
+const CACHE = 'pptedit-v1.3';
 const SHARE = 'pptshare';   // files received through the Android share sheet (Web Share Target), read once by the page
 const SHELL = ['./', './manifest.json', './icon-192.png', './icon-512.png', './icon-maskable-512.png'];
 self.addEventListener('install', e => {

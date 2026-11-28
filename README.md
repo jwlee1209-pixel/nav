@@ -25,10 +25,9 @@
 - 화면: 주간/야간 자동(해 고도), 진행 방향 위·3D 시점, 모의 주행(×1·×2·×4).
 - 같은 사이트의 다른 앱(v2.2): 서비스 워커는 `docs/` 바로 아래 파일(내비 화면·아이콘·카메라 자료)만 다루고, 하위 폴더는 건드리지도 캐시에 넣지도 않는다. v2.1 까지는 같은 주소 아래의 다른 페이지(예: `ppt/`)를 열면 그 화면을 내비 첫 화면 캐시에 덮어써, 인터넷이 끊겼을 때 내비 대신 그 화면이 나올 수 있었다. 새 판으로 바뀌는 순간 예전 캐시(gilnavi-v2.1)를 지우므로 이미 덮어쓴 것도 바로 고쳐진다.
 
-## 같은 사이트의 PPT 편집기
-- 주소: **https://jwlee1209-pixel.github.io/nav/ppt/** — PowerPoint(.pptx, 옛 .ppt) 열기·편집·저장, 슬라이드 쇼, PDF. 파일은 브라우저 안에서만 처리한다.
-- 설치형 앱(v1.1~): 크롬·엣지에서 앱으로 설치하면 파일 탐색기에서 .pptx·.ppt 를 두 번 눌러 연다(manifest `file_handlers`, 연결 프로그램 → PPT 편집기). 휴대폰(v1.2~)은 파일 ‘공유 → PPT 편집기’로 연다(`share_target`, 안드로이드는 웹 앱을 ‘연결 앱’에 넣을 수 없음). 자기 서비스 워커(`docs/ppt/sw.js`, 범위 /nav/ppt/, 캐시 pptedit-*)를 쓰고 내비 서비스 워커와 서로 건드리지 않는다.
-- `docs/ppt/` 는 PPT 편집기 웹 판 빌드 결과다(index.html·manifest.json·sw.js·아이콘). 소스는 이 저장소의 `claude/ppt` 브랜치: `node build.js 1.2 --pages <이 저장소>/docs/ppt`.
+## 같은 사이트의 PPT 편집기(옮김)
+- PPT 편집기는 **https://jwlee1209-pixel.github.io/apps/ppt/** (저장소 `apps`)로 옮겼다(v1.3). `/nav/ppt/` 는 내비 범위(`/nav/`) 안이라, 내비를 설치한 휴대폰의 크롬이 PPT 편집기를 따로 설치하지 않고 공유 목록에도 넣지 않았기 때문이다.
+- `docs/ppt/` 는 예전 주소에 남긴 판: 같은 편집기에 ‘새 주소로 옮겼습니다’ 안내를 띄운다(앱 id 는 예전 그대로 /nav/ppt/). 소스는 이 저장소의 `claude/ppt` 브랜치: `node build.js 1.3 --id /nav/ppt/ --moved https://jwlee1209-pixel.github.io/apps/ppt/ --pages <이 저장소>/docs/ppt`.
 - 내비 빌드(`node build.js`)는 `docs/` 바로 아래 파일만 새로 쓰고 `docs/ppt/` 는 그대로 둔다.
 
 ## 개발
