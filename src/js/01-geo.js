@@ -143,3 +143,70 @@ function circlePoly(center, radius, steps = 40) {
   for (let i = 0; i <= steps; i++) ring.push(offsetPt(center, (i / steps) * 360, radius));
   return { type: 'Polygon', coordinates: [ring] };
 }
+
+// ── 주행 기록(지나간 길)용 ──
+// 선 줄이기(Douglas–Peucker): 남길 점의 번호. tol 은 미터(국지 평면 근사)
+function simplifyIdx(coords, tol = 5) {
+  const n = coords.length;
+  if (n <= 2) return coords.map((_, i) => i);
+  const kx = Math.cos(coords[0][1] * RAD) * EARTH_R * RAD, ky = EARTH_R * RAD;
+  const X = new Float64Array(n), Y = new Float64Array(n);
+  for (let i = 0; i < n; i++) { X[i] = coords[i][0] * kx; Y[i] = coords[i][1] * ky; }
+  const keep = new Uint8Array(n);
+  keep[0] = keep[n - 1] = 1;
+  const stack = [0, n - 1];
+  while (stack.length) {
+    const b = stack.pop(), a = stack.pop();
+    const dx = X[b] - X[a], dy = Y[b] - Y[a], L2 = dx * dx + dy * dy;
+    let md = 0, mi = -1;
+    for (let i = a + 1; i < b; i++) {
+      let t = L2 > 0 ? ((X[i] - X[a]) * dx + (Y[i] - Y[a]) * dy) / L2 : 0;
+      t = t < 0 ? 0 : t > 1 ? 1 : t;
+      const d = Math.hypot(X[i] - (X[a] + dx * t), Y[i] - (Y[a] + dy * t));
+      if (d > md) { md = d; mi = i; }
+    }
+    if (mi > 0 && md > tol) { keep[mi] = 1; stack.push(a, mi, mi, b); }
+  }
+  const out = [];
+  for (let i = 0; i < n; i++) if (keep[i]) out.push(i);
+  return out;
+}
+const simplifyLine = (coords, tol = 5) => simplifyIdx(coords, tol).map(i => coords[i]);
+function lineLen(coords) { let s = 0; for (let i = 1; i < coords.length; i++) s += hav(coords[i - 1], coords[i]); return s; }
+
+// 선 위에서 점 p 와 가장 가까운 곳: i(선분 시작 번호)·t(선분 안 비율)·d(거리 m)·along(처음부터 m). from~to 번째 점 사이만 본다
+function nearestOnLine(coords, p, from = 0, to = coords.length - 1, cum = null) {
+  const n = coords.length;
+  if (n < 2) return { i: 0, t: 0, d: n ? hav(p, coords[0]) : Infinity, along: 0 };
+  from = clamp(from, 0, n - 2); to = clamp(to, from + 1, n - 1);
+  let best = { i: from, t: 0, d: Infinity };
+  for (let i = from; i < to; i++) {
+    const r = projSeg(p, coords[i], coords[i + 1]);
+    if (r.d < best.d) best = { i, t: r.t, d: r.d };
+  }
+  const c = cum || cumDist(coords);
+  best.along = c[best.i] + (c[best.i + 1] - c[best.i]) * best.t;
+  return best;
+}
+
+// 기록한 길 a 를 선 b 가 얼마나 지나는지: a 를 step 미터마다 보아 b 에서 tol 미터 안인 비율과, 벗어난 구간 [시작, 끝](a 위 거리)
+// 두 선 모두 앞에서 뒤로 가므로 b 쪽은 앞으로만 움직이는 창에서 찾는다(못 찾으면 전체에서)
+function coverage(a, b, tol = 30, step = 20) {
+  const ca = cumDist(a), total = ca[ca.length - 1];
+  if (total <= 0 || b.length < 2) return { share: 0, gaps: total > 0 ? [[0, total]] : [] };
+  let k = 0, inside = 0, n = 0, gapStart = -1;
+  const gaps = [];
+  for (let d = 0; d <= total + 1e-6; d += step) {
+    const p = pointAt(a, ca, Math.min(d, total)).p;
+    let r = nearestOnLine(b, p, Math.max(0, k - 30), Math.min(b.length - 1, k + 400));
+    if (r.d > tol) { const r2 = nearestOnLine(b, p); if (r2.d < r.d) r = r2; }
+    n++;
+    if (r.d <= tol) {
+      inside++;
+      k = Math.max(k, r.i);
+      if (gapStart >= 0) { gaps.push([gapStart, d]); gapStart = -1; }
+    } else if (gapStart < 0) gapStart = d;
+  }
+  if (gapStart >= 0) gaps.push([gapStart, total]);
+  return { share: n ? inside / n : 0, gaps };
+}

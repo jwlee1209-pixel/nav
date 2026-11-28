@@ -338,3 +338,23 @@ input[type="range"] { width: 180px; accent-color: var(--accent); }
 .modes { display: inline-flex; gap: 2px; padding: 3px; border-radius: 11px; background: var(--surface-2); flex: 0 0 auto; }
 .modes button { display: inline-flex; align-items: center; gap: 4px; height: 32px; padding: 0 10px; border-radius: 8px; color: var(--text-2); font-weight: 700; font-size: 14px; background: transparent; }
 .modes button[aria-pressed="true"] { background: var(--surface); color: var(--text); box-shadow: 0 1px 3px rgba(0, 0, 0, .18); }
+
+/* 주행 기록 · 즐겨찾는 경로(v2.3) */
+.dayhead { list-style: none; padding: 14px 4px 4px; font-size: 12.5px; font-weight: 800; color: var(--text-3); letter-spacing: .01em; border-bottom: 1px solid var(--line); }
+.dayhead:first-child { padding-top: 4px; }
+.item__ic--trip { color: var(--accent); }
+.item__ic--froute { color: #D9822B; background: rgba(217, 130, 43, .13); }
+.item__star { color: #D9822B; flex: none; display: grid; place-items: center; }
+.item--froute .icon-btn { flex: none; color: var(--text-3); }
+.sec-sub { font-size: 12.5px; font-weight: 800; color: var(--text-3); padding: 8px 4px 2px; }
+.list--froutes { margin-bottom: 4px; }
+.chip--route svg { color: #D9822B; }
+.trip__when { font-size: 13px; font-weight: 700; color: var(--text-3); margin-top: 2px; }
+.trip__roads { margin-top: 6px; font-size: 14px; color: var(--text); background: var(--surface-2); padding: 7px 10px; border-radius: 9px; }
+.followbar { display: flex; align-items: center; gap: 8px; padding: 8px 10px; margin-top: 4px; border-radius: 12px; background: rgba(217, 130, 43, .12); color: #9A5A0C; }
+.followbar__txt { flex: 1; min-width: 0; font-weight: 700; font-size: 14.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--text); }
+.followbar .btn { flex: none; }
+.tag--follow { background: rgba(217, 130, 43, .16); color: #9A5A0C; }
+.rcard__follow { grid-column: 2 / 4; font-size: 12.5px; font-weight: 700; color: #9A5A0C; }
+.btn--danger-text { color: var(--danger, #C62828); }
+:root[data-mode="night"] .followbar, :root[data-mode="night"] .tag--follow, :root[data-mode="night"] .rcard__follow { color: #F0B565; }

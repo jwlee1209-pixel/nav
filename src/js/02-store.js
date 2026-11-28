@@ -33,7 +33,8 @@ const store = {
   work: null,
   favs: [],              // [{id, name, addr, lat, lon, ts}]
   recents: [],           // [{name, addr, lat, lon, ts, n}]
-  trips: [],             // 실제 주행 기록(모의 주행 제외)
+  trips: [],             // 실제 주행 기록(모의 주행 제외) {id, ts, end, pred, act, dist, rr, arrived, mode, dest, from, roads, len}
+  froutes: [],           // 즐겨찾는 경로 [{id, name, memo, from, dest, track(polyline5), len, roads, mode, ts, n, tripId}]
   roads: {},             // 도로별·시간대별 실제 통행 속도 학습 {'도로명|시간대': {r, n, t}}
   view: null,            // 마지막 지도 위치 {c:[lon,lat], z}
   scache: [],            // 검색 결과 캐시 [[key, ts, results]]
@@ -75,6 +76,7 @@ function applyData(d) {
   store.favs = (Array.isArray(d.favs) ? d.favs : []).map(cleanPlace).filter(Boolean).slice(0, 100);
   store.recents = (Array.isArray(d.recents) ? d.recents : []).map(cleanPlace).filter(Boolean).slice(0, 30);
   store.trips = (Array.isArray(d.trips) ? d.trips : []).filter(t => t && isFinite(t.ts) && isFinite(t.pred) && isFinite(t.act)).slice(-300);
+  store.froutes = (Array.isArray(d.froutes) ? d.froutes : []).map(cleanRoute).filter(Boolean).slice(0, 30);
   store.roads = {};
   if (d.roads && typeof d.roads === 'object') {
     for (const k in d.roads) { const v = d.roads[k]; if (v && isFinite(v.r) && isFinite(v.n) && k.length < 90) store.roads[k] = { r: +v.r, n: +v.n, t: +v.t || 0 }; }
@@ -101,8 +103,61 @@ function saveStore(now) {
 
 function exportData() {
   const { scache, ...rest } = store;
-  return JSON.stringify({ app: 'gilnavi', ver: 1, at: new Date().toISOString(), ...rest }, null, 1);
+  return JSON.stringify({ app: 'gilnavi', ver: 1, at: new Date().toISOString(), ...rest, tracks: { ...tracksDb() } }, null, 1);
 }
+
+// ── 주행 기록의 지나간 길(따로 저장: 자주 저장하는 기본 자료를 가볍게) ──
+// { 기록 id: polyline(정밀도 5, 약 1 m) } — 최근 TRACK_MAX 건만 둔다. 즐겨찾는 경로는 자기 길을 따로 갖고 있다.
+const TRACK_KEY = 'gilnavi.tracks.v1';
+const TRACK_MAX = 80;
+let _tracks = null;
+function tracksDb() {
+  if (!_tracks) {
+    try { const v = JSON.parse(localStorage.getItem(TRACK_KEY) || '{}'); _tracks = v && typeof v === 'object' ? v : {}; } catch (e) { _tracks = {}; }
+  }
+  return _tracks;
+}
+function saveTracks() { try { localStorage.setItem(TRACK_KEY, JSON.stringify(tracksDb())); } catch (e) { /* 저장 공간 부족 등: 길 없이 기록만 */ } }
+function setTracks(obj) {
+  _tracks = {};
+  if (obj && typeof obj === 'object') for (const k in obj) if (typeof obj[k] === 'string' && obj[k].length >= 4 && k.length < 40) _tracks[k] = obj[k];
+  pruneTracks();
+}
+// 주행 기록에 없는 길은 지우고 최근 TRACK_MAX 건만
+function pruneTracks(extraId) {
+  const db = tracksDb();
+  const live = store.trips.filter(t => t.id && db[t.id]).map(t => t.id).slice(-TRACK_MAX);
+  const keep = new Set(live);
+  if (extraId) keep.add(extraId);
+  for (const k in db) if (!keep.has(k)) delete db[k];
+  saveTracks();
+}
+function keepTrack(id, coords) { tracksDb()[id] = encodePolyline(coords, 5); pruneTracks(id); }
+function hasTrack(t) { return !!(t && t.id && tracksDb()[t.id]); }
+function tripTrack(t) {
+  const s = t && t.id && tracksDb()[t.id];
+  if (!s) return null;
+  try { const c = decodePolyline(s, 5); return c.length >= 2 ? c : null; } catch (e) { return null; }
+}
+function dropTrack(id) { const db = tracksDb(); if (db[id]) { delete db[id]; saveTracks(); } }
+
+// 즐겨찾는 경로 정리(백업에서 읽을 때도)
+function cleanRoute(r) {
+  if (!r || typeof r.track !== 'string' || r.track.length < 4) return null;
+  let pts;
+  try { pts = decodePolyline(r.track, 5); } catch (e) { return null; }
+  if (pts.length < 2 || pts.some(p => !isFinite(p[0]) || !isFinite(p[1]))) return null;
+  const pl = (p, c) => (p && isFinite(+p.lat) && isFinite(+p.lon) ? { name: String(p.name || '').slice(0, 80), lat: +p.lat, lon: +p.lon } : { name: '', lat: c[1], lon: c[0] });
+  const memo = String(r.memo || '').trim().slice(0, 120);
+  return {
+    id: String(r.id || uid()).slice(0, 40), name: String(r.name || '').trim().slice(0, 40) || '즐겨찾는 경로', ...(memo ? { memo } : {}),
+    from: pl(r.from, pts[0]), dest: pl(r.dest, pts[pts.length - 1]), track: r.track,
+    len: isFinite(+r.len) && +r.len > 0 ? +r.len : Math.round(lineLen(pts)),
+    roads: (Array.isArray(r.roads) ? r.roads : []).map(x => String(x).slice(0, 40)).slice(0, 8),
+    mode: r.mode === 'walk' ? 'walk' : 'car', ts: +r.ts || Date.now(), n: +r.n || 0, ...(r.tripId ? { tripId: String(r.tripId).slice(0, 40) } : {}),
+  };
+}
+const routeTrack = r => decodePolyline(r.track, 5);
 
 function addRecent(p) {
   const c = cleanPlace(p);

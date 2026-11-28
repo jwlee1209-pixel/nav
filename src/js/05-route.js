@@ -137,6 +137,108 @@ function normValhalla(trip, k) {
   });
 }
 
+// ── 기록한 길 따라가기(주행 기록·즐겨찾는 경로) ──
+// Valhalla 에 ‘지나는 점(through: 멈추지 않고 유턴도 하지 않는 점)’을 기록한 길 위에 찍어 그 길을 따르게 한다.
+//  · 회전한 곳(줄인 선의 꼭짓점)을 지나 나가는 길 위 약 70 m — 꼭짓점 자체는 교차로라 옆 길에 붙을 수 있다
+//  · 긴 직선은 고르게 채운다(같은 고속도로·큰길을 지키게)
+//  · 점마다 진행 방향(heading)을 붙여 중앙분리대가 있는 길의 반대 차로에 붙지 않게
+// 공개 서버의 지점 수 한도(기본 20) 안에서 출발·도착을 빼고 FOLLOW_MAX 개.
+const FOLLOW_MAX = 15;
+function throughPoints(track, max = FOLLOW_MAX) {
+  const cum = cumDist(track), total = cum[cum.length - 1];
+  if (!(total >= 400)) return [];
+  let tol = 12, idx;
+  for (;;) {
+    idx = simplifyIdx(track, tol).slice(1, -1);
+    if (idx.length <= Math.round(max * 0.75) || tol > 4000) break;
+    tol *= 1.5;
+  }
+  const turns = [];
+  const bounds = [...idx.map(i => cum[i]), total];
+  idx.forEach((i, k) => {
+    const off = Math.min(70, (bounds[k + 1] - cum[i]) / 2);
+    if (off >= 8) turns.push(cum[i] + off);
+  });
+  const spacing = Math.max(2500, total / (max + 1));
+  const all = [];
+  let prev = 0;
+  for (const d of [...turns, total]) {
+    const gap = d - prev;
+    if (gap > spacing * 1.5) { const n = Math.floor(gap / spacing); for (let j = 1; j <= n; j++) all.push({ d: prev + gap * j / (n + 1), fill: true }); }
+    if (d < total) all.push({ d, fill: false });
+    prev = d;
+  }
+  let pts = all.filter(x => x.d > 150 && x.d < total - 150).sort((a, b) => a.d - b.d);
+  pts = pts.filter((x, k) => k === 0 || x.d - pts[k - 1].d >= 60);
+  // 많으면 채운 점부터, 그래도 많으면 이웃과 가장 가까운 점부터 뺀다
+  while (pts.length > max) {
+    const cand = pts.some(x => x.fill) ? pts.map((x, k) => [x, k]).filter(([x]) => x.fill) : pts.map((x, k) => [x, k]);
+    let best = cand[0][1], bg = Infinity;
+    for (const [, k] of cand) {
+      const g = (k > 0 ? pts[k].d - pts[k - 1].d : pts[k].d) + (k < pts.length - 1 ? pts[k + 1].d - pts[k].d : total - pts[k].d);
+      if (g < bg) { bg = g; best = k; }
+    }
+    pts.splice(best, 1);
+  }
+  return pts.map(x => { const a = pointAt(track, cum, x.d); return { lon: a.p[0], lat: a.p[1], h: a.brg, d: x.d }; });
+}
+
+// 지점: 출발(지금 위치) → 지나는 점들 → 도착
+async function alongRequest(start, vias, dest, mode, heading, signal, withHeading = true) {
+  const walk = mode === 'walk';
+  const ll = p => ({ lat: +(+p.lat).toFixed(6), lon: +(+p.lon).toFixed(6) });
+  const locations = [
+    { ...ll(start), type: 'break', ...(heading != null && !walk ? { heading: Math.round(heading) % 360, heading_tolerance: 50 } : {}) },
+    ...vias.map(v => ({ ...ll(v), type: 'through', ...(withHeading && !walk ? { heading: Math.round(v.h) % 360, heading_tolerance: 60 } : {}) })),
+    { ...ll(dest), type: 'break' },
+  ];
+  const req = { locations, costing: walk ? 'pedestrian' : 'auto', costing_options: walk ? { pedestrian: { walking_speed: WALK_KMH } } : { auto: {} },
+    units: 'kilometers', language: 'en-US', directions_type: 'maneuvers' };
+  const url = ROUTE_ENGINES.valhalla.base + '?json=' + encodeURIComponent(JSON.stringify(req));
+  const data = await routePace(() => fetchJSON(url, { timeout: 15000, signal }));
+  const r = data && data.trip ? normValhalla(data.trip, 0) : null;
+  if (!r) { const e = new Error('no-route'); e.status = 400; throw e; }
+  r.mode = mode;
+  return r;
+}
+
+// track: 기록한 길 [[경도, 위도], …], start: 지금 위치(또는 고른 출발지), dest: 도착지
+async function findRoutesAlong(track, { start, dest, mode = 'car', heading = null, signal } = {}) {
+  const cum = cumDist(track);
+  const near = nearestOnLine(track, [start.lon, start.lat], 0, track.length - 1, cum);
+  // 지금 위치에서 기록에 가장 가까운 곳부터 남은 길
+  const rest = [pointAt(track, cum, near.along).p, ...track.slice(near.i + 1)];
+  if (lineLen(rest) < 50) { const e = new Error('track-done'); e.status = 400; throw e; }
+  let vias = throughPoints(rest);
+  let r;
+  try { r = await alongRequest(start, vias, dest, mode, heading, signal); }
+  catch (e) {
+    if (signal && signal.aborted) throw e;
+    if (e.status !== 400) throw e;
+    r = await alongRequest(start, vias, dest, mode, heading, signal, false);   // 진행 방향을 빼고 한 번 더(점이 길에서 조금 떨어진 경우)
+  }
+  let cov = coverage(rest, r.coords);
+  // 기록과 다르게 간 곳: 그 구간이 시작되는 곳(기록 위) 조금 뒤에 점을 더 넣어 한 번 더 찾는다
+  if (cov.share < 0.92 && vias.length < FOLLOW_MAX) {
+    const rc = cumDist(rest);
+    const extra = cov.gaps.filter(([a, b]) => b - a >= 40).slice(0, FOLLOW_MAX - vias.length).map(([a, b]) => {
+      const d = Math.min(b, a + Math.min(80, (b - a) / 2) + 20);
+      const q = pointAt(rest, rc, d);
+      return { lon: q.p[0], lat: q.p[1], h: q.brg, d };
+    }).filter(x => x.d > 60 && x.d < rc[rc.length - 1] - 60);
+    const merged = vias.concat(extra).sort((a, b) => a.d - b.d).filter((x, k, arr) => k === 0 || x.d - arr[k - 1].d >= 50);
+    if (merged.length > vias.length) {
+      try {
+        const r2 = await alongRequest(start, merged.slice(0, FOLLOW_MAX), dest, mode, heading, signal);
+        const cov2 = coverage(rest, r2.coords);
+        if (cov2.share > cov.share) { r = r2; cov = cov2; vias = merged.slice(0, FOLLOW_MAX); }
+      } catch (e) { if (signal && signal.aborted) throw e; }
+    }
+  }
+  r.follow = { share: cov.share, vias: vias.length, join: near.d, len: lineLen(rest) };
+  return { engine: 'valhalla', routes: [r] };
+}
+
 // ── OSRM ──
 async function viaOsrm(points, pref, heading, signal, mode = 'car') {
   const coordStr = points.map(p => `${(+p.lon).toFixed(6)},${(+p.lat).toFixed(6)}`).join(';');

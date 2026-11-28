@@ -26,13 +26,14 @@ const IC = {
   car: '<path d="M5 16.5V12l2-5h10l2 5v4.5"/><path d="M3.5 16.5h17M6.5 19.5v-3M17.5 19.5v-3"/><circle cx="7.5" cy="13.5" r="1"/><circle cx="16.5" cy="13.5" r="1"/>',
   nav: '<path d="M12 3 19 20l-7-4-7 4z"/>',
   walk: '<circle cx="13.5" cy="4.5" r="2"/><path d="M12.6 8.6 10.4 14l3.1 2.6-1 4.4M10.4 14 8 20.6M12 9.6l-3.2 3M12.6 8.6l2.6 3 3 .9"/>',
+  route: '<circle cx="6" cy="18.5" r="2.2"/><circle cx="18" cy="5.5" r="2.2"/><path d="M8.3 18.5H15a3.2 3.2 0 0 0 0-6.4H9a3.2 3.2 0 0 1 0-6.4h6.7"/>',
 };
 const ic = (n, size = 22, fill = false) => `<svg viewBox="0 0 24 24" width="${size}" height="${size}" fill="${fill ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${IC[n]}</svg>`;
 
 const S = {
   screen: 'home', me: null, gps: 'idle', night: false,
   place: null, pick: null, results: null, searching: false, lastQuery: '',
-  homeTab: 'recent', trip: null, nav: null,
+  homeTab: 'recent', trip: null, nav: null, tripView: null,
   searchCtl: null, routeCtl: null, followHome: false,
 };
 
@@ -72,6 +73,7 @@ function go(screen) {
   S.sheetScr = null;          // 화면을 옮기면(같은 화면을 다시 열어도) 목록은 기본 크기로
   $('#app').dataset.screen = screen;
   if (screen !== 'place' && screen !== 'search') { MV.setPlaceMark(null); MV.setHits(null); }
+  if (prev === 'trip' && screen !== 'trip') { S.tripView = null; if (screen !== 'preview') { MV.clearRoutes(); MV.setTripMarks(null, [], null); } }
   if (screen === 'home') { S.pick = null; $('#q').value = ''; $('#q').placeholder = '어디로 갈까요?'; $('#q').blur(); }
   $('#qClear').hidden = !(screen === 'search' || screen === 'place');
   renderSheet();
@@ -86,6 +88,7 @@ function back() {
   if (S.screen === 'place') { if (S.results) go('search'); else if (S.pick && S.trip) go('preview'); else go('home'); return; }
   if (S.screen === 'search') { if (S.pick && S.trip && S.pick !== 'home' && S.pick !== 'work') { S.pick = null; go('preview'); } else go('home'); return; }
   if (S.screen === 'preview') { cancelTrip(); return; }
+  if (S.screen === 'trip') { S.homeTab = 'trips'; go('home'); return; }
 }
 window.addEventListener('popstate', () => {
   S.pushed = false;
@@ -182,7 +185,7 @@ function setSheetSize(size) {
   if (size === 'min') $('#sheetBody').scrollTop = 0;
   requestAnimationFrame(measure); setTimeout(measure, 300);
 }
-const SHEET_DEFAULT = { home: 'peek', search: 'full', place: 'peek', preview: 'peek' };
+const SHEET_DEFAULT = { home: 'peek', search: 'full', place: 'peek', preview: 'peek', trip: 'peek' };
 
 function renderSheet() {
   const body = $('#sheetBody');
@@ -194,6 +197,7 @@ function renderSheet() {
   else if (scr === 'search') put(searchSheet());
   else if (scr === 'place') put(placeSheet());
   else if (scr === 'preview') put(previewSheet());
+  else if (scr === 'trip') put(tripSheet());
   body.scrollTop = 0;
 }
 
@@ -222,17 +226,20 @@ function renderChips() {
     kids.push(h('button', { class: 'chip chip--' + k, type: 'button', onclick: () => p ? startTrip({ ...p, label }) : beginPick(k) },
       h('span', { svg: ic(k, 17) }), p ? label : label + ' 등록'));
   }
+  // 즐겨찾는 경로: 많이 쓴 것 4개(같으면 나중에 등록한 것 먼저)
+  for (const r of [...store.froutes].sort((a, b) => (b.n || 0) - (a.n || 0)).slice(0, 4)) kids.push(h('button', { class: 'chip chip--route', type: 'button', title: `즐겨찾는 경로: ${r.from.name || '출발지'} → ${r.dest.name || '도착지'}`, onclick: () => followFav(r) }, h('span', { svg: ic('route', 16) }), r.name));
   for (const f of store.favs.slice(0, 8)) kids.push(h('button', { class: 'chip chip--fav', type: 'button', onclick: () => startTrip(f) }, h('span', { svg: ic('star', 16, true) }), f.name));
   box.replaceChildren(...kids);
 }
 
 function homeSheet() {
   const tabs = h('div', { class: 'seg', role: 'tablist' },
-    ...[['recent', '최근 목적지'], ['fav', '즐겨찾기']].map(([k, label]) => h('button', { type: 'button', role: 'tab', 'aria-pressed': S.homeTab === k ? 'true' : 'false', text: label, onclick: () => { S.homeTab = k; renderSheet(); } })));
+    ...[['recent', '최근 목적지'], ['fav', '즐겨찾기'], ['trips', '주행 기록']].map(([k, label]) => h('button', { type: 'button', role: 'tab', id: 'tab-' + k, 'aria-pressed': S.homeTab === k ? 'true' : 'false', text: label, onclick: () => { S.homeTab = k; renderSheet(); } })));
+  if (S.homeTab === 'trips') return [gpsAlert(), h('div', { class: 'sec-head' }, tabs), ...tripsTab()];
   const list = h('ul', { class: 'list' });
   const items = S.homeTab === 'recent' ? store.recents : store.favs;
   if (!items.length) {
-    list.append(h('li', { class: 'empty', text: S.homeTab === 'recent' ? '아직 다녀온 곳이 없습니다. 위에서 목적지를 검색해 보세요.' : '자주 가는 곳을 즐겨찾기에 넣으면 여기와 지도 위에 표시됩니다.' }));
+    list.append(h('li', { class: 'empty', text: S.homeTab === 'recent' ? '아직 다녀온 곳이 없습니다. 위에서 목적지를 검색해 보세요.' : '자주 가는 곳을 즐겨찾기에 넣으면 여기와 지도 위에 표시됩니다. 자주 다니는 길은 ‘주행 기록’에서 즐겨찾는 경로로 등록하세요.' }));
   } else {
     for (const p of items.slice(0, 20)) list.append(placeItem(p, { kind: S.homeTab === 'recent' ? 'recent' : 'fav', onClick: () => openPlace(p) }));
   }
@@ -241,7 +248,7 @@ function homeSheet() {
       h('button', { class: 'btn btn--sm', type: 'button', id: 'btnSaveHere', onclick: () => saveHere() }, h('span', { svg: ic('pin', 16) }), '현재 위치 저장'),
       h('button', { class: 'btn btn--sm btn--ghost', type: 'button', onclick: openPlaces }, h('span', { svg: ic('star', 16) }), '내 장소 관리')),
     gpsNote());
-  return [gpsAlert(), h('div', { class: 'sec-head' }, tabs), list, manage];
+  return [gpsAlert(), h('div', { class: 'sec-head' }, tabs), ...(S.homeTab === 'fav' ? froutesSection() : []), list, manage];
 }
 
 // 위치를 못 쓰는 이유와 해결 방법(한곳에서 관리)
@@ -390,10 +397,10 @@ function placeSheet() {
   } else if (pk === 'origin' && S.trip) {
     acts.append(h('button', { class: 'btn btn--primary', type: 'button', onclick: () => { S.trip.origin = p; S.pick = null; S.results = null; go('preview'); computeRoutes(); } }, '출발지로 설정'));
   } else if (pk === 'stop' && S.trip) {
-    acts.append(h('button', { class: 'btn btn--primary', type: 'button', onclick: () => { S.trip.stops.push(p); S.pick = null; S.results = null; go('preview'); computeRoutes(); } }, h('span', { svg: ic('plus', 20) }), '경유지로 추가'));
+    acts.append(h('button', { class: 'btn btn--primary', type: 'button', onclick: () => { S.trip.stops.push(p); S.trip.follow = null; S.pick = null; S.results = null; go('preview'); computeRoutes(); } }, h('span', { svg: ic('plus', 20) }), '경유지로 추가'));
   } else {
-    acts.append(h('button', { class: 'btn btn--primary', type: 'button', onclick: () => { if (S.trip && pk === 'dest') { S.trip.dest = p; S.pick = null; S.results = null; go('preview'); computeRoutes(); } else startTrip(p); } }, h('span', { svg: ic('nav', 20, true) }), '여기로 길 안내'));
-    if (S.trip && S.trip.stops.length < 3 && pk !== 'dest') acts.append(h('button', { class: 'btn', type: 'button', onclick: () => { S.trip.stops.push(p); S.results = null; go('preview'); computeRoutes(); } }, '경유지로'));
+    acts.append(h('button', { class: 'btn btn--primary', type: 'button', onclick: () => { if (S.trip && pk === 'dest') { S.trip.dest = p; S.trip.follow = null; S.pick = null; S.results = null; go('preview'); computeRoutes(); } else startTrip(p); } }, h('span', { svg: ic('nav', 20, true) }), '여기로 길 안내'));
+    if (S.trip && S.trip.stops.length < 3 && pk !== 'dest') acts.append(h('button', { class: 'btn', type: 'button', onclick: () => { S.trip.stops.push(p); S.trip.follow = null; S.results = null; go('preview'); computeRoutes(); } }, '경유지로'));
   }
   const fav = isFav(p);
   acts.append(h('button', { class: 'btn', type: 'button', 'aria-pressed': fav ? 'true' : 'false', 'aria-label': fav ? '즐겨찾기에서 빼기' : '즐겨찾기에 넣기',
@@ -476,6 +483,19 @@ function renderPlan() {
       h('button', { class: 'icon-btn', type: 'button', 'aria-label': '경유지 빼기', svg: ic('close', 20), onclick: () => { t.stops.splice(i, 1); renderPlan(); computeRoutes(); } }))),
     row('plan__dot--dest', h('i'), '도착', t.dest.label || t.dest.name, () => beginPick('dest')),
   ];
+  if (t.follow) {
+    // 기록한 길로: 이동 방법·경유지·경로 옵션 대신 ‘기록한 길’ 줄과 보통 길로 바꾸는 단추
+    rows[0].replaceChildren(rows[0].firstChild,
+      h('div', { style: 'flex:1;min-width:0;font-weight:800;font-size:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis', text: '기록한 길로 안내' }));
+    const bar = h('div', { class: 'followbar' },
+      h('span', { svg: ic('route', 18) }),
+      h('span', { class: 'followbar__txt', text: t.follow.failed ? '기록한 길을 찾지 못했습니다' : (t.follow.name || '기록한 길') }),
+      t.follow.failed ? h('button', { class: 'btn btn--sm', type: 'button', id: 'btnFollowRetry', onclick: () => { t.follow.failed = false; renderPlan(); computeRoutes(); } }, '다시 시도') : null,
+      h('button', { class: 'btn btn--sm btn--ghost', type: 'button', id: 'btnFollowOff', onclick: () => { t.follow = null; t.pref = t.mode === 'walk' ? 'fast' : store.settings.pref; renderPlan(); computeRoutes(); } }, '보통 길로 찾기'));
+    box.replaceChildren(...rows, bar);
+    requestAnimationFrame(measure);
+    return;
+  }
   const tools = h('div', { class: 'plan__tools' },
     t.stops.length < 3 ? h('button', { class: 'btn btn--sm btn--ghost', type: 'button', onclick: () => beginPick('stop') }, h('span', { svg: ic('plus', 16) }), '경유지 추가') : null);
   const prefs = h('div', { class: 'prefs', role: 'group', 'aria-label': '경로 옵션' },
@@ -521,6 +541,9 @@ async function computeRoutes() {
   MV.fit(pts.map(p => [p.lon, p.lat]));
   const walk = t.mode === 'walk';
   const heading = !walk && !t.origin && S.me && Date.now() - S.me.t < 10000 && S.me.speed > 2 && S.me.heading != null ? S.me.heading : null;
+  if (t.follow && !t.follow.failed && await computeFollow(t, pts, heading, ctl)) return;
+  if (ctl.signal.aborted || S.trip !== t) return;
+  const followWarn = t.warn;
   try {
     const r = await findRoutes(pts, { pref: t.pref, mode: t.mode || 'car', heading, engine: store.settings.engine, signal: ctl.signal });
     if (ctl.signal.aborted || S.trip !== t) return;
@@ -540,7 +563,7 @@ async function computeRoutes() {
       if (S.trip !== t) return;
     }
     const ranked = rankRoutes(all, { pref: t.pref, easyPrefer: !walk && store.settings.easyPrefer, easyMin: store.settings.easyMin });
-    t.routes = ranked.routes; t.info = ranked.info; t.sel = 0; t.warn = r.warn || ''; t.engine = r.engine;
+    t.routes = ranked.routes; t.info = ranked.info; t.sel = 0; t.warn = [followWarn, r.warn].filter(Boolean).join(' '); t.engine = r.engine;
     if (walk) t.routes.forEach(x => { x.tags = (x.tags || []).filter(k => k !== 'easy'); });
     else attachCams(t.routes);
   } catch (e) {
@@ -582,7 +605,7 @@ function previewSheet() {
     t.routes.forEach((r, i) => {
       const dur = r.p ? r.p.dur : r.duration * (walk ? 1 : ef.k);
       const tags = [];
-      const TAG = { rec: ['tag--rec', '추천'], fast: ['tag--fast', '가장 빠름'], easy: ['tag--easy', '운전 쉬움'] };
+      const TAG = { rec: ['tag--rec', '추천'], fast: ['tag--fast', '가장 빠름'], easy: ['tag--easy', '운전 쉬움'], follow: ['tag--follow', '기록한 길'] };
       (r.tags || []).forEach(k => tags.push(h('span', { class: 'tag ' + TAG[k][0], text: TAG[k][1] })));
       if (r.p && r.p.learnedShare >= 0.2) tags.push(h('span', { class: 'tag tag--me', text: '내 기록 반영' }));
       if (r.hasToll) tags.push(h('span', { class: 'tag tag--toll', text: '유료도로' }));
@@ -599,11 +622,15 @@ function previewSheet() {
         walk ? h('span', { class: 'rcard__ease num', text: walkLine(r) })
           : r.ease ? h('span', { class: 'rcard__ease num', text: `회전 ${r.ease.turns}번${r.ease.left + r.ease.uturn ? ` (좌회전·유턴 ${r.ease.left + r.ease.uturn})` : ''} · 큰길 ${Math.round((1 - r.ease.smallShare) * 100)}%${r.cams ? ` · 단속 카메라 ${camCount(r.cams)}곳` : ''}` }) : null,
         tags.length ? h('span', { class: 'rcard__tags' }, ...tags) : null,
-        r.roads.length ? h('span', { class: 'rcard__via', text: r.roads.join(' · ') + ' 경유' }) : null));
+        r.roads.length ? h('span', { class: 'rcard__via', text: r.roads.join(' · ') + ' 경유' }) : null,
+        r.follow ? h('span', { class: 'rcard__follow num', text: r.follow.share >= 0.97 ? '기록한 길 그대로' : `기록한 길의 ${Math.round(r.follow.share * 100)}%를 그대로 지남` }) : null));
     });
     out.push(list);
     const notes = [];
     const nRoads = Object.keys(store.roads).length;
+    const fr = t.routes.find(x => x.follow);
+    if (fr) notes.push(`기록한 길 위 ${fr.follow.vias}곳을 지나도록 찾았습니다${fr.follow.join > 300 ? `(지금 위치에서 기록한 길까지 ${fmtDistStr(fr.follow.join)})` : ''}. 공사·통제로 길이 바뀐 곳은 다르게 나올 수 있고, 안내 중 벗어나면 기록한 길로 되돌아가게 다시 찾습니다.`);
+    if (fr && fr.follow.share < 0.8) out.push(h('p', { class: 'warnline', text: '기록한 길과 다른 곳이 있습니다. 지도에 회색으로 보이는 것이 기록한 길입니다.' }));
     if (walk) notes.push(`걷는 시간은 시속 ${WALK_KMH}km로 계산했습니다. 보도·횡단보도 자료가 없는 곳은 차도 옆으로 안내할 수 있으니 실제 길을 보며 걸으세요.`);
     else if (ef.n || nRoads) notes.push(`도착 시간은 내 주행 기록으로 보정했습니다${ef.n ? `(전체 ×${ef.k.toFixed(2)}, ${ef.n}회${ef.band ? ', ' + BAND_KO[ef.band] : ''})` : ''}${nRoads ? ` · 도로별 학습 ${nRoads}건` : ''}.`);
     else notes.push('실시간 교통 정보가 없는 무료 지도라, 막히는 시간에는 실제보다 짧게 나올 수 있습니다. 안내를 받으며 달린 도로는 시간대별 실제 속도를 배워 다음부터 경로 선택과 도착 시간에 반영합니다.');
@@ -625,8 +652,10 @@ const camCount = cams => cams.filter(c => c.t !== 6).length;
 
 function selectRoute(i) {
   const t = S.trip;
+  if (!t || !t.routes[i]) return;
   t.sel = i;
-  MV.setRoutes(t.routes, i);
+  if (t.follow) MV.setRoutes(t.routes.concat([{ coords: t.follow.track }]), i);
+  else MV.setRoutes(t.routes, i);
   MV.setCams(t.routes[i].cams);
   $$('.rcard').forEach((b, k) => { b.setAttribute('aria-pressed', k === i ? 'true' : 'false'); b.setAttribute('aria-checked', k === i ? 'true' : 'false'); });
 }

@@ -8,6 +8,7 @@
 const { chromium } = require('playwright');
 const https = require('https');
 const path = require('path'), fs = require('fs');
+const CK = 'gilnavi-v' + require('../package.json').appVersion;   // 지금 판의 캐시 이름
 const { execFileSync } = require('child_process');
 const mock = require('./mocknet');
 const ROOT = path.join(__dirname, '..');
@@ -66,9 +67,9 @@ const ok = (c, m) => { console.log((c ? '  ✓ ' : '  ✗ ') + m); if (!c) fails
   useOld = false;   // 이제 사이트에는 새 서비스 워커(v2.2)와 PPT 편집기가 올라가 있다
   await page.goto(BASE + 'ppt/');
   ok(/PPT 편집기/.test(await page.title()), `PPT 편집기 열림: ${await page.title()}`);
-  const st = await waitCache({ 'gilnavi-v2.2': '내비' });
+  const st = await waitCache({ [CK]: '내비' });
   console.log('    캐시:', JSON.stringify(st));
-  ok(JSON.stringify(st) === JSON.stringify({ 'gilnavi-v2.2': '내비' }), '브라우저가 새 서비스 워커로 바꾸며 캐시가 깨끗해짐(내비 첫 화면만)');
+  ok(JSON.stringify(st) === JSON.stringify({ [CK]: '내비' }), '브라우저가 새 서비스 워커로 바꾸며 캐시가 깨끗해짐(내비 첫 화면만)');
 
   console.log('2. 새 서비스 워커에서 PPT 편집기 쓰기');
   await page.goto(BASE + 'ppt/');
@@ -77,7 +78,7 @@ const ok = (c, m) => { console.log((c ? '  ✓ ' : '  ✗ ') + m); if (!c) fails
   ok(n === 6, `PPT 편집기에서 파일 열기(슬라이드 ${n}장)`);
   ok(await page.evaluate(() => window.isSecureContext && 'showSaveFilePicker' in window), 'https 주소라 원본에 바로 저장(File System Access) 가능');
   await page.waitForTimeout(500);
-  ok(JSON.stringify(await cacheState()) === JSON.stringify({ 'gilnavi-v2.2': '내비' }), 'PPT 편집기를 열어도 내비 캐시 그대로');
+  ok(JSON.stringify(await cacheState()) === JSON.stringify({ [CK]: '내비' }), 'PPT 편집기를 열어도 내비 캐시 그대로');
 
   console.log('3. 인터넷이 끊긴 상태');
   offline = true;

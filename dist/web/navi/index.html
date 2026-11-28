@@ -9,7 +9,7 @@
 <meta name="apple-mobile-web-app-title" content="&#xae38;&#xc7a1;&#xc774; &#xb0b4;&#xbe44;">
 <meta name="description" content="&#xbb34;&#xb8cc; &#xc9c0;&#xb3c4;(OpenStreetMap)&#xb85c; &#xae38;&#xc744; &#xcc3e;&#xace0; &#xd55c;&#xad6d;&#xc5b4; &#xc74c;&#xc131;&#xc73c;&#xb85c; &#xc548;&#xb0b4;&#xd558;&#xb294; &#xac1c;&#xc778;&#xc6a9; &#xcc28;&#xb7c9; &#xb0b4;&#xbe44;&#xac8c;&#xc774;&#xc158;">
 <title>&#xae38;&#xc7a1;&#xc774; &#xb0b4;&#xbe44;</title>
-<meta name="generator" content="&#xae38;&#xc7a1;&#xc774; &#xb0b4;&#xbe44; v2.2">
+<meta name="generator" content="&#xae38;&#xc7a1;&#xc774; &#xb0b4;&#xbe44; v2.3">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230B5CAD'/%3E%3Cpath d='M11 25V15.5a3.5 3.5 0 0 1 3.5-3.5H20' fill='none' stroke='%23fff' stroke-width='3.4' stroke-linecap='round'/%3E%3Cpath d='M19 7.2 25.5 12 19 16.8z' fill='%23fff'/%3E%3C/svg%3E">
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
@@ -355,6 +355,26 @@ input[type="range"] { width: 180px; accent-color: var(--accent); }
 .modes { display: inline-flex; gap: 2px; padding: 3px; border-radius: 11px; background: var(--surface-2); flex: 0 0 auto; }
 .modes button { display: inline-flex; align-items: center; gap: 4px; height: 32px; padding: 0 10px; border-radius: 8px; color: var(--text-2); font-weight: 700; font-size: 14px; background: transparent; }
 .modes button[aria-pressed="true"] { background: var(--surface); color: var(--text); box-shadow: 0 1px 3px rgba(0, 0, 0, .18); }
+
+/* \c8fc \d589  \ae30 \b85d  \b7  \c990 \aca8 \cc3e \b294  \acbd \b85c (v2.3) */
+.dayhead { list-style: none; padding: 14px 4px 4px; font-size: 12.5px; font-weight: 800; color: var(--text-3); letter-spacing: .01em; border-bottom: 1px solid var(--line); }
+.dayhead:first-child { padding-top: 4px; }
+.item__ic--trip { color: var(--accent); }
+.item__ic--froute { color: #D9822B; background: rgba(217, 130, 43, .13); }
+.item__star { color: #D9822B; flex: none; display: grid; place-items: center; }
+.item--froute .icon-btn { flex: none; color: var(--text-3); }
+.sec-sub { font-size: 12.5px; font-weight: 800; color: var(--text-3); padding: 8px 4px 2px; }
+.list--froutes { margin-bottom: 4px; }
+.chip--route svg { color: #D9822B; }
+.trip__when { font-size: 13px; font-weight: 700; color: var(--text-3); margin-top: 2px; }
+.trip__roads { margin-top: 6px; font-size: 14px; color: var(--text); background: var(--surface-2); padding: 7px 10px; border-radius: 9px; }
+.followbar { display: flex; align-items: center; gap: 8px; padding: 8px 10px; margin-top: 4px; border-radius: 12px; background: rgba(217, 130, 43, .12); color: #9A5A0C; }
+.followbar__txt { flex: 1; min-width: 0; font-weight: 700; font-size: 14.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--text); }
+.followbar .btn { flex: none; }
+.tag--follow { background: rgba(217, 130, 43, .16); color: #9A5A0C; }
+.rcard__follow { grid-column: 2 / 4; font-size: 12.5px; font-weight: 700; color: #9A5A0C; }
+.btn--danger-text { color: var(--danger, #C62828); }
+:root[data-mode="night"] .followbar, :root[data-mode="night"] .tag--follow, :root[data-mode="night"] .rcard__follow { color: #F0B565; }
 </style>
 </head>
 <body>
@@ -483,7 +503,7 @@ return maplibregl$1;
 </script>
 <script>(function () {
 'use strict';
-const APP_VERSION = '2.2';
+const APP_VERSION = '2.3';
 // ===== 00-util.js =====
 // \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 \uacf5\ud1b5 \ub3c4\uad6c \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
 const $ = (s, r = document) => r.querySelector(s);
@@ -761,6 +781,73 @@ function circlePoly(center, radius, steps = 40) {
   return { type: 'Polygon', coordinates: [ring] };
 }
 
+// \u2500\u2500 \uc8fc\ud589 \uae30\ub85d(\uc9c0\ub098\uac04 \uae38)\uc6a9 \u2500\u2500
+// \uc120 \uc904\uc774\uae30(Douglas\u2013Peucker): \ub0a8\uae38 \uc810\uc758 \ubc88\ud638. tol \uc740 \ubbf8\ud130(\uad6d\uc9c0 \ud3c9\uba74 \uadfc\uc0ac)
+function simplifyIdx(coords, tol = 5) {
+  const n = coords.length;
+  if (n <= 2) return coords.map((_, i) => i);
+  const kx = Math.cos(coords[0][1] * RAD) * EARTH_R * RAD, ky = EARTH_R * RAD;
+  const X = new Float64Array(n), Y = new Float64Array(n);
+  for (let i = 0; i < n; i++) { X[i] = coords[i][0] * kx; Y[i] = coords[i][1] * ky; }
+  const keep = new Uint8Array(n);
+  keep[0] = keep[n - 1] = 1;
+  const stack = [0, n - 1];
+  while (stack.length) {
+    const b = stack.pop(), a = stack.pop();
+    const dx = X[b] - X[a], dy = Y[b] - Y[a], L2 = dx * dx + dy * dy;
+    let md = 0, mi = -1;
+    for (let i = a + 1; i < b; i++) {
+      let t = L2 > 0 ? ((X[i] - X[a]) * dx + (Y[i] - Y[a]) * dy) / L2 : 0;
+      t = t < 0 ? 0 : t > 1 ? 1 : t;
+      const d = Math.hypot(X[i] - (X[a] + dx * t), Y[i] - (Y[a] + dy * t));
+      if (d > md) { md = d; mi = i; }
+    }
+    if (mi > 0 && md > tol) { keep[mi] = 1; stack.push(a, mi, mi, b); }
+  }
+  const out = [];
+  for (let i = 0; i < n; i++) if (keep[i]) out.push(i);
+  return out;
+}
+const simplifyLine = (coords, tol = 5) => simplifyIdx(coords, tol).map(i => coords[i]);
+function lineLen(coords) { let s = 0; for (let i = 1; i < coords.length; i++) s += hav(coords[i - 1], coords[i]); return s; }
+
+// \uc120 \uc704\uc5d0\uc11c \uc810 p \uc640 \uac00\uc7a5 \uac00\uae4c\uc6b4 \uacf3: i(\uc120\ubd84 \uc2dc\uc791 \ubc88\ud638)\u00b7t(\uc120\ubd84 \uc548 \ube44\uc728)\u00b7d(\uac70\ub9ac m)\u00b7along(\ucc98\uc74c\ubd80\ud130 m). from~to \ubc88\uc9f8 \uc810 \uc0ac\uc774\ub9cc \ubcf8\ub2e4
+function nearestOnLine(coords, p, from = 0, to = coords.length - 1, cum = null) {
+  const n = coords.length;
+  if (n < 2) return { i: 0, t: 0, d: n ? hav(p, coords[0]) : Infinity, along: 0 };
+  from = clamp(from, 0, n - 2); to = clamp(to, from + 1, n - 1);
+  let best = { i: from, t: 0, d: Infinity };
+  for (let i = from; i < to; i++) {
+    const r = projSeg(p, coords[i], coords[i + 1]);
+    if (r.d < best.d) best = { i, t: r.t, d: r.d };
+  }
+  const c = cum || cumDist(coords);
+  best.along = c[best.i] + (c[best.i + 1] - c[best.i]) * best.t;
+  return best;
+}
+
+// \uae30\ub85d\ud55c \uae38 a \ub97c \uc120 b \uac00 \uc5bc\ub9c8\ub098 \uc9c0\ub098\ub294\uc9c0: a \ub97c step \ubbf8\ud130\ub9c8\ub2e4 \ubcf4\uc544 b \uc5d0\uc11c tol \ubbf8\ud130 \uc548\uc778 \ube44\uc728\uacfc, \ubc97\uc5b4\ub09c \uad6c\uac04 [\uc2dc\uc791, \ub05d](a \uc704 \uac70\ub9ac)
+// \ub450 \uc120 \ubaa8\ub450 \uc55e\uc5d0\uc11c \ub4a4\ub85c \uac00\ubbc0\ub85c b \ucabd\uc740 \uc55e\uc73c\ub85c\ub9cc \uc6c0\uc9c1\uc774\ub294 \ucc3d\uc5d0\uc11c \ucc3e\ub294\ub2e4(\ubabb \ucc3e\uc73c\uba74 \uc804\uccb4\uc5d0\uc11c)
+function coverage(a, b, tol = 30, step = 20) {
+  const ca = cumDist(a), total = ca[ca.length - 1];
+  if (total <= 0 || b.length < 2) return { share: 0, gaps: total > 0 ? [[0, total]] : [] };
+  let k = 0, inside = 0, n = 0, gapStart = -1;
+  const gaps = [];
+  for (let d = 0; d <= total + 1e-6; d += step) {
+    const p = pointAt(a, ca, Math.min(d, total)).p;
+    let r = nearestOnLine(b, p, Math.max(0, k - 30), Math.min(b.length - 1, k + 400));
+    if (r.d > tol) { const r2 = nearestOnLine(b, p); if (r2.d < r.d) r = r2; }
+    n++;
+    if (r.d <= tol) {
+      inside++;
+      k = Math.max(k, r.i);
+      if (gapStart >= 0) { gaps.push([gapStart, d]); gapStart = -1; }
+    } else if (gapStart < 0) gapStart = d;
+  }
+  if (gapStart >= 0) gaps.push([gapStart, total]);
+  return { share: n ? inside / n : 0, gaps };
+}
+
 // ===== 02-store.js =====
 // \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 \uc800\uc7a5\uc18c(\uc774 \uae30\uae30 \ube0c\ub77c\uc6b0\uc800) \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
 const STORE_KEY = 'gilnavi.v1';
@@ -797,7 +884,8 @@ const store = {
   work: null,
   favs: [],              // [{id, name, addr, lat, lon, ts}]
   recents: [],           // [{name, addr, lat, lon, ts, n}]
-  trips: [],             // \uc2e4\uc81c \uc8fc\ud589 \uae30\ub85d(\ubaa8\uc758 \uc8fc\ud589 \uc81c\uc678)
+  trips: [],             // \uc2e4\uc81c \uc8fc\ud589 \uae30\ub85d(\ubaa8\uc758 \uc8fc\ud589 \uc81c\uc678) {id, ts, end, pred, act, dist, rr, arrived, mode, dest, from, roads, len}
+  froutes: [],           // \uc990\uaca8\ucc3e\ub294 \uacbd\ub85c [{id, name, memo, from, dest, track(polyline5), len, roads, mode, ts, n, tripId}]
   roads: {},             // \ub3c4\ub85c\ubcc4\u00b7\uc2dc\uac04\ub300\ubcc4 \uc2e4\uc81c \ud1b5\ud589 \uc18d\ub3c4 \ud559\uc2b5 {'\ub3c4\ub85c\uba85|\uc2dc\uac04\ub300': {r, n, t}}
   view: null,            // \ub9c8\uc9c0\ub9c9 \uc9c0\ub3c4 \uc704\uce58 {c:[lon,lat], z}
   scache: [],            // \uac80\uc0c9 \uacb0\uacfc \uce90\uc2dc [[key, ts, results]]
@@ -839,6 +927,7 @@ function applyData(d) {
   store.favs = (Array.isArray(d.favs) ? d.favs : []).map(cleanPlace).filter(Boolean).slice(0, 100);
   store.recents = (Array.isArray(d.recents) ? d.recents : []).map(cleanPlace).filter(Boolean).slice(0, 30);
   store.trips = (Array.isArray(d.trips) ? d.trips : []).filter(t => t && isFinite(t.ts) && isFinite(t.pred) && isFinite(t.act)).slice(-300);
+  store.froutes = (Array.isArray(d.froutes) ? d.froutes : []).map(cleanRoute).filter(Boolean).slice(0, 30);
   store.roads = {};
   if (d.roads && typeof d.roads === 'object') {
     for (const k in d.roads) { const v = d.roads[k]; if (v && isFinite(v.r) && isFinite(v.n) && k.length < 90) store.roads[k] = { r: +v.r, n: +v.n, t: +v.t || 0 }; }
@@ -865,8 +954,61 @@ function saveStore(now) {
 
 function exportData() {
   const { scache, ...rest } = store;
-  return JSON.stringify({ app: 'gilnavi', ver: 1, at: new Date().toISOString(), ...rest }, null, 1);
+  return JSON.stringify({ app: 'gilnavi', ver: 1, at: new Date().toISOString(), ...rest, tracks: { ...tracksDb() } }, null, 1);
 }
+
+// \u2500\u2500 \uc8fc\ud589 \uae30\ub85d\uc758 \uc9c0\ub098\uac04 \uae38(\ub530\ub85c \uc800\uc7a5: \uc790\uc8fc \uc800\uc7a5\ud558\ub294 \uae30\ubcf8 \uc790\ub8cc\ub97c \uac00\ubccd\uac8c) \u2500\u2500
+// { \uae30\ub85d id: polyline(\uc815\ubc00\ub3c4 5, \uc57d 1 m) } \u2014 \ucd5c\uadfc TRACK_MAX \uac74\ub9cc \ub454\ub2e4. \uc990\uaca8\ucc3e\ub294 \uacbd\ub85c\ub294 \uc790\uae30 \uae38\uc744 \ub530\ub85c \uac16\uace0 \uc788\ub2e4.
+const TRACK_KEY = 'gilnavi.tracks.v1';
+const TRACK_MAX = 80;
+let _tracks = null;
+function tracksDb() {
+  if (!_tracks) {
+    try { const v = JSON.parse(localStorage.getItem(TRACK_KEY) || '{}'); _tracks = v && typeof v === 'object' ? v : {}; } catch (e) { _tracks = {}; }
+  }
+  return _tracks;
+}
+function saveTracks() { try { localStorage.setItem(TRACK_KEY, JSON.stringify(tracksDb())); } catch (e) { /* \uc800\uc7a5 \uacf5\uac04 \ubd80\uc871 \ub4f1: \uae38 \uc5c6\uc774 \uae30\ub85d\ub9cc */ } }
+function setTracks(obj) {
+  _tracks = {};
+  if (obj && typeof obj === 'object') for (const k in obj) if (typeof obj[k] === 'string' && obj[k].length >= 4 && k.length < 40) _tracks[k] = obj[k];
+  pruneTracks();
+}
+// \uc8fc\ud589 \uae30\ub85d\uc5d0 \uc5c6\ub294 \uae38\uc740 \uc9c0\uc6b0\uace0 \ucd5c\uadfc TRACK_MAX \uac74\ub9cc
+function pruneTracks(extraId) {
+  const db = tracksDb();
+  const live = store.trips.filter(t => t.id && db[t.id]).map(t => t.id).slice(-TRACK_MAX);
+  const keep = new Set(live);
+  if (extraId) keep.add(extraId);
+  for (const k in db) if (!keep.has(k)) delete db[k];
+  saveTracks();
+}
+function keepTrack(id, coords) { tracksDb()[id] = encodePolyline(coords, 5); pruneTracks(id); }
+function hasTrack(t) { return !!(t && t.id && tracksDb()[t.id]); }
+function tripTrack(t) {
+  const s = t && t.id && tracksDb()[t.id];
+  if (!s) return null;
+  try { const c = decodePolyline(s, 5); return c.length >= 2 ? c : null; } catch (e) { return null; }
+}
+function dropTrack(id) { const db = tracksDb(); if (db[id]) { delete db[id]; saveTracks(); } }
+
+// \uc990\uaca8\ucc3e\ub294 \uacbd\ub85c \uc815\ub9ac(\ubc31\uc5c5\uc5d0\uc11c \uc77d\uc744 \ub54c\ub3c4)
+function cleanRoute(r) {
+  if (!r || typeof r.track !== 'string' || r.track.length < 4) return null;
+  let pts;
+  try { pts = decodePolyline(r.track, 5); } catch (e) { return null; }
+  if (pts.length < 2 || pts.some(p => !isFinite(p[0]) || !isFinite(p[1]))) return null;
+  const pl = (p, c) => (p && isFinite(+p.lat) && isFinite(+p.lon) ? { name: String(p.name || '').slice(0, 80), lat: +p.lat, lon: +p.lon } : { name: '', lat: c[1], lon: c[0] });
+  const memo = String(r.memo || '').trim().slice(0, 120);
+  return {
+    id: String(r.id || uid()).slice(0, 40), name: String(r.name || '').trim().slice(0, 40) || '\uc990\uaca8\ucc3e\ub294 \uacbd\ub85c', ...(memo ? { memo } : {}),
+    from: pl(r.from, pts[0]), dest: pl(r.dest, pts[pts.length - 1]), track: r.track,
+    len: isFinite(+r.len) && +r.len > 0 ? +r.len : Math.round(lineLen(pts)),
+    roads: (Array.isArray(r.roads) ? r.roads : []).map(x => String(x).slice(0, 40)).slice(0, 8),
+    mode: r.mode === 'walk' ? 'walk' : 'car', ts: +r.ts || Date.now(), n: +r.n || 0, ...(r.tripId ? { tripId: String(r.tripId).slice(0, 40) } : {}),
+  };
+}
+const routeTrack = r => decodePolyline(r.track, 5);
 
 function addRecent(p) {
   const c = cleanPlace(p);
@@ -1550,6 +1692,108 @@ function normValhalla(trip, k) {
     distance: (s.length || 0) * 1000, duration: s.time || 0,
     hasToll: !!s.has_toll, hasHwy: !!s.has_highway, hasFerry: !!s.has_ferry,
   });
+}
+
+// \u2500\u2500 \uae30\ub85d\ud55c \uae38 \ub530\ub77c\uac00\uae30(\uc8fc\ud589 \uae30\ub85d\u00b7\uc990\uaca8\ucc3e\ub294 \uacbd\ub85c) \u2500\u2500
+// Valhalla \uc5d0 \u2018\uc9c0\ub098\ub294 \uc810(through: \uba48\ucd94\uc9c0 \uc54a\uace0 \uc720\ud134\ub3c4 \ud558\uc9c0 \uc54a\ub294 \uc810)\u2019\uc744 \uae30\ub85d\ud55c \uae38 \uc704\uc5d0 \ucc0d\uc5b4 \uadf8 \uae38\uc744 \ub530\ub974\uac8c \ud55c\ub2e4.
+//  \u00b7 \ud68c\uc804\ud55c \uacf3(\uc904\uc778 \uc120\uc758 \uaf2d\uc9d3\uc810)\uc744 \uc9c0\ub098 \ub098\uac00\ub294 \uae38 \uc704 \uc57d 70 m \u2014 \uaf2d\uc9d3\uc810 \uc790\uccb4\ub294 \uad50\ucc28\ub85c\ub77c \uc606 \uae38\uc5d0 \ubd99\uc744 \uc218 \uc788\ub2e4
+//  \u00b7 \uae34 \uc9c1\uc120\uc740 \uace0\ub974\uac8c \ucc44\uc6b4\ub2e4(\uac19\uc740 \uace0\uc18d\ub3c4\ub85c\u00b7\ud070\uae38\uc744 \uc9c0\ud0a4\uac8c)
+//  \u00b7 \uc810\ub9c8\ub2e4 \uc9c4\ud589 \ubc29\ud5a5(heading)\uc744 \ubd99\uc5ec \uc911\uc559\ubd84\ub9ac\ub300\uac00 \uc788\ub294 \uae38\uc758 \ubc18\ub300 \ucc28\ub85c\uc5d0 \ubd99\uc9c0 \uc54a\uac8c
+// \uacf5\uac1c \uc11c\ubc84\uc758 \uc9c0\uc810 \uc218 \ud55c\ub3c4(\uae30\ubcf8 20) \uc548\uc5d0\uc11c \ucd9c\ubc1c\u00b7\ub3c4\ucc29\uc744 \ube7c\uace0 FOLLOW_MAX \uac1c.
+const FOLLOW_MAX = 15;
+function throughPoints(track, max = FOLLOW_MAX) {
+  const cum = cumDist(track), total = cum[cum.length - 1];
+  if (!(total >= 400)) return [];
+  let tol = 12, idx;
+  for (;;) {
+    idx = simplifyIdx(track, tol).slice(1, -1);
+    if (idx.length <= Math.round(max * 0.75) || tol > 4000) break;
+    tol *= 1.5;
+  }
+  const turns = [];
+  const bounds = [...idx.map(i => cum[i]), total];
+  idx.forEach((i, k) => {
+    const off = Math.min(70, (bounds[k + 1] - cum[i]) / 2);
+    if (off >= 8) turns.push(cum[i] + off);
+  });
+  const spacing = Math.max(2500, total / (max + 1));
+  const all = [];
+  let prev = 0;
+  for (const d of [...turns, total]) {
+    const gap = d - prev;
+    if (gap > spacing * 1.5) { const n = Math.floor(gap / spacing); for (let j = 1; j <= n; j++) all.push({ d: prev + gap * j / (n + 1), fill: true }); }
+    if (d < total) all.push({ d, fill: false });
+    prev = d;
+  }
+  let pts = all.filter(x => x.d > 150 && x.d < total - 150).sort((a, b) => a.d - b.d);
+  pts = pts.filter((x, k) => k === 0 || x.d - pts[k - 1].d >= 60);
+  // \ub9ce\uc73c\uba74 \ucc44\uc6b4 \uc810\ubd80\ud130, \uadf8\ub798\ub3c4 \ub9ce\uc73c\uba74 \uc774\uc6c3\uacfc \uac00\uc7a5 \uac00\uae4c\uc6b4 \uc810\ubd80\ud130 \ube80\ub2e4
+  while (pts.length > max) {
+    const cand = pts.some(x => x.fill) ? pts.map((x, k) => [x, k]).filter(([x]) => x.fill) : pts.map((x, k) => [x, k]);
+    let best = cand[0][1], bg = Infinity;
+    for (const [, k] of cand) {
+      const g = (k > 0 ? pts[k].d - pts[k - 1].d : pts[k].d) + (k < pts.length - 1 ? pts[k + 1].d - pts[k].d : total - pts[k].d);
+      if (g < bg) { bg = g; best = k; }
+    }
+    pts.splice(best, 1);
+  }
+  return pts.map(x => { const a = pointAt(track, cum, x.d); return { lon: a.p[0], lat: a.p[1], h: a.brg, d: x.d }; });
+}
+
+// \uc9c0\uc810: \ucd9c\ubc1c(\uc9c0\uae08 \uc704\uce58) \u2192 \uc9c0\ub098\ub294 \uc810\ub4e4 \u2192 \ub3c4\ucc29
+async function alongRequest(start, vias, dest, mode, heading, signal, withHeading = true) {
+  const walk = mode === 'walk';
+  const ll = p => ({ lat: +(+p.lat).toFixed(6), lon: +(+p.lon).toFixed(6) });
+  const locations = [
+    { ...ll(start), type: 'break', ...(heading != null && !walk ? { heading: Math.round(heading) % 360, heading_tolerance: 50 } : {}) },
+    ...vias.map(v => ({ ...ll(v), type: 'through', ...(withHeading && !walk ? { heading: Math.round(v.h) % 360, heading_tolerance: 60 } : {}) })),
+    { ...ll(dest), type: 'break' },
+  ];
+  const req = { locations, costing: walk ? 'pedestrian' : 'auto', costing_options: walk ? { pedestrian: { walking_speed: WALK_KMH } } : { auto: {} },
+    units: 'kilometers', language: 'en-US', directions_type: 'maneuvers' };
+  const url = ROUTE_ENGINES.valhalla.base + '?json=' + encodeURIComponent(JSON.stringify(req));
+  const data = await routePace(() => fetchJSON(url, { timeout: 15000, signal }));
+  const r = data && data.trip ? normValhalla(data.trip, 0) : null;
+  if (!r) { const e = new Error('no-route'); e.status = 400; throw e; }
+  r.mode = mode;
+  return r;
+}
+
+// track: \uae30\ub85d\ud55c \uae38 [[\uacbd\ub3c4, \uc704\ub3c4], \u2026], start: \uc9c0\uae08 \uc704\uce58(\ub610\ub294 \uace0\ub978 \ucd9c\ubc1c\uc9c0), dest: \ub3c4\ucc29\uc9c0
+async function findRoutesAlong(track, { start, dest, mode = 'car', heading = null, signal } = {}) {
+  const cum = cumDist(track);
+  const near = nearestOnLine(track, [start.lon, start.lat], 0, track.length - 1, cum);
+  // \uc9c0\uae08 \uc704\uce58\uc5d0\uc11c \uae30\ub85d\uc5d0 \uac00\uc7a5 \uac00\uae4c\uc6b4 \uacf3\ubd80\ud130 \ub0a8\uc740 \uae38
+  const rest = [pointAt(track, cum, near.along).p, ...track.slice(near.i + 1)];
+  if (lineLen(rest) < 50) { const e = new Error('track-done'); e.status = 400; throw e; }
+  let vias = throughPoints(rest);
+  let r;
+  try { r = await alongRequest(start, vias, dest, mode, heading, signal); }
+  catch (e) {
+    if (signal && signal.aborted) throw e;
+    if (e.status !== 400) throw e;
+    r = await alongRequest(start, vias, dest, mode, heading, signal, false);   // \uc9c4\ud589 \ubc29\ud5a5\uc744 \ube7c\uace0 \ud55c \ubc88 \ub354(\uc810\uc774 \uae38\uc5d0\uc11c \uc870\uae08 \ub5a8\uc5b4\uc9c4 \uacbd\uc6b0)
+  }
+  let cov = coverage(rest, r.coords);
+  // \uae30\ub85d\uacfc \ub2e4\ub974\uac8c \uac04 \uacf3: \uadf8 \uad6c\uac04\uc774 \uc2dc\uc791\ub418\ub294 \uacf3(\uae30\ub85d \uc704) \uc870\uae08 \ub4a4\uc5d0 \uc810\uc744 \ub354 \ub123\uc5b4 \ud55c \ubc88 \ub354 \ucc3e\ub294\ub2e4
+  if (cov.share < 0.92 && vias.length < FOLLOW_MAX) {
+    const rc = cumDist(rest);
+    const extra = cov.gaps.filter(([a, b]) => b - a >= 40).slice(0, FOLLOW_MAX - vias.length).map(([a, b]) => {
+      const d = Math.min(b, a + Math.min(80, (b - a) / 2) + 20);
+      const q = pointAt(rest, rc, d);
+      return { lon: q.p[0], lat: q.p[1], h: q.brg, d };
+    }).filter(x => x.d > 60 && x.d < rc[rc.length - 1] - 60);
+    const merged = vias.concat(extra).sort((a, b) => a.d - b.d).filter((x, k, arr) => k === 0 || x.d - arr[k - 1].d >= 50);
+    if (merged.length > vias.length) {
+      try {
+        const r2 = await alongRequest(start, merged.slice(0, FOLLOW_MAX), dest, mode, heading, signal);
+        const cov2 = coverage(rest, r2.coords);
+        if (cov2.share > cov.share) { r = r2; cov = cov2; vias = merged.slice(0, FOLLOW_MAX); }
+      } catch (e) { if (signal && signal.aborted) throw e; }
+    }
+  }
+  r.follow = { share: cov.share, vias: vias.length, join: near.d, len: lineLen(rest) };
+  return { engine: 'valhalla', routes: [r] };
 }
 
 // \u2500\u2500 OSRM \u2500\u2500
@@ -2883,13 +3127,14 @@ const IC = {
   car: '<path d="M5 16.5V12l2-5h10l2 5v4.5"/><path d="M3.5 16.5h17M6.5 19.5v-3M17.5 19.5v-3"/><circle cx="7.5" cy="13.5" r="1"/><circle cx="16.5" cy="13.5" r="1"/>',
   nav: '<path d="M12 3 19 20l-7-4-7 4z"/>',
   walk: '<circle cx="13.5" cy="4.5" r="2"/><path d="M12.6 8.6 10.4 14l3.1 2.6-1 4.4M10.4 14 8 20.6M12 9.6l-3.2 3M12.6 8.6l2.6 3 3 .9"/>',
+  route: '<circle cx="6" cy="18.5" r="2.2"/><circle cx="18" cy="5.5" r="2.2"/><path d="M8.3 18.5H15a3.2 3.2 0 0 0 0-6.4H9a3.2 3.2 0 0 1 0-6.4h6.7"/>',
 };
 const ic = (n, size = 22, fill = false) => `<svg viewBox="0 0 24 24" width="${size}" height="${size}" fill="${fill ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${IC[n]}</svg>`;
 
 const S = {
   screen: 'home', me: null, gps: 'idle', night: false,
   place: null, pick: null, results: null, searching: false, lastQuery: '',
-  homeTab: 'recent', trip: null, nav: null,
+  homeTab: 'recent', trip: null, nav: null, tripView: null,
   searchCtl: null, routeCtl: null, followHome: false,
 };
 
@@ -2929,6 +3174,7 @@ function go(screen) {
   S.sheetScr = null;          // \ud654\uba74\uc744 \uc62e\uae30\uba74(\uac19\uc740 \ud654\uba74\uc744 \ub2e4\uc2dc \uc5f4\uc5b4\ub3c4) \ubaa9\ub85d\uc740 \uae30\ubcf8 \ud06c\uae30\ub85c
   $('#app').dataset.screen = screen;
   if (screen !== 'place' && screen !== 'search') { MV.setPlaceMark(null); MV.setHits(null); }
+  if (prev === 'trip' && screen !== 'trip') { S.tripView = null; if (screen !== 'preview') { MV.clearRoutes(); MV.setTripMarks(null, [], null); } }
   if (screen === 'home') { S.pick = null; $('#q').value = ''; $('#q').placeholder = '\uc5b4\ub514\ub85c \uac08\uae4c\uc694?'; $('#q').blur(); }
   $('#qClear').hidden = !(screen === 'search' || screen === 'place');
   renderSheet();
@@ -2943,6 +3189,7 @@ function back() {
   if (S.screen === 'place') { if (S.results) go('search'); else if (S.pick && S.trip) go('preview'); else go('home'); return; }
   if (S.screen === 'search') { if (S.pick && S.trip && S.pick !== 'home' && S.pick !== 'work') { S.pick = null; go('preview'); } else go('home'); return; }
   if (S.screen === 'preview') { cancelTrip(); return; }
+  if (S.screen === 'trip') { S.homeTab = 'trips'; go('home'); return; }
 }
 window.addEventListener('popstate', () => {
   S.pushed = false;
@@ -3039,7 +3286,7 @@ function setSheetSize(size) {
   if (size === 'min') $('#sheetBody').scrollTop = 0;
   requestAnimationFrame(measure); setTimeout(measure, 300);
 }
-const SHEET_DEFAULT = { home: 'peek', search: 'full', place: 'peek', preview: 'peek' };
+const SHEET_DEFAULT = { home: 'peek', search: 'full', place: 'peek', preview: 'peek', trip: 'peek' };
 
 function renderSheet() {
   const body = $('#sheetBody');
@@ -3051,6 +3298,7 @@ function renderSheet() {
   else if (scr === 'search') put(searchSheet());
   else if (scr === 'place') put(placeSheet());
   else if (scr === 'preview') put(previewSheet());
+  else if (scr === 'trip') put(tripSheet());
   body.scrollTop = 0;
 }
 
@@ -3079,17 +3327,20 @@ function renderChips() {
     kids.push(h('button', { class: 'chip chip--' + k, type: 'button', onclick: () => p ? startTrip({ ...p, label }) : beginPick(k) },
       h('span', { svg: ic(k, 17) }), p ? label : label + ' \ub4f1\ub85d'));
   }
+  // \uc990\uaca8\ucc3e\ub294 \uacbd\ub85c: \ub9ce\uc774 \uc4f4 \uac83 4\uac1c(\uac19\uc73c\uba74 \ub098\uc911\uc5d0 \ub4f1\ub85d\ud55c \uac83 \uba3c\uc800)
+  for (const r of [...store.froutes].sort((a, b) => (b.n || 0) - (a.n || 0)).slice(0, 4)) kids.push(h('button', { class: 'chip chip--route', type: 'button', title: `\uc990\uaca8\ucc3e\ub294 \uacbd\ub85c: ${r.from.name || '\ucd9c\ubc1c\uc9c0'} \u2192 ${r.dest.name || '\ub3c4\ucc29\uc9c0'}`, onclick: () => followFav(r) }, h('span', { svg: ic('route', 16) }), r.name));
   for (const f of store.favs.slice(0, 8)) kids.push(h('button', { class: 'chip chip--fav', type: 'button', onclick: () => startTrip(f) }, h('span', { svg: ic('star', 16, true) }), f.name));
   box.replaceChildren(...kids);
 }
 
 function homeSheet() {
   const tabs = h('div', { class: 'seg', role: 'tablist' },
-    ...[['recent', '\ucd5c\uadfc \ubaa9\uc801\uc9c0'], ['fav', '\uc990\uaca8\ucc3e\uae30']].map(([k, label]) => h('button', { type: 'button', role: 'tab', 'aria-pressed': S.homeTab === k ? 'true' : 'false', text: label, onclick: () => { S.homeTab = k; renderSheet(); } })));
+    ...[['recent', '\ucd5c\uadfc \ubaa9\uc801\uc9c0'], ['fav', '\uc990\uaca8\ucc3e\uae30'], ['trips', '\uc8fc\ud589 \uae30\ub85d']].map(([k, label]) => h('button', { type: 'button', role: 'tab', id: 'tab-' + k, 'aria-pressed': S.homeTab === k ? 'true' : 'false', text: label, onclick: () => { S.homeTab = k; renderSheet(); } })));
+  if (S.homeTab === 'trips') return [gpsAlert(), h('div', { class: 'sec-head' }, tabs), ...tripsTab()];
   const list = h('ul', { class: 'list' });
   const items = S.homeTab === 'recent' ? store.recents : store.favs;
   if (!items.length) {
-    list.append(h('li', { class: 'empty', text: S.homeTab === 'recent' ? '\uc544\uc9c1 \ub2e4\ub140\uc628 \uacf3\uc774 \uc5c6\uc2b5\ub2c8\ub2e4. \uc704\uc5d0\uc11c \ubaa9\uc801\uc9c0\ub97c \uac80\uc0c9\ud574 \ubcf4\uc138\uc694.' : '\uc790\uc8fc \uac00\ub294 \uacf3\uc744 \uc990\uaca8\ucc3e\uae30\uc5d0 \ub123\uc73c\uba74 \uc5ec\uae30\uc640 \uc9c0\ub3c4 \uc704\uc5d0 \ud45c\uc2dc\ub429\ub2c8\ub2e4.' }));
+    list.append(h('li', { class: 'empty', text: S.homeTab === 'recent' ? '\uc544\uc9c1 \ub2e4\ub140\uc628 \uacf3\uc774 \uc5c6\uc2b5\ub2c8\ub2e4. \uc704\uc5d0\uc11c \ubaa9\uc801\uc9c0\ub97c \uac80\uc0c9\ud574 \ubcf4\uc138\uc694.' : '\uc790\uc8fc \uac00\ub294 \uacf3\uc744 \uc990\uaca8\ucc3e\uae30\uc5d0 \ub123\uc73c\uba74 \uc5ec\uae30\uc640 \uc9c0\ub3c4 \uc704\uc5d0 \ud45c\uc2dc\ub429\ub2c8\ub2e4. \uc790\uc8fc \ub2e4\ub2c8\ub294 \uae38\uc740 \u2018\uc8fc\ud589 \uae30\ub85d\u2019\uc5d0\uc11c \uc990\uaca8\ucc3e\ub294 \uacbd\ub85c\ub85c \ub4f1\ub85d\ud558\uc138\uc694.' }));
   } else {
     for (const p of items.slice(0, 20)) list.append(placeItem(p, { kind: S.homeTab === 'recent' ? 'recent' : 'fav', onClick: () => openPlace(p) }));
   }
@@ -3098,7 +3349,7 @@ function homeSheet() {
       h('button', { class: 'btn btn--sm', type: 'button', id: 'btnSaveHere', onclick: () => saveHere() }, h('span', { svg: ic('pin', 16) }), '\ud604\uc7ac \uc704\uce58 \uc800\uc7a5'),
       h('button', { class: 'btn btn--sm btn--ghost', type: 'button', onclick: openPlaces }, h('span', { svg: ic('star', 16) }), '\ub0b4 \uc7a5\uc18c \uad00\ub9ac')),
     gpsNote());
-  return [gpsAlert(), h('div', { class: 'sec-head' }, tabs), list, manage];
+  return [gpsAlert(), h('div', { class: 'sec-head' }, tabs), ...(S.homeTab === 'fav' ? froutesSection() : []), list, manage];
 }
 
 // \uc704\uce58\ub97c \ubabb \uc4f0\ub294 \uc774\uc720\uc640 \ud574\uacb0 \ubc29\ubc95(\ud55c\uacf3\uc5d0\uc11c \uad00\ub9ac)
@@ -3247,10 +3498,10 @@ function placeSheet() {
   } else if (pk === 'origin' && S.trip) {
     acts.append(h('button', { class: 'btn btn--primary', type: 'button', onclick: () => { S.trip.origin = p; S.pick = null; S.results = null; go('preview'); computeRoutes(); } }, '\ucd9c\ubc1c\uc9c0\ub85c \uc124\uc815'));
   } else if (pk === 'stop' && S.trip) {
-    acts.append(h('button', { class: 'btn btn--primary', type: 'button', onclick: () => { S.trip.stops.push(p); S.pick = null; S.results = null; go('preview'); computeRoutes(); } }, h('span', { svg: ic('plus', 20) }), '\uacbd\uc720\uc9c0\ub85c \ucd94\uac00'));
+    acts.append(h('button', { class: 'btn btn--primary', type: 'button', onclick: () => { S.trip.stops.push(p); S.trip.follow = null; S.pick = null; S.results = null; go('preview'); computeRoutes(); } }, h('span', { svg: ic('plus', 20) }), '\uacbd\uc720\uc9c0\ub85c \ucd94\uac00'));
   } else {
-    acts.append(h('button', { class: 'btn btn--primary', type: 'button', onclick: () => { if (S.trip && pk === 'dest') { S.trip.dest = p; S.pick = null; S.results = null; go('preview'); computeRoutes(); } else startTrip(p); } }, h('span', { svg: ic('nav', 20, true) }), '\uc5ec\uae30\ub85c \uae38 \uc548\ub0b4'));
-    if (S.trip && S.trip.stops.length < 3 && pk !== 'dest') acts.append(h('button', { class: 'btn', type: 'button', onclick: () => { S.trip.stops.push(p); S.results = null; go('preview'); computeRoutes(); } }, '\uacbd\uc720\uc9c0\ub85c'));
+    acts.append(h('button', { class: 'btn btn--primary', type: 'button', onclick: () => { if (S.trip && pk === 'dest') { S.trip.dest = p; S.trip.follow = null; S.pick = null; S.results = null; go('preview'); computeRoutes(); } else startTrip(p); } }, h('span', { svg: ic('nav', 20, true) }), '\uc5ec\uae30\ub85c \uae38 \uc548\ub0b4'));
+    if (S.trip && S.trip.stops.length < 3 && pk !== 'dest') acts.append(h('button', { class: 'btn', type: 'button', onclick: () => { S.trip.stops.push(p); S.trip.follow = null; S.results = null; go('preview'); computeRoutes(); } }, '\uacbd\uc720\uc9c0\ub85c'));
   }
   const fav = isFav(p);
   acts.append(h('button', { class: 'btn', type: 'button', 'aria-pressed': fav ? 'true' : 'false', 'aria-label': fav ? '\uc990\uaca8\ucc3e\uae30\uc5d0\uc11c \ube7c\uae30' : '\uc990\uaca8\ucc3e\uae30\uc5d0 \ub123\uae30',
@@ -3333,6 +3584,19 @@ function renderPlan() {
       h('button', { class: 'icon-btn', type: 'button', 'aria-label': '\uacbd\uc720\uc9c0 \ube7c\uae30', svg: ic('close', 20), onclick: () => { t.stops.splice(i, 1); renderPlan(); computeRoutes(); } }))),
     row('plan__dot--dest', h('i'), '\ub3c4\ucc29', t.dest.label || t.dest.name, () => beginPick('dest')),
   ];
+  if (t.follow) {
+    // \uae30\ub85d\ud55c \uae38\ub85c: \uc774\ub3d9 \ubc29\ubc95\u00b7\uacbd\uc720\uc9c0\u00b7\uacbd\ub85c \uc635\uc158 \ub300\uc2e0 \u2018\uae30\ub85d\ud55c \uae38\u2019 \uc904\uacfc \ubcf4\ud1b5 \uae38\ub85c \ubc14\uafb8\ub294 \ub2e8\ucd94
+    rows[0].replaceChildren(rows[0].firstChild,
+      h('div', { style: 'flex:1;min-width:0;font-weight:800;font-size:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis', text: '\uae30\ub85d\ud55c \uae38\ub85c \uc548\ub0b4' }));
+    const bar = h('div', { class: 'followbar' },
+      h('span', { svg: ic('route', 18) }),
+      h('span', { class: 'followbar__txt', text: t.follow.failed ? '\uae30\ub85d\ud55c \uae38\uc744 \ucc3e\uc9c0 \ubabb\ud588\uc2b5\ub2c8\ub2e4' : (t.follow.name || '\uae30\ub85d\ud55c \uae38') }),
+      t.follow.failed ? h('button', { class: 'btn btn--sm', type: 'button', id: 'btnFollowRetry', onclick: () => { t.follow.failed = false; renderPlan(); computeRoutes(); } }, '\ub2e4\uc2dc \uc2dc\ub3c4') : null,
+      h('button', { class: 'btn btn--sm btn--ghost', type: 'button', id: 'btnFollowOff', onclick: () => { t.follow = null; t.pref = t.mode === 'walk' ? 'fast' : store.settings.pref; renderPlan(); computeRoutes(); } }, '\ubcf4\ud1b5 \uae38\ub85c \ucc3e\uae30'));
+    box.replaceChildren(...rows, bar);
+    requestAnimationFrame(measure);
+    return;
+  }
   const tools = h('div', { class: 'plan__tools' },
     t.stops.length < 3 ? h('button', { class: 'btn btn--sm btn--ghost', type: 'button', onclick: () => beginPick('stop') }, h('span', { svg: ic('plus', 16) }), '\uacbd\uc720\uc9c0 \ucd94\uac00') : null);
   const prefs = h('div', { class: 'prefs', role: 'group', 'aria-label': '\uacbd\ub85c \uc635\uc158' },
@@ -3378,6 +3642,9 @@ async function computeRoutes() {
   MV.fit(pts.map(p => [p.lon, p.lat]));
   const walk = t.mode === 'walk';
   const heading = !walk && !t.origin && S.me && Date.now() - S.me.t < 10000 && S.me.speed > 2 && S.me.heading != null ? S.me.heading : null;
+  if (t.follow && !t.follow.failed && await computeFollow(t, pts, heading, ctl)) return;
+  if (ctl.signal.aborted || S.trip !== t) return;
+  const followWarn = t.warn;
   try {
     const r = await findRoutes(pts, { pref: t.pref, mode: t.mode || 'car', heading, engine: store.settings.engine, signal: ctl.signal });
     if (ctl.signal.aborted || S.trip !== t) return;
@@ -3397,7 +3664,7 @@ async function computeRoutes() {
       if (S.trip !== t) return;
     }
     const ranked = rankRoutes(all, { pref: t.pref, easyPrefer: !walk && store.settings.easyPrefer, easyMin: store.settings.easyMin });
-    t.routes = ranked.routes; t.info = ranked.info; t.sel = 0; t.warn = r.warn || ''; t.engine = r.engine;
+    t.routes = ranked.routes; t.info = ranked.info; t.sel = 0; t.warn = [followWarn, r.warn].filter(Boolean).join(' '); t.engine = r.engine;
     if (walk) t.routes.forEach(x => { x.tags = (x.tags || []).filter(k => k !== 'easy'); });
     else attachCams(t.routes);
   } catch (e) {
@@ -3439,7 +3706,7 @@ function previewSheet() {
     t.routes.forEach((r, i) => {
       const dur = r.p ? r.p.dur : r.duration * (walk ? 1 : ef.k);
       const tags = [];
-      const TAG = { rec: ['tag--rec', '\ucd94\ucc9c'], fast: ['tag--fast', '\uac00\uc7a5 \ube60\ub984'], easy: ['tag--easy', '\uc6b4\uc804 \uc26c\uc6c0'] };
+      const TAG = { rec: ['tag--rec', '\ucd94\ucc9c'], fast: ['tag--fast', '\uac00\uc7a5 \ube60\ub984'], easy: ['tag--easy', '\uc6b4\uc804 \uc26c\uc6c0'], follow: ['tag--follow', '\uae30\ub85d\ud55c \uae38'] };
       (r.tags || []).forEach(k => tags.push(h('span', { class: 'tag ' + TAG[k][0], text: TAG[k][1] })));
       if (r.p && r.p.learnedShare >= 0.2) tags.push(h('span', { class: 'tag tag--me', text: '\ub0b4 \uae30\ub85d \ubc18\uc601' }));
       if (r.hasToll) tags.push(h('span', { class: 'tag tag--toll', text: '\uc720\ub8cc\ub3c4\ub85c' }));
@@ -3456,11 +3723,15 @@ function previewSheet() {
         walk ? h('span', { class: 'rcard__ease num', text: walkLine(r) })
           : r.ease ? h('span', { class: 'rcard__ease num', text: `\ud68c\uc804 ${r.ease.turns}\ubc88${r.ease.left + r.ease.uturn ? ` (\uc88c\ud68c\uc804\u00b7\uc720\ud134 ${r.ease.left + r.ease.uturn})` : ''} \u00b7 \ud070\uae38 ${Math.round((1 - r.ease.smallShare) * 100)}%${r.cams ? ` \u00b7 \ub2e8\uc18d \uce74\uba54\ub77c ${camCount(r.cams)}\uacf3` : ''}` }) : null,
         tags.length ? h('span', { class: 'rcard__tags' }, ...tags) : null,
-        r.roads.length ? h('span', { class: 'rcard__via', text: r.roads.join(' \u00b7 ') + ' \uacbd\uc720' }) : null));
+        r.roads.length ? h('span', { class: 'rcard__via', text: r.roads.join(' \u00b7 ') + ' \uacbd\uc720' }) : null,
+        r.follow ? h('span', { class: 'rcard__follow num', text: r.follow.share >= 0.97 ? '\uae30\ub85d\ud55c \uae38 \uadf8\ub300\ub85c' : `\uae30\ub85d\ud55c \uae38\uc758 ${Math.round(r.follow.share * 100)}%\ub97c \uadf8\ub300\ub85c \uc9c0\ub0a8` }) : null));
     });
     out.push(list);
     const notes = [];
     const nRoads = Object.keys(store.roads).length;
+    const fr = t.routes.find(x => x.follow);
+    if (fr) notes.push(`\uae30\ub85d\ud55c \uae38 \uc704 ${fr.follow.vias}\uacf3\uc744 \uc9c0\ub098\ub3c4\ub85d \ucc3e\uc558\uc2b5\ub2c8\ub2e4${fr.follow.join > 300 ? `(\uc9c0\uae08 \uc704\uce58\uc5d0\uc11c \uae30\ub85d\ud55c \uae38\uae4c\uc9c0 ${fmtDistStr(fr.follow.join)})` : ''}. \uacf5\uc0ac\u00b7\ud1b5\uc81c\ub85c \uae38\uc774 \ubc14\ub010 \uacf3\uc740 \ub2e4\ub974\uac8c \ub098\uc62c \uc218 \uc788\uace0, \uc548\ub0b4 \uc911 \ubc97\uc5b4\ub098\uba74 \uae30\ub85d\ud55c \uae38\ub85c \ub418\ub3cc\uc544\uac00\uac8c \ub2e4\uc2dc \ucc3e\uc2b5\ub2c8\ub2e4.`);
+    if (fr && fr.follow.share < 0.8) out.push(h('p', { class: 'warnline', text: '\uae30\ub85d\ud55c \uae38\uacfc \ub2e4\ub978 \uacf3\uc774 \uc788\uc2b5\ub2c8\ub2e4. \uc9c0\ub3c4\uc5d0 \ud68c\uc0c9\uc73c\ub85c \ubcf4\uc774\ub294 \uac83\uc774 \uae30\ub85d\ud55c \uae38\uc785\ub2c8\ub2e4.' }));
     if (walk) notes.push(`\uac77\ub294 \uc2dc\uac04\uc740 \uc2dc\uc18d ${WALK_KMH}km\ub85c \uacc4\uc0b0\ud588\uc2b5\ub2c8\ub2e4. \ubcf4\ub3c4\u00b7\ud6a1\ub2e8\ubcf4\ub3c4 \uc790\ub8cc\uac00 \uc5c6\ub294 \uacf3\uc740 \ucc28\ub3c4 \uc606\uc73c\ub85c \uc548\ub0b4\ud560 \uc218 \uc788\uc73c\ub2c8 \uc2e4\uc81c \uae38\uc744 \ubcf4\uba70 \uac78\uc73c\uc138\uc694.`);
     else if (ef.n || nRoads) notes.push(`\ub3c4\ucc29 \uc2dc\uac04\uc740 \ub0b4 \uc8fc\ud589 \uae30\ub85d\uc73c\ub85c \ubcf4\uc815\ud588\uc2b5\ub2c8\ub2e4${ef.n ? `(\uc804\uccb4 \u00d7${ef.k.toFixed(2)}, ${ef.n}\ud68c${ef.band ? ', ' + BAND_KO[ef.band] : ''})` : ''}${nRoads ? ` \u00b7 \ub3c4\ub85c\ubcc4 \ud559\uc2b5 ${nRoads}\uac74` : ''}.`);
     else notes.push('\uc2e4\uc2dc\uac04 \uad50\ud1b5 \uc815\ubcf4\uac00 \uc5c6\ub294 \ubb34\ub8cc \uc9c0\ub3c4\ub77c, \ub9c9\ud788\ub294 \uc2dc\uac04\uc5d0\ub294 \uc2e4\uc81c\ubcf4\ub2e4 \uc9e7\uac8c \ub098\uc62c \uc218 \uc788\uc2b5\ub2c8\ub2e4. \uc548\ub0b4\ub97c \ubc1b\uc73c\uba70 \ub2ec\ub9b0 \ub3c4\ub85c\ub294 \uc2dc\uac04\ub300\ubcc4 \uc2e4\uc81c \uc18d\ub3c4\ub97c \ubc30\uc6cc \ub2e4\uc74c\ubd80\ud130 \uacbd\ub85c \uc120\ud0dd\uacfc \ub3c4\ucc29 \uc2dc\uac04\uc5d0 \ubc18\uc601\ud569\ub2c8\ub2e4.');
@@ -3482,8 +3753,10 @@ const camCount = cams => cams.filter(c => c.t !== 6).length;
 
 function selectRoute(i) {
   const t = S.trip;
+  if (!t || !t.routes[i]) return;
   t.sel = i;
-  MV.setRoutes(t.routes, i);
+  if (t.follow) MV.setRoutes(t.routes.concat([{ coords: t.follow.track }]), i);
+  else MV.setRoutes(t.routes, i);
   MV.setCams(t.routes[i].cams);
   $$('.rcard').forEach((b, k) => { b.setAttribute('aria-pressed', k === i ? 'true' : 'false'); b.setAttribute('aria-checked', k === i ? 'true' : 'false'); });
 }
@@ -3585,7 +3858,13 @@ async function startNav(sim) {
     sim, route, trip: t, dest: t.dest, stops: t.stops.slice(), visited: 0, mode: t.mode || 'car',
     startTs: Date.now(), pred: route.duration, dist0: route.distance, rr: 0, corr: walk ? 1 : ef.k,
     lastFixT: 0, lastSt: null, simObj: null, rerouteCtl: null, ended: false,
+    // \uc8fc\ud589 \uae30\ub85d: \uc9c0\ub098\uac04 \uae38(\uacbd\ub85c\uc5d0 \ub9de\ucd98 \uc810)\u00b7\uc9c0\ub09c \ub3c4\ub85c \uc774\ub984\u00b7\ucd9c\ubc1c\uc9c0(\uc2e4\uc81c \uc548\ub0b4\ub9cc)
+    rec: sim ? null : { pts: [], roads: [], from: originOf(S.me || t.origin) },
+    // \uae30\ub85d\ud55c \uae38\uc744 \ub530\ub77c\uac00\ub294 \uc548\ub0b4\uba74 \uadf8 \uae38(\uc774\ud0c8\ud558\uba74 \uadf8 \uae38\ub85c \ub418\ub3cc\uc544\uac00\uac8c \ub2e4\uc2dc \ucc3e\ub294\ub2e4)
+    follow: route.follow && t.follow ? { track: t.follow.track, idx: 0, name: t.follow.name, n: 0 } : null,
   };
+  if (S.nav.follow && t.follow.favId) { const fr = store.froutes.find(x => x.id === t.follow.favId); if (fr) { fr.n = (fr.n || 0) + 1; saveStore(); } }
+  if (S.nav.rec && !S.nav.rec.from.name) nameOrigin(S.nav.rec.from);
   S.nav.guide = makeGuide(route, false);
   setNavCams(route);
   if (!sim) addRecent(t.dest);
@@ -3679,6 +3958,7 @@ function navFix(fix) {
   const n = S.nav;
   if (!n || n.ended) return;
   const st = n.guide.update(fix);
+  recordFix(n, st, fix);
   const dt = n.lastFixT ? clamp(Date.now() - n.lastFixT, 200, 1500) : 0;
   n.lastFixT = Date.now();
   n.lastSt = st;
@@ -3738,7 +4018,10 @@ function navEvent(name, data) {
   else if (name === 'backon') { if (n.rerouteCtl) n.rerouteCtl.abort(); banner(null); }
   else if (name === 'waypoint') { n.visited = Math.min(n.stops.length, n.visited + 1); MV.setTripMarks(null, n.stops.slice(n.visited), n.dest); }
   else if (name === 'arrive') setTimeout(() => finishNav(true), 3500);
-  else if (name === 'segment' && !n.sim && n.mode !== 'walk') learnRoad(data.name, timeBand(data.t), data.act / data.pred, data.t);
+  else if (name === 'segment' && !n.sim) {
+    if (n.rec && data.name && n.rec.roads[n.rec.roads.length - 1] !== data.name) n.rec.roads.push(data.name);
+    if (n.mode !== 'walk') learnRoad(data.name, timeBand(data.t), data.act / data.pred, data.t);
+  }
 }
 
 async function reroute(at) {
@@ -3747,8 +4030,20 @@ async function reroute(at) {
   if (n.rerouteCtl) n.rerouteCtl.abort();
   const ctl = n.rerouteCtl = new AbortController();
   const pts = [{ lat: at.lat, lon: at.lon }, ...n.stops.slice(n.visited), n.dest];
+  const heading = at.speed > 2 ? at.heading : null;
   try {
-    const r = await findRoutes(pts, { pref: n.trip.pref, mode: n.mode, heading: at.speed > 2 ? at.heading : null, engine: store.settings.engine, signal: ctl.signal });
+    let r = null;
+    if (n.follow) {
+      // \uae30\ub85d\ud55c \uae38\uc5d0\uc11c 2.5 km \uc548\uc774\uba74 \uadf8 \uae38\ub85c \ub418\ub3cc\uc544\uac00\uac8c(\uc9c0\ub098\uc628 \uacf3 \ub4a4\ucabd\uc740 \ubcf4\uc9c0 \uc54a\ub294\ub2e4)
+      const fl = n.follow, near = nearestOnLine(fl.track, [at.lon, at.lat], fl.idx);
+      if (near.d < 2500) {
+        try { r = await findRoutesAlong(fl.track.slice(near.i), { start: at, dest: n.dest, mode: n.mode, heading, signal: ctl.signal }); }
+        catch (e) { if (ctl.signal.aborted) throw e; r = null; }
+      }
+      if (!r && !fl.left) { fl.left = true; toast('\uae30\ub85d\ud55c \uae38\uc5d0\uc11c \ub9ce\uc774 \ubc97\uc5b4\ub098 \ubcf4\ud1b5 \uae38\ub85c \uc548\ub0b4\ud569\ub2c8\ub2e4', 3500); }
+      if (!r) n.follow = null;
+    }
+    if (!r) r = await findRoutes(pts, { pref: n.trip.pref, mode: n.mode, heading, engine: store.settings.engine, signal: ctl.signal });
     if (ctl.signal.aborted || S.nav !== n || n.ended) return;
     n.route = r.routes[0];
     n.route.p = personalize(n.route);
@@ -3777,10 +4072,16 @@ function finishNav(arrived) {
   if (!arrived) Voice.stop();
   const act = (Date.now() - n.startTs) / 1000;
   if (!n.sim) {
-    store.trips.push({ ts: n.startTs, end: Date.now(), pred: n.pred, act, dist: n.dist0, rr: n.rr, arrived: !!arrived, mode: n.mode,
-      dest: { name: n.dest.label || n.dest.name, lat: n.dest.lat, lon: n.dest.lon } });
+    const rec = n.rec || { pts: [], roads: [], from: null };
+    const len = Math.round(lineLen(rec.pts));
+    const id = uid();
+    const roads = [...new Set(rec.roads)].slice(0, 8);
+    store.trips.push({ id, ts: n.startTs, end: Date.now(), pred: n.pred, act, dist: n.dist0, rr: n.rr, arrived: !!arrived, mode: n.mode,
+      dest: { name: n.dest.label || n.dest.name, lat: n.dest.lat, lon: n.dest.lon }, ...(rec.from ? { from: rec.from } : {}), ...(roads.length ? { roads } : {}), len });
     store.trips = store.trips.slice(-300);
     saveStore(true);
+    if (rec.pts.length >= 2 && len >= 200) keepTrack(id, simplifyLine(rec.pts, 4));
+    else pruneTracks();
   }
   S.nav = null; S.trip = null;
   $('#cambox').hidden = true; $('#speed').classList.remove('over');
@@ -3882,11 +4183,11 @@ function openSettings() {
       row('\ub3c4\ucc29 \uc2dc\uac04 \ubcf4\uc815', ef.n ? `\ub0b4 \uc8fc\ud589 \uae30\ub85d\uc73c\ub85c \ubcf4\uc815 \uc911: \u00d7${ef.k.toFixed(2)} (${ef.n}\ud68c, ${ef.band ? BAND_KO[ef.band] : '\uc804\uccb4'})` : `\uc2e4\uc81c \uc548\ub0b4\ub97c \ub05d\uae4c\uc9c0 3\ubc88 \uc774\uc0c1 \ubc1b\uc73c\uba74 \uc2dc\uc791\ud569\ub2c8\ub2e4 (\uc9c0\uae08 ${realTrips.filter(t => t.arrived).length}\ud68c)`, sw(st.etaLearn, v => setS('etaLearn', v), '\ub3c4\ucc29 \uc2dc\uac04 \ubcf4\uc815')),
       row('\uc2dc\uac04\ub300\ubcc4 \ubaa9\uc801\uc9c0 \ucd94\ucc9c', '\uc694\uc77c\u00b7\uc2dc\uac04\ub300\uac00 \ube44\uc2b7\ud560 \ub54c \uc790\uc8fc \uac04 \uacf3\uc744 \uccab \ud654\uba74\uc5d0 \ub744\uc6c1\ub2c8\ub2e4', sw(st.suggest, v => setS('suggest', v), '\uc2dc\uac04\ub300\ubcc4 \ucd94\ucc9c')),
       row('\ub3c4\ub85c\ubcc4 \uad50\ud1b5 \ud559\uc2b5', Object.keys(store.roads).length ? `\uc548\ub0b4 \uc911 \ub2ec\ub9b0 \ub3c4\ub85c\uc758 \uc2dc\uac04\ub300\ubcc4 \uc2e4\uc81c \uc18d\ub3c4 ${Object.keys(store.roads).length}\uac74 \u2014 \ucd5c\uadfc \uae30\ub85d\uc77c\uc218\ub85d \ud06c\uac8c \ubc18\uc601\ud574 \uacbd\ub85c \uc120\ud0dd\uacfc \ub3c4\ucc29 \uc2dc\uac04\uc5d0 \uc501\ub2c8\ub2e4` : '\uc548\ub0b4\ub97c \ubc1b\uc73c\uba70 \ub2ec\ub9ac\uba74 \ub3c4\ub85c\ubcc4\u00b7\uc2dc\uac04\ub300\ubcc4 \uc2e4\uc81c \uc18d\ub3c4\ub97c \ubc30\uc6cc \ub2e4\uc74c \uacbd\ub85c \uc120\ud0dd\uc5d0 \uc501\ub2c8\ub2e4', h('span')),
-      row('\uc8fc\ud589 \uae30\ub85d \uc9c0\uc6b0\uae30', `\uc8fc\ud589 ${realTrips.length}\uac74 \u00b7 \ub3c4\ub85c \ud559\uc2b5 ${Object.keys(store.roads).length}\uac74`, h('button', { class: 'btn btn--sm btn--ghost', type: 'button', text: '\uc9c0\uc6b0\uae30', onclick: async () => { if (await ask('\uc8fc\ud589 \uae30\ub85d\uacfc \ub3c4\ub85c\ubcc4 \ud559\uc2b5\uc744 \ubaa8\ub450 \uc9c0\uc6b8\uae4c\uc694? \ub3c4\ucc29 \uc2dc\uac04 \ubcf4\uc815\uacfc \ucd94\ucc9c\uc774 \ucc98\uc74c\ubd80\ud130 \ub2e4\uc2dc \uc2dc\uc791\ub429\ub2c8\ub2e4.', { ok: '\uc9c0\uc6b0\uae30', danger: true })) { store.trips = []; store.roads = {}; saveStore(true); toast('\uc8fc\ud589 \uae30\ub85d\uc744 \uc9c0\uc6e0\uc2b5\ub2c8\ub2e4'); openSettings(); } } }))),
+      row('\uc8fc\ud589 \uae30\ub85d \uc9c0\uc6b0\uae30', `\uc8fc\ud589 ${realTrips.length}\uac74 \u00b7 \ub3c4\ub85c \ud559\uc2b5 ${Object.keys(store.roads).length}\uac74`, h('button', { class: 'btn btn--sm btn--ghost', type: 'button', text: '\uc9c0\uc6b0\uae30', onclick: async () => { if (await ask('\uc8fc\ud589 \uae30\ub85d\uacfc \ub3c4\ub85c\ubcc4 \ud559\uc2b5\uc744 \ubaa8\ub450 \uc9c0\uc6b8\uae4c\uc694? \ub3c4\ucc29 \uc2dc\uac04 \ubcf4\uc815\uacfc \ucd94\ucc9c\uc774 \ucc98\uc74c\ubd80\ud130 \ub2e4\uc2dc \uc2dc\uc791\ub429\ub2c8\ub2e4.', { ok: '\uc9c0\uc6b0\uae30', danger: true })) { store.trips = []; store.roads = {}; saveStore(true); setTracks({}); toast('\uc8fc\ud589 \uae30\ub85d\uc744 \uc9c0\uc6e0\uc2b5\ub2c8\ub2e4'); openSettings(); } } }))),
     h('section', { class: 'group' }, h('h2', { text: '\ub370\uc774\ud130' }),
-      row('\ubc31\uc5c5 \ud30c\uc77c\ub85c \uc800\uc7a5', '\uc9d1\u00b7\ud68c\uc0ac\u00b7\uc990\uaca8\ucc3e\uae30\u00b7\uc124\uc815\u00b7\uae30\ub85d\uc744 \uc774 \uae30\uae30\uc5d0\uc11c \ub2e4\ub978 \uae30\uae30\ub85c \uc62e\uae38 \ub54c', h('button', { class: 'btn btn--sm', type: 'button', onclick: exportFile }, h('span', { svg: ic('down', 16) }), '\uc800\uc7a5')),
+      row('\ubc31\uc5c5 \ud30c\uc77c\ub85c \uc800\uc7a5', '\uc9d1\u00b7\ud68c\uc0ac\u00b7\uc990\uaca8\ucc3e\uae30\u00b7\uc990\uaca8\ucc3e\ub294 \uacbd\ub85c\u00b7\uc124\uc815\u00b7\uc8fc\ud589 \uae30\ub85d(\uc9c0\ub098\uac04 \uae38 \ud3ec\ud568)\uc744 \uc774 \uae30\uae30\uc5d0\uc11c \ub2e4\ub978 \uae30\uae30\ub85c \uc62e\uae38 \ub54c', h('button', { class: 'btn btn--sm', type: 'button', onclick: exportFile }, h('span', { svg: ic('down', 16) }), '\uc800\uc7a5')),
       row('\ubc31\uc5c5 \ud30c\uc77c \ubd88\ub7ec\uc624\uae30', '\uc9c0\uae08 \ub370\uc774\ud130\ub294 \ubc31\uc5c5 \ub0b4\uc6a9\uc73c\ub85c \ubc14\ub01d\ub2c8\ub2e4', h('button', { class: 'btn btn--sm', type: 'button', onclick: importFile }, h('span', { svg: ic('up', 16) }), '\ubd88\ub7ec\uc624\uae30')),
-      row('\ubaa8\ub450 \ucd08\uae30\ud654', null, h('button', { class: 'btn btn--sm btn--ghost', type: 'button', text: '\ucd08\uae30\ud654', onclick: async () => { if (await ask('\uc9d1\u00b7\ud68c\uc0ac\u00b7\uc990\uaca8\ucc3e\uae30\u00b7\uae30\ub85d\u00b7\uc124\uc815\uc744 \ubaa8\ub450 \uc9c0\uc6b8\uae4c\uc694?', { ok: '\ubaa8\ub450 \uc9c0\uc6b0\uae30', danger: true })) { applyData({}); store.settings = { ...DEFAULT_SETTINGS }; saveStore(true); refreshPts(); applyTheme(); toast('\ucd08\uae30\ud654\ud588\uc2b5\ub2c8\ub2e4'); openSettings(); } } }))),
+      row('\ubaa8\ub450 \ucd08\uae30\ud654', null, h('button', { class: 'btn btn--sm btn--ghost', type: 'button', text: '\ucd08\uae30\ud654', onclick: async () => { if (await ask('\uc9d1\u00b7\ud68c\uc0ac\u00b7\uc990\uaca8\ucc3e\uae30\u00b7\uc990\uaca8\ucc3e\ub294 \uacbd\ub85c\u00b7\uae30\ub85d\u00b7\uc124\uc815\uc744 \ubaa8\ub450 \uc9c0\uc6b8\uae4c\uc694?', { ok: '\ubaa8\ub450 \uc9c0\uc6b0\uae30', danger: true })) { applyData({}); store.settings = { ...DEFAULT_SETTINGS }; saveStore(true); setTracks({}); refreshPts(); applyTheme(); toast('\ucd08\uae30\ud654\ud588\uc2b5\ub2c8\ub2e4'); openSettings(); } } }))),
     h('section', { class: 'group' }, h('h2', { text: '\uc571 \uc815\ubcf4' }),
       row('\ubc84\uc804', null, h('span', { class: 'num', style: 'font-weight:700', text: 'v' + APP_VERSION })),
       row('\uc571 \uc8fc\uc18c', '\ud734\ub300\ud3f0\uc5d0\uc11c\ub294 \uc774 \uc8fc\uc18c\ub85c \uc5f4\uc5b4\uc57c \uc704\uce58(GPS)\ub97c \uc4f8 \uc218 \uc788\uc2b5\ub2c8\ub2e4. \uba54\ub274\uc758 \u2018\ud648 \ud654\uba74\uc5d0 \ucd94\uac00\u2019\ub97c \ud558\uba74 \uc571\ucc98\ub7fc \uc5f4\ub9bd\ub2c8\ub2e4.', h('span', { class: 'num', style: 'font-weight:700;user-select:all;word-break:break-all', text: APP_URL }))),
@@ -3944,7 +4245,7 @@ function importFile() {
       try {
         const d = JSON.parse(rd.result);
         if (d.app !== 'gilnavi') throw new Error('not ours');
-        applyData(d); saveStore(true); refreshPts(); applyTheme();
+        applyData(d); saveStore(true); setTracks(d.tracks); refreshPts(); applyTheme();
         toast('\ubc31\uc5c5\uc744 \ubd88\ub7ec\uc654\uc2b5\ub2c8\ub2e4'); openSettings();
       } catch (e) { toast('\uae38\uc7a1\uc774 \ub0b4\ube44 \ubc31\uc5c5 \ud30c\uc77c\uc774 \uc544\ub2d9\ub2c8\ub2e4'); }
     };
@@ -3956,13 +4257,13 @@ function importFile() {
 // \ub0b4 \uc7a5\uc18c \uad00\ub9ac
 // \u2500\u2500 \ud604\uc7ac \uc704\uce58 \uc800\uc7a5 \u00b7 \ub0b4 \uc7a5\uc18c \uc774\ub984\uacfc \uba54\ubaa8 \u2500\u2500
 // \uc774\ub984\u00b7\uba54\ubaa8 \uc785\ub825 \ucc3d(\ud604\uc7ac \uc704\uce58 \uc800\uc7a5\uacfc \uace0\uce58\uae30\uc5d0 \uac19\uc774 \uc4f4\ub2e4). \uc5f4\ub9b0 \ub3d9\uc548 info()\u00b7setName()\u00b7enable() \ub85c \ub0b4\uc6a9\uc744 \ubc14\uafbc\ub2e4
-function placeForm({ title, name = '', memo = '', kinds = null, okText = '\uc800\uc7a5', onSave }) {
+function placeForm({ title, name = '', memo = '', kinds = null, okText = '\uc800\uc7a5', onSave, onDelete = null, namePh = '\uc774\ub984(\uc608: \uc8fc\ucc28\ud55c \uacf3, \uc6b0\ub9ac \uc544\ud30c\ud2b8)', memoPh = '\uba54\ubaa8(\uc120\ud0dd) \u2014 \uc608: \uc9c0\ud558 2\uce35 B-37' }) {
   const box = $('#dialog');
   let typed = false, kind = kinds ? kinds[0][0] : null, closed = false;
   const close = () => { closed = true; box.hidden = true; box.replaceChildren(); };
-  const nameIn = h('input', { class: 'field field--wide', id: 'pfName', maxlength: '40', value: name, placeholder: '\uc774\ub984(\uc608: \uc8fc\ucc28\ud55c \uacf3, \uc6b0\ub9ac \uc544\ud30c\ud2b8)', 'aria-label': '\uc774\ub984', enterkeyhint: 'done',
+  const nameIn = h('input', { class: 'field field--wide', id: 'pfName', maxlength: '40', value: name, placeholder: namePh, 'aria-label': '\uc774\ub984', enterkeyhint: 'done',
     oninput: () => { typed = true; }, onkeydown: e => { if (e.key === 'Enter') save(); } });
-  const memoIn = h('input', { class: 'field field--wide', id: 'pfMemo', maxlength: '120', value: memo, placeholder: '\uba54\ubaa8(\uc120\ud0dd) \u2014 \uc608: \uc9c0\ud558 2\uce35 B-37', 'aria-label': '\uba54\ubaa8', enterkeyhint: 'done',
+  const memoIn = h('input', { class: 'field field--wide', id: 'pfMemo', maxlength: '120', value: memo, placeholder: memoPh, 'aria-label': '\uba54\ubaa8', enterkeyhint: 'done',
     onkeydown: e => { if (e.key === 'Enter') save(); } });
   const infoEl = h('div', { class: 'pform__info', id: 'pfInfo', 'aria-live': 'polite' });
   const ok = h('button', { class: 'btn btn--primary', type: 'button', id: 'pfSave', text: okText, onclick: () => save() });
@@ -3971,7 +4272,9 @@ function placeForm({ title, name = '', memo = '', kinds = null, okText = '\uc800
     h('h2', { text: title }), infoEl,
     kinds ? seg(kinds, kind, k => { kind = k; }, '\uc800\uc7a5\ud560 \uacf3') : null,
     nameIn, memoIn,
-    h('div', { class: 'dialog__btns' }, h('button', { class: 'btn', type: 'button', text: '\ucde8\uc18c', onclick: close }), ok)));
+    h('div', { class: 'dialog__btns' },
+      onDelete ? h('button', { class: 'btn btn--ghost btn--danger-text', type: 'button', id: 'pfDel', text: '\uc9c0\uc6b0\uae30', style: 'margin-right:auto', onclick: () => { close(); onDelete(); } }) : null,
+      h('button', { class: 'btn', type: 'button', text: '\ucde8\uc18c', onclick: close }), ok)));
   box.hidden = false;
   box.onclick = e => { if (e.target === box) close(); };
   box.onkeydown = e => { if (e.key === 'Escape') close(); };
@@ -4083,6 +4386,276 @@ function openPlaces() {
     sec(`\uc990\uaca8\ucc3e\uae30 ${store.favs.length}\uacf3`, [here, ...favRows]),
     sec('\ucd5c\uadfc \ubaa9\uc801\uc9c0', [row(`${store.recents.length}\uacf3 \uc800\uc7a5\ub428`, null, h('button', { class: 'btn btn--sm btn--ghost', type: 'button', text: '\ubaa8\ub450 \uc9c0\uc6b0\uae30', onclick: () => { store.recents = []; saveStore(); openPlaces(); } }))]),
   ]);
+}
+
+// ===== 13b-history.js =====
+// \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 \uc8fc\ud589 \uae30\ub85d \u00b7 \uc990\uaca8\ucc3e\ub294 \uacbd\ub85c \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
+// \uc2e4\uc81c \uc548\ub0b4\ub97c \ubc1b\uc740 \uc8fc\ud589\ub9c8\ub2e4 \uc9c0\ub098\uac04 \uae38\uc744 \ub0a8\uae34\ub2e4(\uacbd\ub85c\uc5d0 \ub9de\ucd98 \uc810, 10 m \ub9c8\ub2e4 \u2192 \ub05d\ub0a0 \ub54c 4 m \ud5c8\uc6a9\uc73c\ub85c \uc904\uc784).
+// \uae30\ub85d\uc744 \ub204\ub974\uba74 \uc9c0\ub3c4\uc5d0 \uadf8 \uae38\uc744 \ubcf4\uc5ec \uc8fc\uace0, \u2018\uc774 \uacbd\ub85c\ub85c \uc548\ub0b4\u2019\ub294 \uadf8 \uae38\uc744 \ub530\ub77c\uac00\ub294 \uacbd\ub85c(findRoutesAlong)\ub85c \uc548\ub0b4\ud55c\ub2e4.
+// \ub9c8\uc74c\uc5d0 \ub4dc\ub294 \uae38\uc740 \u2018\uc990\uaca8\ucc3e\ub294 \uacbd\ub85c\u2019\ub85c \uc774\ub984\uc744 \ubd99\uc5ec \ub450\uace0 \uccab \ud654\uba74\uc5d0\uc11c \ubc14\ub85c \uace0\ub978\ub2e4.
+
+// \ucd9c\ubc1c\uc9c0 \uc774\ub984: \uc800\uc7a5\ud55c \uacf3(\uc9d1\u00b7\ud68c\uc0ac\u00b7\uc990\uaca8\ucc3e\uae30 250 m, \ucd5c\uadfc \ubaa9\uc801\uc9c0 150 m \uc548)\uc774\uba74 \uadf8 \uc774\ub984, \uc544\ub2c8\uba74 \ub098\uc911\uc5d0 \uc8fc\uc18c\ub85c
+function originOf(p) {
+  if (!p || !isFinite(+p.lat)) return { name: '', lat: 0, lon: 0 };
+  const at = [+p.lon, +p.lat];
+  const near = (q, r) => q && hav(at, [q.lon, q.lat]) <= r;
+  let name = '';
+  if (near(store.home, 250)) name = '\uc9d1';
+  else if (near(store.work, 250)) name = '\ud68c\uc0ac';
+  else {
+    const f = store.favs.find(x => near(x, 250)) || store.recents.find(x => near(x, 150));
+    if (f) name = f.name;
+  }
+  return { name, lat: +(+p.lat).toFixed(6), lon: +(+p.lon).toFixed(6) };
+}
+async function nameOrigin(from) {
+  try {
+    const r = await reversePlace(from.lon, from.lat);
+    if (r && r.name && r.name !== '\uc120\ud0dd\ud55c \uc704\uce58' && !from.name) from.name = r.name;
+  } catch (e) { /* \uc774\ub984 \uc5c6\uc774(\u2018\ucd9c\ubc1c\uc9c0\u2019) */ }
+}
+
+// \uc548\ub0b4 \uc911 \uc704\uce58\ub9c8\ub2e4: \uc9c0\ub098\uac04 \uae38(\uacbd\ub85c \uc704\uba74 \uacbd\ub85c\uc5d0 \ub9de\ucd98 \uc810, \ubc97\uc5b4\ub0ac\uc73c\uba74 \uc815\ud655\ud55c GPS \uc810\ub9cc)\uacfc \uae30\ub85d\ud55c \uae38\uc758 \uc9c4\ud589 \uc704\uce58
+function recordFix(n, st, fix) {
+  const rec = n.rec;
+  if (rec && (st.on || (fix.acc || 99) <= 40)) {
+    const p = st.on ? st.p : [fix.lon, fix.lat];
+    const last = rec.pts[rec.pts.length - 1];
+    if (!last || hav(last, p) >= 10) {
+      rec.pts.push([+p[0].toFixed(6), +p[1].toFixed(6)]);
+      if (rec.pts.length > 6000) rec.pts = simplifyLine(rec.pts, 4);   // \uc544\uc8fc \uae34 \uc8fc\ud589: \uc911\uac04\uc5d0 \ud55c \ubc88 \uc904\uc778\ub2e4
+    }
+  }
+  const fl = n.follow;
+  if (fl && ++fl.n % 5 === 0) {
+    const r = nearestOnLine(fl.track, [fix.lon, fix.lat], fl.idx, Math.min(fl.track.length - 1, fl.idx + 200));
+    if (r.d < 60) fl.idx = r.i;
+  }
+}
+
+// \u2500\u2500 \uae00\uc790 \u2500\u2500
+const WD = ['\uc77c', '\uc6d4', '\ud654', '\uc218', '\ubaa9', '\uae08', '\ud1a0'];
+function dayLabel(ts) {
+  const d = new Date(ts), t = new Date();
+  const k = x => `${x.getFullYear()}-${x.getMonth()}-${x.getDate()}`;
+  const y = new Date(t); y.setDate(t.getDate() - 1);
+  if (k(d) === k(t)) return '\uc624\ub298';
+  if (k(d) === k(y)) return '\uc5b4\uc81c';
+  return `${d.getFullYear() !== t.getFullYear() ? d.getFullYear() + '\ub144 ' : ''}${d.getMonth() + 1}\uc6d4 ${d.getDate()}\uc77c (${WD[d.getDay()]})`;
+}
+const clock = ts => { const d = new Date(ts); return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`; };
+const fromName = t => (t.from && t.from.name) || '\ucd9c\ubc1c\uc9c0';
+const tripTitle = t => `${fromName(t)} \u2192 ${(t.dest && t.dest.name) || '\ub3c4\ucc29\uc9c0'}`;
+const tripLen = t => t.len || t.dist || 0;
+function tripLine(t, withTime = true) {
+  return [withTime ? clock(t.ts) : '', fmtDistStr(tripLen(t)), fmtDur(t.act), (t.roads || []).slice(0, 2).join('\u00b7'), t.arrived ? '' : '\uc911\uac04\uc5d0 \ub05d\ub0c4'].filter(Boolean).join(' \u00b7 ');
+}
+const favOfTrip = t => store.froutes.find(r => r.tripId && r.tripId === t.id);
+
+// \u2500\u2500 \uccab \ud654\uba74 \u2018\uc8fc\ud589 \uae30\ub85d\u2019 \ud0ed \u2500\u2500
+function tripsTab() {
+  const list = h('ul', { class: 'list', id: 'tripList' });
+  const trips = store.trips.filter(t => !t.sim).slice(-120).reverse();
+  if (!trips.length) {
+    list.append(h('li', { class: 'empty', text: '\uc2e4\uc81c \uae38 \uc548\ub0b4\ub97c \ubc1b\uc73c\uba74 \uc8fc\ud589 \uae30\ub85d\uc774 \uc5ec\uae30\uc5d0 \uc313\uc785\ub2c8\ub2e4. \uae30\ub85d\uc744 \ub204\ub974\uba74 \uadf8 \uae38\ub85c \ub2e4\uc2dc \uc548\ub0b4\ubc1b\uac70\ub098 \uc990\uaca8\ucc3e\ub294 \uacbd\ub85c\ub85c \uc800\uc7a5\ud560 \uc218 \uc788\uc2b5\ub2c8\ub2e4.' }));
+    return [list];
+  }
+  let day = '';
+  for (const t of trips) {
+    const dl = dayLabel(t.ts);
+    if (dl !== day) { day = dl; list.append(h('li', { class: 'dayhead', role: 'presentation', text: dl })); }
+    const fav = favOfTrip(t);
+    list.append(h('li', { class: 'item item--trip', tabindex: '0', role: 'button', dataset: { id: t.id || '' }, onclick: () => openTripView(t), onkeydown: e => { if (e.key === 'Enter') openTripView(t); } },
+      h('span', { class: 'item__ic item__ic--trip', svg: ic(t.mode === 'walk' ? 'walk' : 'route', 20) }),
+      h('span', { class: 'item__txt' },
+        h('div', { class: 'item__name', text: tripTitle(t) }),
+        h('div', { class: 'item__addr num', text: tripLine(t) })),
+      fav ? h('span', { class: 'item__star', title: '\uc990\uaca8\ucc3e\ub294 \uacbd\ub85c', svg: ic('star', 17, true) }) : null));
+  }
+  return [list, h('p', { class: 'note', text: `\uc2e4\uc81c \uc548\ub0b4\ub9cc \ub0a8\uc2b5\ub2c8\ub2e4(\ubaa8\uc758 \uc8fc\ud589 \uc81c\uc678). \uc9c0\ub098\uac04 \uae38\uc740 \ucd5c\uadfc ${TRACK_MAX}\ubc88\uae4c\uc9c0 \uc800\uc7a5\ud569\ub2c8\ub2e4.` })];
+}
+
+// \u2500\u2500 \uc990\uaca8\ucc3e\uae30 \ud0ed \ub9e8 \uc704 \u2018\uc990\uaca8\ucc3e\ub294 \uacbd\ub85c\u2019 \u2500\u2500
+function froutesSection() {
+  if (!store.froutes.length) return [];
+  const list = h('ul', { class: 'list list--froutes' });
+  for (const r of store.froutes) {
+    list.append(h('li', { class: 'item item--froute', tabindex: '0', role: 'button', onclick: () => followFav(r), onkeydown: e => { if (e.key === 'Enter') followFav(r); } },
+      h('span', { class: 'item__ic item__ic--froute', svg: ic('route', 20) }),
+      h('span', { class: 'item__txt' },
+        h('div', { class: 'item__name', text: r.name }),
+        h('div', { class: 'item__addr num', text: [`${r.from.name || '\ucd9c\ubc1c\uc9c0'} \u2192 ${r.dest.name || '\ub3c4\ucc29\uc9c0'}`, fmtDistStr(r.len), r.roads.slice(0, 2).join('\u00b7'), r.memo].filter(Boolean).join(' \u00b7 ') })),
+      h('button', { class: 'icon-btn', type: 'button', 'aria-label': `${r.name} \uc774\ub984\u00b7\uba54\ubaa8 \uace0\uce58\uae30`, svg: ic('edit', 18), onclick: e => { e.stopPropagation(); editFav(r); } })));
+  }
+  return [h('div', { class: 'sec-sub', text: '\uc990\uaca8\ucc3e\ub294 \uacbd\ub85c' }), list, h('div', { class: 'sec-sub', text: '\uc990\uaca8\ucc3e\ub294 \uc7a5\uc18c' })];
+}
+
+// \u2500\u2500 \uae30\ub85d \ud55c \uac74 \ubcf4\uae30(\uc9c0\ub3c4\uc5d0 \uc9c0\ub098\uac04 \uae38) \u2500\u2500
+function openTripView(t) {
+  S.tripView = t;
+  go('trip');
+  drawTripView();
+}
+function drawTripView() {
+  const t = S.tripView;
+  if (!t) return;
+  const trk = tripTrack(t);
+  MV.setPlaceMark(null);
+  MV.follow = false;
+  if (trk) {
+    MV.setRoutes([{ coords: trk }], 0);
+    MV.setTripMarks(t.from && t.from.lat ? t.from : { lat: trk[0][1], lon: trk[0][0], name: fromName(t) }, [], t.dest);
+    MV.fit(trk.filter((_, i) => i % 4 === 0).concat([trk[trk.length - 1]]));
+  } else {
+    MV.clearRoutes();
+    MV.setTripMarks(t.from && t.from.lat ? t.from : null, [], t.dest);
+    MV.fit([t.from && t.from.lat ? [t.from.lon, t.from.lat] : null, [t.dest.lon, t.dest.lat]].filter(Boolean));
+  }
+}
+function tripSheet() {
+  const t = S.tripView;
+  if (!t) return [];
+  const trk = hasTrack(t);
+  const fav = favOfTrip(t);
+  const d = new Date(t.ts);
+  const out = [
+    h('div', { class: 'trip__when num', text: `${dayLabel(t.ts)}${dayLabel(t.ts).includes('\uc6d4') ? '' : ` ${d.getMonth() + 1}\uc6d4 ${d.getDate()}\uc77c`} ${clock(t.ts)} \ucd9c\ubc1c \u00b7 ${clock(t.end || t.ts + t.act * 1000)} ${t.arrived ? '\ub3c4\ucc29' : '\ub05d\ub0c4'}` }),
+    h('div', { class: 'place__name', text: tripTitle(t) }),
+    h('div', { class: 'place__meta num', text: [fmtDistStr(tripLen(t)), `${fmtDur(t.act)} \uac78\ub9bc`, t.mode === 'walk' ? '\ub3c4\ubcf4' : '', t.rr ? `\uacbd\ub85c \ub2e4\uc2dc \ucc3e\uc74c ${t.rr}\ubc88` : ''].filter(Boolean).join(' \u00b7 ') }),
+    t.roads && t.roads.length ? h('div', { class: 'trip__roads', text: t.roads.join(' \u2192 ') + ' \uc9c0\ub0a8' }) : null,
+  ];
+  const acts = h('div', { class: 'place__acts' });
+  if (trk) {
+    acts.append(h('button', { class: 'btn btn--primary', type: 'button', id: 'btnFollowTrip', onclick: () => followTrip(t) }, h('span', { svg: ic('nav', 20, true) }), '\uc774 \uacbd\ub85c\ub85c \uc548\ub0b4'));
+    acts.append(h('button', { class: 'btn', type: 'button', id: 'btnFavTrip', 'aria-pressed': fav ? 'true' : 'false', onclick: () => (fav ? editFav(fav) : saveFavRoute(t)) },
+      h('span', { svg: ic('star', 20, !!fav) }), fav ? '\uc990\uaca8\ucc3e\ub294 \uacbd\ub85c' : '\uc990\uaca8\ucc3e\ub294 \uacbd\ub85c\ub85c \ub4f1\ub85d'));
+  } else {
+    out.push(h('p', { class: 'warnline', text: '\uc774 \uae30\ub85d\uc5d0\ub294 \uc9c0\ub098\uac04 \uae38\uc774 \uc5c6\uc2b5\ub2c8\ub2e4(\uc774\uc804 \ud310\uc5d0\uc11c \uae30\ub85d\ud588\uac70\ub098 \uc544\uc8fc \uc9e7\uc740 \uc8fc\ud589). \ub3c4\ucc29\uc9c0\uae4c\uc9c0 \ubcf4\ud1b5 \uae38\ub85c \ucc3e\uc744 \uc218 \uc788\uc2b5\ub2c8\ub2e4.' }));
+    acts.append(h('button', { class: 'btn btn--primary', type: 'button', onclick: () => startTrip({ ...t.dest }) }, h('span', { svg: ic('nav', 20, true) }), '\ub3c4\ucc29\uc9c0\ub85c \uae38 \ucc3e\uae30'));
+  }
+  out.push(acts);
+  out.push(h('div', { class: 'place__more' },
+    h('button', { class: 'btn btn--sm btn--ghost', type: 'button', id: 'btnDelTrip', onclick: () => deleteTrip(t) }, h('span', { svg: ic('trash', 16) }), '\uc774 \uae30\ub85d \uc9c0\uc6b0\uae30')));
+  return out.filter(Boolean);
+}
+async function deleteTrip(t) {
+  if (!await ask(`${dayLabel(t.ts)} ${clock(t.ts)} ${tripTitle(t)} \uae30\ub85d\uc744 \uc9c0\uc6b8\uae4c\uc694? \uc990\uaca8\ucc3e\ub294 \uacbd\ub85c\ub85c \uc800\uc7a5\ud55c \uac83\uc740 \ub0a8\uc2b5\ub2c8\ub2e4.`, { ok: '\uc9c0\uc6b0\uae30', danger: true })) return;
+  store.trips = store.trips.filter(x => x !== t);
+  if (t.id) dropTrack(t.id);
+  saveStore(true);
+  S.tripView = null;
+  S.homeTab = 'trips';
+  MV.clearRoutes(); MV.setTripMarks(null, [], null);
+  go('home');
+  toast('\uc8fc\ud589 \uae30\ub85d\uc744 \uc9c0\uc6e0\uc2b5\ub2c8\ub2e4');
+}
+
+// \u2500\u2500 \uc990\uaca8\ucc3e\ub294 \uacbd\ub85c \u2500\u2500
+function saveFavRoute(t) {
+  const trk = tripTrack(t);
+  if (!trk) return;
+  const def = t.roads && t.roads.length ? `${t.dest.name} (${t.roads[0]})` : `${fromName(t)} \u2192 ${t.dest.name}`;
+  placeForm({
+    title: '\uc990\uaca8\ucc3e\ub294 \uacbd\ub85c\ub85c \ub4f1\ub85d', name: def.slice(0, 40), okText: '\ub4f1\ub85d', namePh: '\uc774\ub984(\uc608: \ucd9c\uadfc\uae38, \uc62c\ub9bc\ud53d\ub300\ub85c\ub85c \uc9d1)', memoPh: '\uba54\ubaa8(\uc120\ud0dd) \u2014 \uc608: \uc544\uce68 8\uc2dc \uc804\uc5d0',
+    onSave: ({ name, memo }) => {
+      const r = cleanRoute({ name: name || def, memo, from: t.from, dest: t.dest, track: encodePolyline(trk, 5), len: tripLen(t), roads: t.roads || [], mode: t.mode, tripId: t.id });
+      if (!r) return false;
+      store.froutes = [r, ...store.froutes].slice(0, 30);
+      saveStore(true);
+      toast(`\u2018${r.name}\u2019${josa(r.name, '\uc744/\ub97c').slice(r.name.length)} \uc990\uaca8\ucc3e\ub294 \uacbd\ub85c\ub85c \ub4f1\ub85d\ud588\uc2b5\ub2c8\ub2e4`, 3200);
+      if (S.screen === 'trip') renderSheet();
+      if (S.screen === 'home') { renderChips(); renderSheet(); }
+    },
+  }).info(`${tripTitle(t)} \u00b7 ${fmtDistStr(tripLen(t))}${t.roads && t.roads.length ? ' \u00b7 ' + t.roads.slice(0, 3).join('\u00b7') : ''}`);
+}
+function editFav(r) {
+  placeForm({
+    title: '\uc990\uaca8\ucc3e\ub294 \uacbd\ub85c', name: r.name, memo: r.memo || '', namePh: '\uc774\ub984(\uc608: \ucd9c\uadfc\uae38)', memoPh: '\uba54\ubaa8(\uc120\ud0dd)',
+    onSave: ({ name, memo }) => {
+      r.name = name || r.name;
+      if (memo) r.memo = memo.slice(0, 120); else delete r.memo;
+      saveStore(true);
+      toast('\uace0\ucce4\uc2b5\ub2c8\ub2e4');
+      if (S.screen === 'home') { renderChips(); renderSheet(); }
+      if (S.screen === 'trip') renderSheet();
+    },
+    onDelete: async () => {
+      if (!await ask(`\uc990\uaca8\ucc3e\ub294 \uacbd\ub85c \u2018${r.name}\u2019${josa(r.name, '\uc744/\ub97c').slice(r.name.length)} \uc9c0\uc6b8\uae4c\uc694?`, { ok: '\uc9c0\uc6b0\uae30', danger: true })) return;
+      store.froutes = store.froutes.filter(x => x !== r);
+      saveStore(true);
+      toast('\uc990\uaca8\ucc3e\ub294 \uacbd\ub85c\ub97c \uc9c0\uc6e0\uc2b5\ub2c8\ub2e4');
+      if (S.screen === 'home') { renderChips(); renderSheet(); }
+      if (S.screen === 'trip') renderSheet();
+    },
+  }).info(`${r.from.name || '\ucd9c\ubc1c\uc9c0'} \u2192 ${r.dest.name || '\ub3c4\ucc29\uc9c0'} \u00b7 ${fmtDistStr(r.len)}`);
+}
+
+// \u2500\u2500 \uae30\ub85d\ud55c \uae38\ub85c \uc548\ub0b4(\uacbd\ub85c \ubbf8\ub9ac\ubcf4\uae30 \u2192 \uc548\ub0b4 \uc2dc\uc791) \u2500\u2500
+function startFollow({ track, dest, name, mode = 'car', favId = null, tripId = null, from = null }) {
+  if (S.nav) return;
+  const d = cleanPlace({ name: dest.name || '\ub3c4\ucc29\uc9c0', addr: dest.addr || '', lat: dest.lat, lon: dest.lon });
+  if (!d || !track || track.length < 2) return;
+  S.tripView = null;
+  S.trip = { origin: null, stops: [], dest: d, mode, pref: 'fast', routes: [], sel: 0, loading: false, err: '', warn: '',
+    follow: { track, name, favId, tripId, from } };
+  S.pick = null; S.results = null;
+  go('preview');
+  computeRoutes();
+}
+function followTrip(t) {
+  const trk = tripTrack(t);
+  if (!trk) return;
+  startFollow({ track: trk, dest: t.dest, name: tripTitle(t), mode: t.mode === 'walk' ? 'walk' : 'car', tripId: t.id, from: t.from });
+}
+function followFav(r) {
+  startFollow({ track: routeTrack(r), dest: r.dest, name: r.name, mode: r.mode, favId: r.id, from: r.from });
+}
+
+// \uacbd\ub85c \ubbf8\ub9ac\ubcf4\uae30: \uae30\ub85d\ud55c \uae38\uc744 \ub530\ub77c\uac00\ub294 \uacbd\ub85c\ub97c \ucc3e\uace0, \ube44\uad50\uc6a9\uc73c\ub85c \ubcf4\ud1b5 \uae38(\uac00\uc7a5 \ube60\ub978 \uae38)\ub3c4 \ud558\ub098
+async function computeFollow(t, pts, heading, ctl) {
+  const walk = t.mode === 'walk';
+  try {
+    const r = await findRoutesAlong(t.follow.track, { start: pts[0], dest: t.dest, mode: t.mode, heading, signal: ctl.signal });
+    if (ctl.signal.aborted || S.trip !== t) return true;
+    const fr = r.routes[0];
+    fr.tags = ['follow'];
+    fr.p = personalize(fr);
+    t.routes = [fr]; t.info = null; t.sel = 0; t.engine = 'valhalla'; t.warn = '';
+    if (!walk) attachCams(t.routes);
+  } catch (e) {
+    if (ctl.signal.aborted || S.trip !== t) return true;
+    if (e.message === 'track-done') { t.follow = null; t.warn = '\uae30\ub85d\ud55c \uae38\uc758 \ub05d\uc5d0 \uc640 \uc788\uc5b4 \ubcf4\ud1b5 \uae38\ub85c \ucc3e\uc558\uc2b5\ub2c8\ub2e4.'; return false; }
+    t.follow.failed = true;
+    t.warn = e.noPath || e.status === 400 ? '\uae30\ub85d\ud55c \uae38\uc744 \ub530\ub77c\uac00\ub294 \uacbd\ub85c\ub97c \ucc3e\uc9c0 \ubabb\ud574 \ubcf4\ud1b5 \uae38\uc744 \ubcf4\uc5ec \uc90d\ub2c8\ub2e4.' : '\uacbd\ub85c \uc11c\ubc84\uac00 \uc751\ub2f5\ud558\uc9c0 \uc54a\uc544 \uae30\ub85d\ud55c \uae38 \ub300\uc2e0 \ubcf4\ud1b5 \uae38\uc744 \ubcf4\uc5ec \uc90d\ub2c8\ub2e4.';
+    if (S.screen === 'preview') renderPlan();
+    return false;     // \ubcf4\ud1b5 \uacbd\ub85c \ucc3e\uae30\ub85c \ub118\uc5b4\uac04\ub2e4
+  }
+  t.loading = false;
+  if (S.screen === 'preview') { renderSheet(); renderPlan(); }
+  drawFollow(t);
+  // \ubcf4\ud1b5 \uae38: \uae30\ub85d\ud55c \uae38\ubcf4\ub2e4 3\ubd84 \ub118\uac8c \ube60\ub974\uac70\ub098 1 km \ub118\uac8c \uc9e7\uc73c\uba74 \ud568\uaed8 \ubcf4\uc5ec \uc900\ub2e4
+  try {
+    const n = await findRoutes(pts, { pref: 'fast', mode: t.mode, heading, engine: store.settings.engine, signal: ctl.signal });
+    if (ctl.signal.aborted || S.trip !== t || !t.routes.length) return true;
+    const f = t.routes[0], best = n.routes.reduce((a, b) => (personalize(b).dur < personalize(a).dur ? b : a));
+    best.p = personalize(best);
+    if (best.p.dur < f.p.dur - 180 || best.distance < f.distance - 1000) {
+      best.tags = ['fast'];
+      if (!walk) attachCams([best]);
+      t.routes = [f, best];
+      if (S.screen === 'preview') renderSheet();
+      drawFollow(t);
+    }
+  } catch (e) { /* \ube44\uad50 \uacbd\ub85c \uc5c6\uc774 */ }
+  return true;
+}
+// \uc9c0\ub3c4: \uace0\ub978 \uacbd\ub85c + \uae30\ub85d\ud55c \uae38(\uc587\uac8c, \ube44\uad50\uc6a9)
+function drawFollow(t) {
+  if (!t.routes.length) return;
+  MV.setRoutes(t.routes.concat(t.follow ? [{ coords: t.follow.track, ghost: true }] : []), t.sel);
+  MV.setCams(t.mode === 'walk' ? [] : t.routes[t.sel].cams);
+  const r = t.routes[t.sel];
+  MV.fit([r.coords[0], ...r.coords.filter((_, i) => i % 20 === 0), r.coords[r.coords.length - 1]]);
 }
 
 // ===== 14-main.js =====
@@ -4207,7 +4780,7 @@ function boot() {
       toast('\uc800\uc7a5\ub41c \uc7a5\uc18c \uc774\ub984\u00b7\uc8fc\uc18c\ub97c \ud55c\uae00\ub85c \ubc14\uafe8\uc2b5\ub2c8\ub2e4');
     }).catch(() => { /* \ub2e4\uc74c\uc5d0 \ub2e4\uc2dc */ });
   }, 4000);
-  window.__navi = { S, store, MV, Voice, navFix, startTrip, finishNav, applyTheme, openSettings, openPlaces, onPos, reversePlace, searchPlaces, renderSheet, setSheetSize };
+  window.__navi = { S, store, MV, Voice, navFix, startTrip, finishNav, applyTheme, openSettings, openPlaces, onPos, reversePlace, searchPlaces, renderSheet, renderChips, setSheetSize };
 }
 
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();

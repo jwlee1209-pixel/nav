@@ -2,6 +2,7 @@
 const geojsonvt = require('geojson-vt');
 const vtpbf = require('vt-pbf');
 const F = require('./fixtures');
+const G = require('./load')(['01-geo', '00-util']);
 
 const P = F.P;
 const line = (coords, props) => ({ type: 'Feature', properties: props, geometry: { type: 'LineString', coordinates: coords } });
@@ -147,7 +148,14 @@ async function install(context, opt = {}) {
     if (opt.valhallaDown) return r.fulfill({ status: 503, body: 'down' });
     log.push('valhalla-costing ' + req.costing);
     const easy = req.costing_options && req.costing_options.auto && req.costing_options.auto.maneuver_penalty;
-    const body = req.costing === 'pedestrian' ? F.walkResponse() : easy ? F.easyResponse() : F.valhallaResponse();
+    let body = req.costing === 'pedestrian' ? F.walkResponse() : easy ? F.easyResponse() : F.valhallaResponse();
+    // 지나는 점(through)이 있으면 실제 서버처럼 그 점들을 모두 지나는 길을 고른다(가짜 길 중 가장 가까운 것)
+    const thr = req.locations.filter(l => l.type === 'through');
+    if (thr.length && req.costing !== 'pedestrian') {
+      const far = b => { const c = G.decodePolyline(b.trip.legs[0].shape, 6); return Math.max(...thr.map(l => G.nearestOnLine(c, [l.lon, l.lat]).d)); };
+      body = [F.valhallaResponse({ noAlt: true }), F.easyResponse()].sort((a, b) => far(a) - far(b))[0];
+      log.push('valhalla-through ' + thr.length + ' far=' + Math.round(far(body)));
+    }
     r.fulfill({ contentType: 'application/json', body: JSON.stringify(body) });
   });
   await context.route(/routing\.openstreetmap\.de\/routed-(car|foot)/, r => {

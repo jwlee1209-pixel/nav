@@ -2,7 +2,7 @@
 // icons and manifest are cache-first. Map tiles, search and routing requests are not touched.
 // Only files directly in this folder belong to the app. Sub-folders hold other apps on the
 // same site (e.g. ppt/ = PPT editor) and are never touched or cached here (v2.2).
-const CACHE = 'gilnavi-v2.2';
+const CACHE = 'gilnavi-v2.3';
 const SHELL = ['./', './manifest.json', './icon-192.png', './icon-512.png', './cameras.json'];
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()));

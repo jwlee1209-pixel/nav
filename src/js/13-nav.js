@@ -94,7 +94,13 @@ async function startNav(sim) {
     sim, route, trip: t, dest: t.dest, stops: t.stops.slice(), visited: 0, mode: t.mode || 'car',
     startTs: Date.now(), pred: route.duration, dist0: route.distance, rr: 0, corr: walk ? 1 : ef.k,
     lastFixT: 0, lastSt: null, simObj: null, rerouteCtl: null, ended: false,
+    // 주행 기록: 지나간 길(경로에 맞춘 점)·지난 도로 이름·출발지(실제 안내만)
+    rec: sim ? null : { pts: [], roads: [], from: originOf(S.me || t.origin) },
+    // 기록한 길을 따라가는 안내면 그 길(이탈하면 그 길로 되돌아가게 다시 찾는다)
+    follow: route.follow && t.follow ? { track: t.follow.track, idx: 0, name: t.follow.name, n: 0 } : null,
   };
+  if (S.nav.follow && t.follow.favId) { const fr = store.froutes.find(x => x.id === t.follow.favId); if (fr) { fr.n = (fr.n || 0) + 1; saveStore(); } }
+  if (S.nav.rec && !S.nav.rec.from.name) nameOrigin(S.nav.rec.from);
   S.nav.guide = makeGuide(route, false);
   setNavCams(route);
   if (!sim) addRecent(t.dest);
@@ -188,6 +194,7 @@ function navFix(fix) {
   const n = S.nav;
   if (!n || n.ended) return;
   const st = n.guide.update(fix);
+  recordFix(n, st, fix);
   const dt = n.lastFixT ? clamp(Date.now() - n.lastFixT, 200, 1500) : 0;
   n.lastFixT = Date.now();
   n.lastSt = st;
@@ -247,7 +254,10 @@ function navEvent(name, data) {
   else if (name === 'backon') { if (n.rerouteCtl) n.rerouteCtl.abort(); banner(null); }
   else if (name === 'waypoint') { n.visited = Math.min(n.stops.length, n.visited + 1); MV.setTripMarks(null, n.stops.slice(n.visited), n.dest); }
   else if (name === 'arrive') setTimeout(() => finishNav(true), 3500);
-  else if (name === 'segment' && !n.sim && n.mode !== 'walk') learnRoad(data.name, timeBand(data.t), data.act / data.pred, data.t);
+  else if (name === 'segment' && !n.sim) {
+    if (n.rec && data.name && n.rec.roads[n.rec.roads.length - 1] !== data.name) n.rec.roads.push(data.name);
+    if (n.mode !== 'walk') learnRoad(data.name, timeBand(data.t), data.act / data.pred, data.t);
+  }
 }
 
 async function reroute(at) {
@@ -256,8 +266,20 @@ async function reroute(at) {
   if (n.rerouteCtl) n.rerouteCtl.abort();
   const ctl = n.rerouteCtl = new AbortController();
   const pts = [{ lat: at.lat, lon: at.lon }, ...n.stops.slice(n.visited), n.dest];
+  const heading = at.speed > 2 ? at.heading : null;
   try {
-    const r = await findRoutes(pts, { pref: n.trip.pref, mode: n.mode, heading: at.speed > 2 ? at.heading : null, engine: store.settings.engine, signal: ctl.signal });
+    let r = null;
+    if (n.follow) {
+      // 기록한 길에서 2.5 km 안이면 그 길로 되돌아가게(지나온 곳 뒤쪽은 보지 않는다)
+      const fl = n.follow, near = nearestOnLine(fl.track, [at.lon, at.lat], fl.idx);
+      if (near.d < 2500) {
+        try { r = await findRoutesAlong(fl.track.slice(near.i), { start: at, dest: n.dest, mode: n.mode, heading, signal: ctl.signal }); }
+        catch (e) { if (ctl.signal.aborted) throw e; r = null; }
+      }
+      if (!r && !fl.left) { fl.left = true; toast('기록한 길에서 많이 벗어나 보통 길로 안내합니다', 3500); }
+      if (!r) n.follow = null;
+    }
+    if (!r) r = await findRoutes(pts, { pref: n.trip.pref, mode: n.mode, heading, engine: store.settings.engine, signal: ctl.signal });
     if (ctl.signal.aborted || S.nav !== n || n.ended) return;
     n.route = r.routes[0];
     n.route.p = personalize(n.route);
@@ -286,10 +308,16 @@ function finishNav(arrived) {
   if (!arrived) Voice.stop();
   const act = (Date.now() - n.startTs) / 1000;
   if (!n.sim) {
-    store.trips.push({ ts: n.startTs, end: Date.now(), pred: n.pred, act, dist: n.dist0, rr: n.rr, arrived: !!arrived, mode: n.mode,
-      dest: { name: n.dest.label || n.dest.name, lat: n.dest.lat, lon: n.dest.lon } });
+    const rec = n.rec || { pts: [], roads: [], from: null };
+    const len = Math.round(lineLen(rec.pts));
+    const id = uid();
+    const roads = [...new Set(rec.roads)].slice(0, 8);
+    store.trips.push({ id, ts: n.startTs, end: Date.now(), pred: n.pred, act, dist: n.dist0, rr: n.rr, arrived: !!arrived, mode: n.mode,
+      dest: { name: n.dest.label || n.dest.name, lat: n.dest.lat, lon: n.dest.lon }, ...(rec.from ? { from: rec.from } : {}), ...(roads.length ? { roads } : {}), len });
     store.trips = store.trips.slice(-300);
     saveStore(true);
+    if (rec.pts.length >= 2 && len >= 200) keepTrack(id, simplifyLine(rec.pts, 4));
+    else pruneTracks();
   }
   S.nav = null; S.trip = null;
   $('#cambox').hidden = true; $('#speed').classList.remove('over');
@@ -391,11 +419,11 @@ function openSettings() {
       row('도착 시간 보정', ef.n ? `내 주행 기록으로 보정 중: ×${ef.k.toFixed(2)} (${ef.n}회, ${ef.band ? BAND_KO[ef.band] : '전체'})` : `실제 안내를 끝까지 3번 이상 받으면 시작합니다 (지금 ${realTrips.filter(t => t.arrived).length}회)`, sw(st.etaLearn, v => setS('etaLearn', v), '도착 시간 보정')),
       row('시간대별 목적지 추천', '요일·시간대가 비슷할 때 자주 간 곳을 첫 화면에 띄웁니다', sw(st.suggest, v => setS('suggest', v), '시간대별 추천')),
       row('도로별 교통 학습', Object.keys(store.roads).length ? `안내 중 달린 도로의 시간대별 실제 속도 ${Object.keys(store.roads).length}건 — 최근 기록일수록 크게 반영해 경로 선택과 도착 시간에 씁니다` : '안내를 받으며 달리면 도로별·시간대별 실제 속도를 배워 다음 경로 선택에 씁니다', h('span')),
-      row('주행 기록 지우기', `주행 ${realTrips.length}건 · 도로 학습 ${Object.keys(store.roads).length}건`, h('button', { class: 'btn btn--sm btn--ghost', type: 'button', text: '지우기', onclick: async () => { if (await ask('주행 기록과 도로별 학습을 모두 지울까요? 도착 시간 보정과 추천이 처음부터 다시 시작됩니다.', { ok: '지우기', danger: true })) { store.trips = []; store.roads = {}; saveStore(true); toast('주행 기록을 지웠습니다'); openSettings(); } } }))),
+      row('주행 기록 지우기', `주행 ${realTrips.length}건 · 도로 학습 ${Object.keys(store.roads).length}건`, h('button', { class: 'btn btn--sm btn--ghost', type: 'button', text: '지우기', onclick: async () => { if (await ask('주행 기록과 도로별 학습을 모두 지울까요? 도착 시간 보정과 추천이 처음부터 다시 시작됩니다.', { ok: '지우기', danger: true })) { store.trips = []; store.roads = {}; saveStore(true); setTracks({}); toast('주행 기록을 지웠습니다'); openSettings(); } } }))),
     h('section', { class: 'group' }, h('h2', { text: '데이터' }),
-      row('백업 파일로 저장', '집·회사·즐겨찾기·설정·기록을 이 기기에서 다른 기기로 옮길 때', h('button', { class: 'btn btn--sm', type: 'button', onclick: exportFile }, h('span', { svg: ic('down', 16) }), '저장')),
+      row('백업 파일로 저장', '집·회사·즐겨찾기·즐겨찾는 경로·설정·주행 기록(지나간 길 포함)을 이 기기에서 다른 기기로 옮길 때', h('button', { class: 'btn btn--sm', type: 'button', onclick: exportFile }, h('span', { svg: ic('down', 16) }), '저장')),
       row('백업 파일 불러오기', '지금 데이터는 백업 내용으로 바뀝니다', h('button', { class: 'btn btn--sm', type: 'button', onclick: importFile }, h('span', { svg: ic('up', 16) }), '불러오기')),
-      row('모두 초기화', null, h('button', { class: 'btn btn--sm btn--ghost', type: 'button', text: '초기화', onclick: async () => { if (await ask('집·회사·즐겨찾기·기록·설정을 모두 지울까요?', { ok: '모두 지우기', danger: true })) { applyData({}); store.settings = { ...DEFAULT_SETTINGS }; saveStore(true); refreshPts(); applyTheme(); toast('초기화했습니다'); openSettings(); } } }))),
+      row('모두 초기화', null, h('button', { class: 'btn btn--sm btn--ghost', type: 'button', text: '초기화', onclick: async () => { if (await ask('집·회사·즐겨찾기·즐겨찾는 경로·기록·설정을 모두 지울까요?', { ok: '모두 지우기', danger: true })) { applyData({}); store.settings = { ...DEFAULT_SETTINGS }; saveStore(true); setTracks({}); refreshPts(); applyTheme(); toast('초기화했습니다'); openSettings(); } } }))),
     h('section', { class: 'group' }, h('h2', { text: '앱 정보' }),
       row('버전', null, h('span', { class: 'num', style: 'font-weight:700', text: 'v' + APP_VERSION })),
       row('앱 주소', '휴대폰에서는 이 주소로 열어야 위치(GPS)를 쓸 수 있습니다. 메뉴의 ‘홈 화면에 추가’를 하면 앱처럼 열립니다.', h('span', { class: 'num', style: 'font-weight:700;user-select:all;word-break:break-all', text: APP_URL }))),
@@ -453,7 +481,7 @@ function importFile() {
       try {
         const d = JSON.parse(rd.result);
         if (d.app !== 'gilnavi') throw new Error('not ours');
-        applyData(d); saveStore(true); refreshPts(); applyTheme();
+        applyData(d); saveStore(true); setTracks(d.tracks); refreshPts(); applyTheme();
         toast('백업을 불러왔습니다'); openSettings();
       } catch (e) { toast('길잡이 내비 백업 파일이 아닙니다'); }
     };
@@ -465,13 +493,13 @@ function importFile() {
 // 내 장소 관리
 // ── 현재 위치 저장 · 내 장소 이름과 메모 ──
 // 이름·메모 입력 창(현재 위치 저장과 고치기에 같이 쓴다). 열린 동안 info()·setName()·enable() 로 내용을 바꾼다
-function placeForm({ title, name = '', memo = '', kinds = null, okText = '저장', onSave }) {
+function placeForm({ title, name = '', memo = '', kinds = null, okText = '저장', onSave, onDelete = null, namePh = '이름(예: 주차한 곳, 우리 아파트)', memoPh = '메모(선택) — 예: 지하 2층 B-37' }) {
   const box = $('#dialog');
   let typed = false, kind = kinds ? kinds[0][0] : null, closed = false;
   const close = () => { closed = true; box.hidden = true; box.replaceChildren(); };
-  const nameIn = h('input', { class: 'field field--wide', id: 'pfName', maxlength: '40', value: name, placeholder: '이름(예: 주차한 곳, 우리 아파트)', 'aria-label': '이름', enterkeyhint: 'done',
+  const nameIn = h('input', { class: 'field field--wide', id: 'pfName', maxlength: '40', value: name, placeholder: namePh, 'aria-label': '이름', enterkeyhint: 'done',
     oninput: () => { typed = true; }, onkeydown: e => { if (e.key === 'Enter') save(); } });
-  const memoIn = h('input', { class: 'field field--wide', id: 'pfMemo', maxlength: '120', value: memo, placeholder: '메모(선택) — 예: 지하 2층 B-37', 'aria-label': '메모', enterkeyhint: 'done',
+  const memoIn = h('input', { class: 'field field--wide', id: 'pfMemo', maxlength: '120', value: memo, placeholder: memoPh, 'aria-label': '메모', enterkeyhint: 'done',
     onkeydown: e => { if (e.key === 'Enter') save(); } });
   const infoEl = h('div', { class: 'pform__info', id: 'pfInfo', 'aria-live': 'polite' });
   const ok = h('button', { class: 'btn btn--primary', type: 'button', id: 'pfSave', text: okText, onclick: () => save() });
@@ -480,7 +508,9 @@ function placeForm({ title, name = '', memo = '', kinds = null, okText = '저장
     h('h2', { text: title }), infoEl,
     kinds ? seg(kinds, kind, k => { kind = k; }, '저장할 곳') : null,
     nameIn, memoIn,
-    h('div', { class: 'dialog__btns' }, h('button', { class: 'btn', type: 'button', text: '취소', onclick: close }), ok)));
+    h('div', { class: 'dialog__btns' },
+      onDelete ? h('button', { class: 'btn btn--ghost btn--danger-text', type: 'button', id: 'pfDel', text: '지우기', style: 'margin-right:auto', onclick: () => { close(); onDelete(); } }) : null,
+      h('button', { class: 'btn', type: 'button', text: '취소', onclick: close }), ok)));
   box.hidden = false;
   box.onclick = e => { if (e.target === box) close(); };
   box.onkeydown = e => { if (e.key === 'Escape') close(); };
