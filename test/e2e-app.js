@@ -144,7 +144,9 @@ const ok = (c, m) => { console.log((c ? '  ✓ ' : '  ✗ ') + m); if (!c) fails
   offline = false;
 
   console.log('5. 휴대폰 ‘공유 → PPT 편집기’(Web Share Target)');
-  ok(parsed.share_target && parsed.share_target.method === 'POST' && parsed.share_target.params.files[0].accept.includes('.pptx'), 'manifest 에 공유 받기(share_target) 있음');
+  const acc = parsed.share_target && parsed.share_target.params.files[0].accept;
+  ok(parsed.share_target && parsed.share_target.method === 'POST' && acc.includes('application/vnd.openxmlformats-officedocument.presentationml.presentation'), 'manifest 에 공유 받기(share_target) 있음');
+  ok(acc.every(a => /^[a-z]+\/[a-z0-9.+-]+$/i.test(a)), '공유 받기 형식은 MIME 만(확장자 항목 없음: 삼성 인터넷 설치 실패 방지)');
   await page.goto(BASE + 'ppt/');
   await page.evaluate(() => navigator.serviceWorker.ready);
   // 안드로이드가 하는 것처럼 파일을 multipart POST 로 보낸다(화면 이동 요청)

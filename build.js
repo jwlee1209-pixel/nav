@@ -70,13 +70,14 @@ const manifest = {
     launch_type: 'multiple-clients',
   }],
   // 휴대폰(안드로이드)은 웹 앱을 ‘연결 앱’에 넣을 수 없어, 파일의 ‘공유’ 목록에 넣는다(Web Share Target)
+  // accept 에는 MIME 형식만 넣는다: 안드로이드 설치 앱(WebAPK)은 MIME 형식으로만 공유 목록을 정하고,
+  // ‘.pptx’ 같은 확장자 항목은 삼성 인터넷의 앱 설치(WebAPK 만들기)를 실패하게 할 수 있다(v1.4).
   share_target: {
     action: './share', method: 'POST', enctype: 'multipart/form-data',
     params: { title: 'title', text: 'text', files: [{ name: 'file', accept: [
       'application/vnd.openxmlformats-officedocument.presentationml.presentation', 'application/vnd.ms-powerpoint',
       'application/vnd.openxmlformats-officedocument.presentationml.slideshow', 'application/vnd.openxmlformats-officedocument.presentationml.template',
       'application/vnd.ms-powerpoint.presentation.macroEnabled.12',
-      '.pptx', '.ppt', '.ppsx', '.pps', '.potx', '.pot', '.pptm',
       // 카카오톡 등 형식을 모르는 앱이 보내는 경우(내용으로 PowerPoint 인지 다시 확인한다)
       'application/octet-stream', 'application/zip', 'application/x-zip-compressed',
     ] }] },

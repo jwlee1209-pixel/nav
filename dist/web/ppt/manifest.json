@@ -79,13 +79,6 @@
             "application/vnd.openxmlformats-officedocument.presentationml.slideshow",
             "application/vnd.openxmlformats-officedocument.presentationml.template",
             "application/vnd.ms-powerpoint.presentation.macroEnabled.12",
-            ".pptx",
-            ".ppt",
-            ".ppsx",
-            ".pps",
-            ".potx",
-            ".pot",
-            ".pptm",
             "application/octet-stream",
             "application/zip",
             "application/x-zip-compressed"
