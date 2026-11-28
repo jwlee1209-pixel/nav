@@ -8,8 +8,20 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="&#xae38;&#xc7a1;&#xc774; &#xb0b4;&#xbe44;">
 <meta name="description" content="&#xbb34;&#xb8cc; &#xc9c0;&#xb3c4;(OpenStreetMap)&#xb85c; &#xae38;&#xc744; &#xcc3e;&#xace0; &#xd55c;&#xad6d;&#xc5b4; &#xc74c;&#xc131;&#xc73c;&#xb85c; &#xc548;&#xb0b4;&#xd558;&#xb294; &#xac1c;&#xc778;&#xc6a9; &#xcc28;&#xb7c9; &#xb0b4;&#xbe44;&#xac8c;&#xc774;&#xc158;">
+<!-- &#xce74;&#xce74;&#xc624;&#xd1a1;&#xb7;&#xbb38;&#xc790;&#xb85c; &#xb9c1;&#xd06c;&#xb97c; &#xbcf4;&#xb0bc; &#xb54c; &#xb728;&#xb294; &#xbbf8;&#xb9ac;&#xbcf4;&#xae30; -->
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="&#xae38;&#xc7a1;&#xc774; &#xb0b4;&#xbe44;">
+<meta property="og:title" content="&#xae38;&#xc7a1;&#xc774; &#xb0b4;&#xbe44;">
+<meta property="og:description" content="&#xc124;&#xce58; &#xc5c6;&#xc774; &#xbc14;&#xb85c; &#xc4f0;&#xb294; &#xbb34;&#xb8cc; &#xb0b4;&#xbe44;&#xac8c;&#xc774;&#xc158;. &#xc5f4;&#xc5b4;&#xc11c; &#x2018;&#xd648; &#xd654;&#xba74;&#xc5d0; &#xcd94;&#xac00;&#x2019;&#xb97c; &#xb204;&#xb974;&#xba74; &#xc571;&#xcc98;&#xb7fc; &#xc501;&#xb2c8;&#xb2e4;.">
+<meta property="og:url" content="https://jwlee1209-pixel.github.io/nav/">
+<meta property="og:image" content="https://jwlee1209-pixel.github.io/nav/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="&#xae38;&#xc7a1;&#xc774; &#xb0b4;&#xbe44; &#x2014; &#xbb34;&#xb8cc; &#xc9c0;&#xb3c4;&#xc640; &#xd55c;&#xad6d;&#xc5b4; &#xc74c;&#xc131; &#xc548;&#xb0b4;">
+<meta property="og:locale" content="ko_KR">
+<meta name="twitter:card" content="summary_large_image">
 <title>&#xae38;&#xc7a1;&#xc774; &#xb0b4;&#xbe44;</title>
-<meta name="generator" content="&#xae38;&#xc7a1;&#xc774; &#xb0b4;&#xbe44; v2.3">
+<meta name="generator" content="&#xae38;&#xc7a1;&#xc774; &#xb0b4;&#xbe44; v2.4">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230B5CAD'/%3E%3Cpath d='M11 25V15.5a3.5 3.5 0 0 1 3.5-3.5H20' fill='none' stroke='%23fff' stroke-width='3.4' stroke-linecap='round'/%3E%3Cpath d='M19 7.2 25.5 12 19 16.8z' fill='%23fff'/%3E%3C/svg%3E">
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
@@ -375,6 +387,29 @@ input[type="range"] { width: 180px; accent-color: var(--accent); }
 .rcard__follow { grid-column: 2 / 4; font-size: 12.5px; font-weight: 700; color: #9A5A0C; }
 .btn--danger-text { color: var(--danger, #C62828); }
 :root[data-mode="night"] .followbar, :root[data-mode="night"] .tag--follow, :root[data-mode="night"] .rcard__follow { color: #F0B565; }
+
+/* \d648  \d654 \ba74 \c5d0  \cd94 \ac00 (v2.4) */
+.a2hs { display: flex; align-items: center; gap: 2px; margin: 2px 0 10px; padding: 4px 2px 4px 4px; border-radius: 16px; background: var(--accent-soft); }
+.a2hs__main { flex: 1; min-width: 0; display: flex; align-items: center; gap: 12px; padding: 8px 6px 8px 8px; border-radius: 12px; background: transparent; color: var(--text); text-align: left; }
+.a2hs__mark { flex: none; display: grid; }
+.a2hs__mark svg { width: 40px; height: 40px; border-radius: 10px; box-shadow: 0 2px 6px rgba(11, 92, 173, .28); }
+.a2hs__mark--lg svg { width: 52px; height: 52px; border-radius: 13px; }
+.a2hs__txt { flex: 1; min-width: 0; }
+.a2hs__txt b { display: block; font-size: 15.5px; }
+.a2hs__txt small { display: block; font-size: 13px; color: var(--text-2); word-break: keep-all; overflow-wrap: anywhere; line-height: 1.35; margin-top: 1px; }
+.a2hs__go { flex: none; padding: 8px 14px; border-radius: 999px; background: var(--accent); color: var(--accent-ink); font-weight: 700; font-size: 14px; }
+.a2hs__x { flex: none; width: 36px; height: 36px; color: var(--text-3); }
+.dialog__box.a2g { max-height: 100%; overflow-y: auto; }
+.a2g__head { display: flex; gap: 14px; align-items: flex-start; margin-bottom: 10px; }
+.a2g__head h2 { margin: 2px 0 4px; font-size: 19px; }
+.dialog__box .a2g__lead { margin: 0; font-size: 14.5px; font-weight: 500; color: var(--text-2); word-break: keep-all; overflow-wrap: anywhere; }
+.a2g__steps { list-style: none; counter-reset: a2g; margin: 6px 0 14px; padding: 0; }
+.a2g__steps li { counter-increment: a2g; position: relative; padding: 11px 0 11px 40px; border-top: 1px solid var(--line); font-size: 15px; line-height: 1.6; word-break: keep-all; overflow-wrap: anywhere; }
+.a2g__steps li::before { content: counter(a2g); position: absolute; left: 0; top: 11px; width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; background: var(--accent); color: var(--accent-ink); font-size: 13.5px; font-weight: 800; }
+.a2g__key { display: inline-flex; align-items: center; justify-content: center; min-width: 26px; height: 26px; padding: 0 6px; margin: 0 2px; border-radius: 7px; background: var(--surface-2); border: 1px solid var(--line); font-weight: 800; line-height: 1; vertical-align: -6px; }
+.dialog__box .a2g__url { margin: -4px 0 14px; padding: 8px 10px; border-radius: 10px; background: var(--surface-2); font-size: 13px; font-weight: 600; color: var(--text-2); user-select: all; word-break: break-all; }
+.dialog__box.a2g:focus { outline: none; }
+.dialog__box .a2g__note { margin: -4px 0 14px; font-size: 13px; font-weight: 500; color: var(--text-2); word-break: keep-all; overflow-wrap: anywhere; }
 </style>
 </head>
 <body>
@@ -503,7 +538,7 @@ return maplibregl$1;
 </script>
 <script>(function () {
 'use strict';
-const APP_VERSION = '2.3';
+const APP_VERSION = '2.4';
 // ===== 00-util.js =====
 // \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 \uacf5\ud1b5 \ub3c4\uad6c \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
 const $ = (s, r = document) => r.querySelector(s);
@@ -3127,6 +3162,8 @@ const IC = {
   car: '<path d="M5 16.5V12l2-5h10l2 5v4.5"/><path d="M3.5 16.5h17M6.5 19.5v-3M17.5 19.5v-3"/><circle cx="7.5" cy="13.5" r="1"/><circle cx="16.5" cy="13.5" r="1"/>',
   nav: '<path d="M12 3 19 20l-7-4-7 4z"/>',
   walk: '<circle cx="13.5" cy="4.5" r="2"/><path d="M12.6 8.6 10.4 14l3.1 2.6-1 4.4M10.4 14 8 20.6M12 9.6l-3.2 3M12.6 8.6l2.6 3 3 .9"/>',
+  share: '<circle cx="17.5" cy="5.5" r="2.5"/><circle cx="6.5" cy="12" r="2.5"/><circle cx="17.5" cy="18.5" r="2.5"/><path d="m8.7 10.8 6.6-4M8.7 13.2l6.6 4"/>',
+  addhome: '<rect x="6.5" y="2.5" width="11" height="19" rx="2.5"/><path d="M12 8.5v6M9 11.5h6"/>',
   route: '<circle cx="6" cy="18.5" r="2.2"/><circle cx="18" cy="5.5" r="2.2"/><path d="M8.3 18.5H15a3.2 3.2 0 0 0 0-6.4H9a3.2 3.2 0 0 1 0-6.4h6.7"/>',
 };
 const ic = (n, size = 22, fill = false) => `<svg viewBox="0 0 24 24" width="${size}" height="${size}" fill="${fill ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${IC[n]}</svg>`;
@@ -3336,7 +3373,7 @@ function renderChips() {
 function homeSheet() {
   const tabs = h('div', { class: 'seg', role: 'tablist' },
     ...[['recent', '\ucd5c\uadfc \ubaa9\uc801\uc9c0'], ['fav', '\uc990\uaca8\ucc3e\uae30'], ['trips', '\uc8fc\ud589 \uae30\ub85d']].map(([k, label]) => h('button', { type: 'button', role: 'tab', id: 'tab-' + k, 'aria-pressed': S.homeTab === k ? 'true' : 'false', text: label, onclick: () => { S.homeTab = k; renderSheet(); } })));
-  if (S.homeTab === 'trips') return [gpsAlert(), h('div', { class: 'sec-head' }, tabs), ...tripsTab()];
+  if (S.homeTab === 'trips') return [gpsAlert(), installCard(), h('div', { class: 'sec-head' }, tabs), ...tripsTab()];
   const list = h('ul', { class: 'list' });
   const items = S.homeTab === 'recent' ? store.recents : store.favs;
   if (!items.length) {
@@ -3349,7 +3386,7 @@ function homeSheet() {
       h('button', { class: 'btn btn--sm', type: 'button', id: 'btnSaveHere', onclick: () => saveHere() }, h('span', { svg: ic('pin', 16) }), '\ud604\uc7ac \uc704\uce58 \uc800\uc7a5'),
       h('button', { class: 'btn btn--sm btn--ghost', type: 'button', onclick: openPlaces }, h('span', { svg: ic('star', 16) }), '\ub0b4 \uc7a5\uc18c \uad00\ub9ac')),
     gpsNote());
-  return [gpsAlert(), h('div', { class: 'sec-head' }, tabs), ...(S.homeTab === 'fav' ? froutesSection() : []), list, manage];
+  return [gpsAlert(), installCard(), h('div', { class: 'sec-head' }, tabs), ...(S.homeTab === 'fav' ? froutesSection() : []), list, manage];
 }
 
 // \uc704\uce58\ub97c \ubabb \uc4f0\ub294 \uc774\uc720\uc640 \ud574\uacb0 \ubc29\ubc95(\ud55c\uacf3\uc5d0\uc11c \uad00\ub9ac)
@@ -4190,7 +4227,9 @@ function openSettings() {
       row('\ubaa8\ub450 \ucd08\uae30\ud654', null, h('button', { class: 'btn btn--sm btn--ghost', type: 'button', text: '\ucd08\uae30\ud654', onclick: async () => { if (await ask('\uc9d1\u00b7\ud68c\uc0ac\u00b7\uc990\uaca8\ucc3e\uae30\u00b7\uc990\uaca8\ucc3e\ub294 \uacbd\ub85c\u00b7\uae30\ub85d\u00b7\uc124\uc815\uc744 \ubaa8\ub450 \uc9c0\uc6b8\uae4c\uc694?', { ok: '\ubaa8\ub450 \uc9c0\uc6b0\uae30', danger: true })) { applyData({}); store.settings = { ...DEFAULT_SETTINGS }; saveStore(true); setTracks({}); refreshPts(); applyTheme(); toast('\ucd08\uae30\ud654\ud588\uc2b5\ub2c8\ub2e4'); openSettings(); } } }))),
     h('section', { class: 'group' }, h('h2', { text: '\uc571 \uc815\ubcf4' }),
       row('\ubc84\uc804', null, h('span', { class: 'num', style: 'font-weight:700', text: 'v' + APP_VERSION })),
-      row('\uc571 \uc8fc\uc18c', '\ud734\ub300\ud3f0\uc5d0\uc11c\ub294 \uc774 \uc8fc\uc18c\ub85c \uc5f4\uc5b4\uc57c \uc704\uce58(GPS)\ub97c \uc4f8 \uc218 \uc788\uc2b5\ub2c8\ub2e4. \uba54\ub274\uc758 \u2018\ud648 \ud654\uba74\uc5d0 \ucd94\uac00\u2019\ub97c \ud558\uba74 \uc571\ucc98\ub7fc \uc5f4\ub9bd\ub2c8\ub2e4.', h('span', { class: 'num', style: 'font-weight:700;user-select:all;word-break:break-all', text: APP_URL }))),
+      row('\uc571 \uc8fc\uc18c', '\ud734\ub300\ud3f0\uc5d0\uc11c\ub294 \uc774 \uc8fc\uc18c\ub85c \uc5f4\uc5b4\uc57c \uc704\uce58(GPS)\ub97c \uc4f8 \uc218 \uc788\uc2b5\ub2c8\ub2e4.', h('span', { class: 'num', style: 'font-weight:700;user-select:all;word-break:break-all', text: APP_URL })),
+      a2hsOffer() ? row('\ud648 \ud654\uba74\uc5d0 \ucd94\uac00', ENV.inapp ? '\uce74\uce74\uc624\ud1a1 \uac19\uc740 \uc571 \uc548 \ud654\uba74\uc5d0\uc11c\ub294 \ud734\ub300\ud3f0 \ube0c\ub77c\uc6b0\uc800\ub85c \uc62e\uaca8\uc11c \ucd94\uac00\ud569\ub2c8\ub2e4' : '\ud648 \ud654\uba74 \uc544\uc774\ucf58\uc73c\ub85c \uc571\ucc98\ub7fc \ubc14\ub85c \uc5fd\ub2c8\ub2e4', h('button', { class: 'btn btn--sm', type: 'button', id: 'setA2hs', onclick: () => { closeOverlay(); addToHome(); } }, h('span', { svg: ic('addhome', 16) }), '\ucd94\uac00')) : null,
+      row('\uc571 \uc8fc\uc18c \ubcf4\ub0b4\uae30', '\uce74\uce74\uc624\ud1a1 \ub4f1\uc73c\ub85c \uc774 \uc571 \uc8fc\uc18c\ub97c \ubcf4\ub0c5\ub2c8\ub2e4. \ubc1b\uc740 \uc0ac\ub78c\uc740 \uccab \ud654\uba74\uc758 \u2018\ud648 \ud654\uba74\uc5d0 \ucd94\uac00\u2019\ub85c \uc571\ucc98\ub7fc \uc501\ub2c8\ub2e4', h('button', { class: 'btn btn--sm', type: 'button', id: 'setShare', onclick: shareApp }, h('span', { svg: ic('share', 16) }), '\ubcf4\ub0b4\uae30'))),
     h('section', { class: 'group credits' }, h('h2', { text: '\ub370\uc774\ud130 \ucd9c\ucc98\uc640 \uc774\uc6a9 \uc815\ucc45' }),
       h('p', null, '\uc9c0\ub3c4: ', h('a', { href: 'https://openfreemap.org', target: '_blank', rel: 'noopener', text: 'OpenFreeMap' }), ' \u00b7 ', h('a', { href: 'https://www.openmaptiles.org/', target: '_blank', rel: 'noopener', text: 'OpenMapTiles' }), ' \u00b7 \uc9c0\ub3c4 \ub370\uc774\ud130 ', h('a', { href: 'https://www.openstreetmap.org/copyright', target: '_blank', rel: 'noopener', text: '\u00a9 OpenStreetMap \uae30\uc5ec\uc790' })),
       h('p', null, '\uacbd\ub85c: ', h('a', { href: 'https://valhalla.github.io/valhalla/', target: '_blank', rel: 'noopener', text: 'Valhalla' }), ' \u00b7 ', h('a', { href: 'https://routing.openstreetmap.de/about.html', target: '_blank', rel: 'noopener', text: 'OSRM' }), ' (FOSSGIS \uacf5\uac1c \uc11c\ubc84, \ucd08\ub2f9 1\ud68c \uc774\ud558\u00b7\uac00\ubcbc\uc6b4 \uac1c\uc778 \uc0ac\uc6a9)'),
@@ -4658,6 +4697,206 @@ function drawFollow(t) {
   MV.fit([r.coords[0], ...r.coords.filter((_, i) => i % 20 === 0), r.coords[r.coords.length - 1]]);
 }
 
+// ===== 13c-install.js =====
+// \u2500\u2500 \ud648 \ud654\uba74\uc5d0 \ucd94\uac00 \u2500\u2500
+// \u00b7 \ud06c\ub86c\u00b7\uc5e3\uc9c0(\uc548\ub4dc\ub85c\uc774\ub4dc): beforeinstallprompt \ub97c \ubc1b\uc544 \ub450\uc5c8\ub2e4\uac00 \ub2e8\ucd94\ub97c \ub204\ub974\uba74 \ubc14\ub85c \uc124\uce58 \ucc3d\uc744 \ub744\uc6b4\ub2e4.
+// \u00b7 \uc544\uc774\ud3f0\u00b7\uc0bc\uc131 \uc778\ud130\ub137, \uc124\uce58 \ucc3d\uc744 \uc544\uc9c1 \ubabb \ubc1b\uc740 \ud06c\ub86c: \uadf8 \ube0c\ub77c\uc6b0\uc800\uc758 \uba54\ub274 \uc21c\uc11c\ub97c \ubcf4\uc5ec \uc900\ub2e4.
+// \u00b7 \uce74\uce74\uc624\ud1a1\u00b7\ub77c\uc778 \uac19\uc740 \uc571 \uc548 \ube0c\ub77c\uc6b0\uc800\ub294 \ud648 \ud654\uba74 \ucd94\uac00\ub97c \ub9c9\uc73c\ubbc0\ub85c \uba3c\uc800 \ud734\ub300\ud3f0 \ube0c\ub77c\uc6b0\uc800\ub85c \uc62e\uae34\ub2e4.
+//   \uc62e\uae38 \ub54c ?add=home \uc744 \ubd99\uc5ec \uc5f4\uc5b4, \uc62e\uaca8 \uac04 \ube0c\ub77c\uc6b0\uc800\uc5d0\uc11c \ubc14\ub85c \uc548\ub0b4\ub97c \ub744\uc6b4\ub2e4.
+const UA = navigator.userAgent || '';
+const ENV = (() => {
+  const ios = /iPad|iPhone|iPod/.test(UA) || (/Macintosh/.test(UA) && navigator.maxTouchPoints > 1);
+  const android = /Android/i.test(UA);
+  const kakao = /KAKAOTALK/i.test(UA);
+  const line = /\sLine\//.test(UA);
+  // \ub124\uc774\ubc84\u00b7\ub2e4\uc74c\u00b7\uc778\uc2a4\ud0c0\uadf8\ub7a8\u00b7\ud398\uc774\uc2a4\ubd81\u00b7\ubc34\ub4dc \uc571 \uc548 \ud654\uba74, \uadf8 \ubc16\uc758 \uc548\ub4dc\ub85c\uc774\ub4dc \uc6f9\ubdf0(; wv)
+  const inapp = kakao || line || /NAVER\(inapp|DaumApps|Instagram|FBAN|FBAV|FB_IAB|BAND\//i.test(UA) || (android && /;\s?wv\)/.test(UA));
+  return { ios, android, kakao, line, inapp, mobile: ios || android, samsung: !inapp && /SamsungBrowser/i.test(UA) };
+})();
+const A2HS_KEY = 'gilnavi.a2hs.v1';   // \uccab \ud654\uba74 \uce74\ub4dc\ub97c \ub2eb\uc740 \ub54c(\uc774 \uc2dc\uac01\uae4c\uc9c0 \uc228\uae40)
+const MARK_SVG = '<svg viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="8" fill="#0B5CAD"/><path d="M11 25V15.5a3.5 3.5 0 0 1 3.5-3.5H20" fill="none" stroke="#fff" stroke-width="3.4" stroke-linecap="round"/><path d="M19 7.2 25.5 12 19 16.8z" fill="#fff"/></svg>';
+let installEvt = null;   // \ud06c\ub86c\uc774 \uc900 \uc124\uce58 \ucc3d(\ud55c \ubc88 \uc4f0\uba74 \ub05d)
+let a2g = null;          // \uc5f4\ub824 \uc788\ub294 \uc548\ub0b4 { kind }
+
+const isStandalone = () => { try { return matchMedia('(display-mode: standalone)').matches || navigator.standalone === true; } catch (e) { return false; } };
+// \uc6f9 \uc8fc\uc18c(https \ub610\ub294 localhost)\ub85c \uc5f4\uc5c8\uace0 \uc571 \uc124\uba85\uc11c(manifest)\uac00 \uc788\uc744 \ub54c\ub9cc \ud648 \ud654\uba74\uc5d0 \ucd94\uac00\ud560 \uc218 \uc788\ub2e4(\ub0b4\ub824\ubc1b\uc740 \ud30c\uc77c\uc740 \uc548 \ub428)
+const webApp = () => window.isSecureContext && /^https?:$/.test(location.protocol) && !!document.querySelector('link[rel="manifest"]');
+const a2hsOffer = () => webApp() && ENV.mobile && !isStandalone() && !S.installed;   // \ud734\ub300\ud3f0\uc5d0\uc11c\ub9cc(\ucef4\ud4e8\ud130\ub294 \uc8fc\uc18c\ucc3d\uc758 \uc124\uce58 \uc544\uc774\ucf58)
+const a2hsHidden = () => { try { return +localStorage.getItem(A2HS_KEY) > Date.now(); } catch (e) { return false; } };
+const hideA2hs = days => { try { localStorage.setItem(A2HS_KEY, String(Date.now() + days * 864e5)); } catch (e) { /* \uc800\uc7a5 \ubabb \ud558\uba74 \uc774\ubc88\ub9cc */ } };
+const pageUrl = () => location.origin + location.pathname;
+// \uc774 \ube0c\ub77c\uc6b0\uc800\uc5d0\uc11c \ubcf4\uc5ec \uc904 \uba54\ub274 \uc548\ub0b4 \uc885\ub958
+const a2hsKind = () => ENV.inapp ? 'inapp' : ENV.ios ? 'ios' : ENV.samsung ? 'samsung' : 'android';
+
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault();   // \ube0c\ub77c\uc6b0\uc800 \uc790\uccb4 \uc54c\ub9bc \ub300\uc2e0 \uccab \ud654\uba74 \uce74\ub4dc\u00b7\uc548\ub0b4\uc758 \ub2e8\ucd94\ub85c \ub744\uc6b4\ub2e4
+  installEvt = e;
+  a2hsChanged();
+});
+window.addEventListener('appinstalled', () => {
+  installEvt = null; S.installed = true;
+  closeA2hsGuide();
+  a2hsChanged();
+  toast('\ud648 \ud654\uba74\uc5d0 \ucd94\uac00\ud588\uc2b5\ub2c8\ub2e4. \ub2e4\uc74c\ubd80\ud130\ub294 \uc544\uc774\ucf58\uc744 \ub20c\ub7ec \uc5ec\uc138\uc694', 4000);
+});
+function a2hsChanged() {
+  if (a2g) renderA2hsGuide();
+  // \uce74\ub4dc\uac00 \uc0c8\ub85c \uc0dd\uae30\uac70\ub098 \uc5c6\uc5b4\uc9c8 \ub54c\ub9cc \ub2e4\uc2dc \uadf8\ub9b0\ub2e4(\ubaa9\ub85d\uc744 \ubcf4\ub358 \uc790\ub9ac \uc720\uc9c0)
+  if (S.screen === 'home' && !!$('#a2hsCard') !== (a2hsOffer() && !a2hsHidden())) renderSheet();
+}
+
+// \uccab \ud654\uba74 \ubaa9\ub85d \ub9e8 \uc704\uc758 \uce74\ub4dc
+function installCard() {
+  if (!a2hsOffer() || a2hsHidden()) return null;
+  const sub = ENV.kakao ? '\uce74\uce74\uc624\ud1a1\uc5d0\uc11c\ub294 \ud734\ub300\ud3f0 \ube0c\ub77c\uc6b0\uc800\ub85c \uc62e\uaca8\uc11c \ucd94\uac00\ud569\ub2c8\ub2e4'
+    : ENV.inapp ? '\uc571 \uc548 \ud654\uba74\uc5d0\uc11c\ub294 \ud734\ub300\ud3f0 \ube0c\ub77c\uc6b0\uc800\ub85c \uc62e\uaca8\uc11c \ucd94\uac00\ud569\ub2c8\ub2e4'
+      : '\uc544\uc774\ucf58\uc744 \ub204\ub974\uba74 \uc571\ucc98\ub7fc \ubc14\ub85c \uc5f4\ub9ac\uace0 \ud654\uba74\uc744 \ub113\uac8c \uc501\ub2c8\ub2e4';
+  return h('div', { class: 'a2hs', id: 'a2hsCard' },
+    h('button', { class: 'a2hs__main', type: 'button', id: 'btnA2hs', onclick: () => addToHome() },
+      h('span', { class: 'a2hs__mark', svg: MARK_SVG }),
+      h('span', { class: 'a2hs__txt' }, h('b', { text: '\ud648 \ud654\uba74\uc5d0 \ucd94\uac00' }), h('small', { text: sub })),
+      h('span', { class: 'a2hs__go', text: '\ucd94\uac00' })),
+    h('button', { class: 'icon-btn a2hs__x', type: 'button', id: 'btnA2hsX', 'aria-label': '\ud648 \ud654\uba74 \ucd94\uac00 \uce74\ub4dc \ub2eb\uae30', svg: ic('close', 18),
+      onclick: () => { hideA2hs(60); renderSheet(); toast('\uc124\uc815 \u2192 \uc571 \uc815\ubcf4\uc5d0\uc11c \uc5b8\uc81c\ub4e0 \ud648 \ud654\uba74\uc5d0 \ucd94\uac00\ud560 \uc218 \uc788\uc2b5\ub2c8\ub2e4', 3500); } }));
+}
+
+// \u2018\ud648 \ud654\uba74\uc5d0 \ucd94\uac00\u2019 \ub2e8\ucd94
+function addToHome() {
+  if (ENV.inapp) return leaveInApp();
+  if (installEvt) return promptInstall();
+  openA2hsGuide(a2hsKind());
+}
+
+// \uc571 \uc548 \ube0c\ub77c\uc6b0\uc800 \u2192 \ud734\ub300\ud3f0 \ube0c\ub77c\uc6b0\uc800(\uce74\uce74\uc624\ud1a1: \uae30\ubcf8 \ube0c\ub77c\uc6b0\uc800, \ub77c\uc778: \uc678\ubd80 \ube0c\ub77c\uc6b0\uc800). \ubabb \uc62e\uae30\uba74 \uba54\ub274 \uc548\ub0b4
+function leaveInApp() {
+  const url = pageUrl() + '?add=home';
+  const target = ENV.kakao ? 'kakaotalk://web/openExternal?url=' + encodeURIComponent(url)
+    : ENV.line ? url + '&openExternalBrowser=1' : null;
+  if (!target) return openA2hsGuide('inapp');   // \ub2e4\ub978 \uc571\uc740 \uc5ec\ub294 \ubc29\ubc95\uc774 \uc81c\uac01\uac01\uc774\ub77c \uba54\ub274 \uc548\ub0b4\ub9cc
+  window.__lastExternal = target;   // \uc2dc\ud5d8\uc6a9
+  try { location.href = target; } catch (e) { /* \uc544\ub798\uc5d0\uc11c \uc548\ub0b4 */ }
+  // \ube0c\ub77c\uc6b0\uc800\ub85c \ub118\uc5b4\uac00\uba74 \uc774 \ud654\uba74\uc740 \ub4a4\ub85c \uc228\ub294\ub2e4. 2\ucd08 \ub4a4\uc5d0\ub3c4 \ubcf4\uc774\uba74 \ub118\uc5b4\uac00\uc9c0 \ubabb\ud55c \uac83
+  setTimeout(() => { if (document.visibilityState === 'visible') openA2hsGuide('inapp'); }, 2000);
+}
+
+async function promptInstall() {
+  const ev = installEvt;
+  if (!ev) return openA2hsGuide(a2hsKind());
+  installEvt = null;   // \uc124\uce58 \ucc3d\uc740 \ud55c \ubc88\ub9cc \ub744\uc6b8 \uc218 \uc788\ub2e4
+  try {
+    await ev.prompt();
+    const r = await ev.userChoice;
+    if (r && r.outcome === 'accepted') {
+      S.installed = true; closeA2hsGuide(); a2hsChanged();
+      toast('\ud648 \ud654\uba74\uc5d0 \ucd94\uac00\ud558\ub294 \uc911\uc785\ub2c8\ub2e4. \uc7a0\uc2dc \ub4a4 \uc544\uc774\ucf58\uc774 \uc0dd\uae41\ub2c8\ub2e4', 4000);
+    } else if (a2g) renderA2hsGuide();
+  } catch (e) {
+    openA2hsGuide(a2hsKind());
+  }
+}
+
+// \ub2e4\ub978 \uc571(\uce74\uce74\uc624\ud1a1 \ub4f1)\uc5d0\uc11c \u2018\ud648 \ud654\uba74\uc5d0 \ucd94\uac00\u2019\ub85c \uc62e\uaca8 \uc654\uc73c\uba74 \ubc14\ub85c \uc548\ub0b4\ub97c \ub744\uc6b4\ub2e4
+function initA2hs() {
+  const q = new URLSearchParams(location.search);
+  if (q.get('add') !== 'home') return;
+  q.delete('add'); q.delete('openExternalBrowser');
+  const rest = q.toString();
+  try { history.replaceState(history.state, '', location.pathname + (rest ? '?' + rest : '') + location.hash); } catch (e) { /* \uc8fc\uc18c\ub294 \uadf8\ub300\ub85c */ }
+  if (!webApp() || isStandalone() || ENV.inapp) return;
+  setTimeout(() => { if (!a2g && !isStandalone() && !S.installed) openA2hsGuide(a2hsKind()); }, 600);
+}
+
+// \u2500\u2500 \uc548\ub0b4 \ucc3d \u2500\u2500
+const kbd = x => h('span', { class: 'a2g__key', ...(x.charAt(0) === '<' ? { svg: x } : { text: x }) });
+const IOS_SHARE = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-label="\uacf5\uc720"><path d="M12 3.5v11M8 7.5l4-4 4 4"/><path d="M8.5 10.5h-2v10h11v-10h-2"/></svg>';
+function a2hsSteps(kind) {
+  const b = t => h('b', { text: t });
+  if (kind === 'ios') return [
+    ['\uacf5\uc720 \ub2e8\ucd94 ', kbd(IOS_SHARE), '\ub97c \ub204\ub985\ub2c8\ub2e4. \uc548 \ubcf4\uc774\uba74 ', kbd('\u22ef'), ' \ub2e8\ucd94\ub97c \ub204\ub974\uace0 ', b('\uacf5\uc720'), '\ub97c \ub204\ub974\uc138\uc694.'],
+    ['\ubaa9\ub85d\uc744 \uc704\ub85c \uc62c\ub824 ', b('\ud648 \ud654\uba74\uc5d0 \ucd94\uac00'), '\ub97c \ub204\ub985\ub2c8\ub2e4.'],
+    ['\uc624\ub978\ucabd \uc704 ', b('\ucd94\uac00'), '\ub97c \ub204\ub985\ub2c8\ub2e4.']];
+  if (kind === 'samsung') return [
+    ['\uc624\ub978\ucabd \uc544\ub798 ', kbd('\u2261'), ' \uba54\ub274\ub97c \ub204\ub985\ub2c8\ub2e4.'],
+    [b('\ud604\uc7ac \ud398\uc774\uc9c0 \ucd94\uac00'), ' \u2192 ', b('\ud648 \ud654\uba74'), '\uc744 \ucc28\ub840\ub85c \ub204\ub985\ub2c8\ub2e4. \uba54\ub274\uc5d0 \uc5c6\uc73c\uba74 ', b('\ub3c4\uad6c'), ' \uc548\uc5d0 \uc788\uc2b5\ub2c8\ub2e4.'],
+    [b('\ucd94\uac00'), '\ub97c \ub204\ub985\ub2c8\ub2e4.']];
+  if (kind === 'inapp') {
+    if (ENV.kakao && ENV.ios) return [
+      ['\uc624\ub978\ucabd \uc544\ub798 \uacf5\uc720 \ub2e8\ucd94 ', kbd(IOS_SHARE), '\ub97c \ub204\ub985\ub2c8\ub2e4.'],
+      ['\ubaa9\ub85d\uc5d0\uc11c ', b('Safari'), '\ub97c \uace0\ub985\ub2c8\ub2e4.'],
+      ['Safari\uc5d0\uc11c \uc5f4\ub9ac\uba74 ', b('\ud648 \ud654\uba74\uc5d0 \ucd94\uac00'), '\ub97c \ub2e4\uc2dc \ub204\ub985\ub2c8\ub2e4.']];
+    if (ENV.kakao) return [
+      ['\uc624\ub978\ucabd \uc544\ub798 ', kbd('\u22ee'), ' \uba54\ub274\ub97c \ub204\ub985\ub2c8\ub2e4.'],
+      [b('\ub2e4\ub978 \ube0c\ub77c\uc6b0\uc800\ub85c \uc5f4\uae30'), '\ub97c \ub204\ub985\ub2c8\ub2e4.'],
+      ['\uc5f4\ub9b0 \ube0c\ub77c\uc6b0\uc800\uc5d0\uc11c ', b('\ud648 \ud654\uba74\uc5d0 \ucd94\uac00'), '\ub97c \ub2e4\uc2dc \ub204\ub985\ub2c8\ub2e4.']];
+    if (ENV.ios) return [
+      ['\ud654\uba74 \uc704\ub098 \uc544\ub798\uc758 ', kbd('\u22ef'), ' \uba54\ub274(\ub610\ub294 \uacf5\uc720 \ub2e8\ucd94)\ub97c \ub204\ub985\ub2c8\ub2e4.'],
+      [b('Safari\ub85c \uc5f4\uae30'), '\ub97c \ub204\ub985\ub2c8\ub2e4.'],
+      ['Safari\uc5d0\uc11c \uc5f4\ub9ac\uba74 ', b('\ud648 \ud654\uba74\uc5d0 \ucd94\uac00'), '\ub97c \ub2e4\uc2dc \ub204\ub985\ub2c8\ub2e4.']];
+    return [
+      ['\ud654\uba74 \uc704\ub098 \uc544\ub798\uc758 ', kbd('\u22ee'), ' \uba54\ub274\ub97c \ub204\ub985\ub2c8\ub2e4.'],
+      [b('\ub2e4\ub978 \ube0c\ub77c\uc6b0\uc800\ub85c \uc5f4\uae30'), '(\ub610\ub294 ', b('Chrome\uc73c\ub85c \uc5f4\uae30'), ')\ub97c \ub204\ub985\ub2c8\ub2e4.'],
+      ['\uc5f4\ub9b0 \ube0c\ub77c\uc6b0\uc800\uc5d0\uc11c ', b('\ud648 \ud654\uba74\uc5d0 \ucd94\uac00'), '\ub97c \ub2e4\uc2dc \ub204\ub985\ub2c8\ub2e4.']];
+  }
+  return [   // \ud06c\ub86c \ub4f1 \uc548\ub4dc\ub85c\uc774\ub4dc \ube0c\ub77c\uc6b0\uc800(\uc124\uce58 \ucc3d\uc744 \uc544\uc9c1 \ubabb \ubc1b\uc558\uc744 \ub54c)
+    ['\uc624\ub978\ucabd \uc704 ', kbd('\u22ee'), ' \uba54\ub274\ub97c \ub204\ub985\ub2c8\ub2e4.'],
+    [b('\ud648 \ud654\uba74\uc5d0 \ucd94\uac00'), ' \ub610\ub294 ', b('\uc571 \uc124\uce58'), '\ub97c \ub204\ub985\ub2c8\ub2e4.'],
+    [b('\uc124\uce58'), '(\ub610\ub294 ', b('\ucd94\uac00'), ')\ub97c \ub204\ub985\ub2c8\ub2e4.']];
+}
+function openA2hsGuide(kind) { a2g = { kind }; renderA2hsGuide(); }
+function closeA2hsGuide() {
+  if (!a2g) return;
+  a2g = null;
+  const box = $('#dialog');
+  box.hidden = true; box.replaceChildren();
+}
+function renderA2hsGuide() {
+  const box = $('#dialog');
+  const kind = a2g.kind;
+  const quick = kind !== 'inapp' && !!installEvt;   // \ud06c\ub86c\uc774 \uc124\uce58 \ucc3d\uc744 \uc8fc\uba74 \ub2e8\ucd94 \ud558\ub098\ub85c
+  const lead = quick ? '\uc544\ub798 \ub2e8\ucd94\ub97c \ub204\ub974\uba74 \ubc14\ub85c \ucd94\uac00\ub429\ub2c8\ub2e4. \ub2e4\uc74c\ubd80\ud130\ub294 \ud648 \ud654\uba74 \uc544\uc774\ucf58\uc73c\ub85c \uc5fd\ub2c8\ub2e4.'
+    : kind === 'inapp' ? (ENV.kakao ? '\uce74\uce74\uc624\ud1a1 \uc548 \ud654\uba74\uc5d0\uc11c\ub294 \ud648 \ud654\uba74\uc5d0 \ucd94\uac00\ud560 \uc218 \uc5c6\uc2b5\ub2c8\ub2e4. \ud734\ub300\ud3f0 \ube0c\ub77c\uc6b0\uc800\ub85c \uc62e\uaca8\uc11c \ucd94\uac00\ud558\uc138\uc694.' : '\uc571 \uc548 \ud654\uba74\uc5d0\uc11c\ub294 \ud648 \ud654\uba74\uc5d0 \ucd94\uac00\ud560 \uc218 \uc5c6\uc2b5\ub2c8\ub2e4. \ud734\ub300\ud3f0 \ube0c\ub77c\uc6b0\uc800\ub85c \uc62e\uaca8\uc11c \ucd94\uac00\ud558\uc138\uc694.')
+      : '\ud55c \ubc88 \ucd94\uac00\ud558\uba74 \ud648 \ud654\uba74 \uc544\uc774\ucf58\uc73c\ub85c \ubc14\ub85c \uc5f4\ub9ac\uace0, \uc8fc\uc18c\ucc3d \uc5c6\uc774 \ub113\uc740 \ud654\uba74\uc73c\ub85c \uc501\ub2c8\ub2e4.';
+  const btns = [];
+  if (quick) btns.push(h('button', { class: 'btn btn--primary', type: 'button', id: 'a2gInstall', text: '\ud648 \ud654\uba74\uc5d0 \ucd94\uac00', onclick: () => promptInstall() }));
+  if (kind === 'inapp') btns.push(h('button', { class: 'btn', type: 'button', id: 'a2gCopy', text: '\uc8fc\uc18c \ubcf5\uc0ac', onclick: () => copyText(pageUrl(), '\uc8fc\uc18c\ub97c \ubcf5\uc0ac\ud588\uc2b5\ub2c8\ub2e4. \ud06c\ub86c\uc774\ub098 Safari \uc8fc\uc18c\ucc3d\uc5d0 \ubd99\uc5ec \ub123\uc73c\uc138\uc694') }));
+  btns.push(h('button', { class: quick || kind === 'inapp' ? 'btn btn--ghost' : 'btn btn--primary', type: 'button', id: 'a2gClose', text: quick ? '\ub098\uc911\uc5d0' : '\ub2eb\uae30', onclick: closeA2hsGuide }));
+  box.replaceChildren(h('div', { class: 'dialog__box a2g', role: 'dialog', 'aria-modal': 'true', 'aria-labelledby': 'a2gTitle', 'data-kind': kind },
+    h('div', { class: 'a2g__head' },
+      h('span', { class: 'a2hs__mark a2hs__mark--lg', svg: MARK_SVG }),
+      h('div', null, h('h2', { id: 'a2gTitle', text: '\ud648 \ud654\uba74\uc5d0 \ucd94\uac00' }), h('p', { class: 'a2g__lead', text: lead }))),
+    quick ? null : h('ol', { class: 'a2g__steps' }, ...a2hsSteps(kind).map(s => h('li', null, ...s))),
+    kind === 'inapp' ? h('p', { class: 'a2g__url', text: pageUrl() }) : null,
+    a2hsNote(kind) ? h('p', { class: 'a2g__note', text: a2hsNote(kind) }) : null,
+    h('div', { class: 'dialog__btns' }, ...btns)));
+  box.hidden = false;
+  box.onclick = e => { if (e.target === box) closeA2hsGuide(); };
+  box.onkeydown = e => { if (e.key === 'Escape') closeA2hsGuide(); };
+  const dlg = box.firstChild;
+  dlg.tabIndex = -1;
+  dlg.focus({ preventScroll: true });   // \ud654\uba74 \uc77d\uae30\u00b7\ud0a4\ubcf4\ub4dc\ub294 \ucc3d \uc548\uc5d0\uc11c \uc2dc\uc791(\ub2e8\ucd94\uc5d0 \ud3ec\ucee4\uc2a4 \ud14c\ub450\ub9ac\ub294 \ub744\uc6b0\uc9c0 \uc54a\uc74c)
+}
+// \uc774\ubbf8 \uc800\uc7a5\ud55c \uac83\uc774 \uc788\uc744 \ub54c\ub9cc: \uc571 \uc548 \ud654\uba74\u00b7Safari \uc640 \ud648 \ud654\uba74 \uc571\uc740 \uc800\uc7a5 \uacf5\uac04\uc774 \ub530\ub85c\ub77c \uc62e\uaca8\uc9c0\uc9c0 \uc54a\ub294\ub2e4
+function a2hsNote(kind) {
+  const has = store.home || store.work || store.favs.length || store.recents.length || store.trips.length;
+  if (!has || (kind !== 'inapp' && kind !== 'ios')) return '';
+  return kind === 'inapp' ? `${ENV.kakao ? '\uce74\uce74\uc624\ud1a1' : '\uc571'} \uc548 \ud654\uba74\uc5d0 \uc800\uc7a5\ud55c \uc9d1\u00b7\ud68c\uc0ac\u00b7\uae30\ub85d\uc740 \ube0c\ub77c\uc6b0\uc800\ub85c \uc62e\uaca8\uc9c0\uc9c0 \uc54a\uc2b5\ub2c8\ub2e4. \ud648 \ud654\uba74 \uc571\uc5d0\uc11c \ub2e4\uc2dc \ub4f1\ub85d\ud558\uac70\ub098 \uc124\uc815 \u2192 \ub370\uc774\ud130\uc758 \ubc31\uc5c5 \ud30c\uc77c\ub85c \uc62e\uae30\uc138\uc694.`
+    : '\uc544\uc774\ud3f0\uc758 \ud648 \ud654\uba74 \uc571\uc740 Safari\uc640 \ub530\ub85c \uc800\uc7a5\ud569\ub2c8\ub2e4. \uc9d1\u00b7\ud68c\uc0ac\ub294 \ud648 \ud654\uba74 \uc571\uc5d0\uc11c \ub2e4\uc2dc \ub4f1\ub85d\ud558\uac70\ub098 \uc124\uc815 \u2192 \ub370\uc774\ud130\uc758 \ubc31\uc5c5 \ud30c\uc77c\ub85c \uc62e\uae30\uc138\uc694.';
+}
+
+async function copyText(text, msg) {
+  try { await navigator.clipboard.writeText(text); toast(msg, 3500); }
+  catch (e) { toast(text, 6000); }   // \ubcf5\uc0ac\ub97c \ub9c9\ub294 \ud654\uba74: \uc8fc\uc18c\ub97c \ud06c\uac8c \ubcf4\uc5ec \uc900\ub2e4(\uae38\uac8c \ub20c\ub7ec \ubcf5\uc0ac)
+}
+
+// \uc124\uc815 \u2192 \uc571 \uc8fc\uc18c \ubcf4\ub0b4\uae30(\uce74\uce74\uc624\ud1a1 \ub4f1). \uacf5\uc720 \ucc3d\uc774 \uc5c6\uc73c\uba74 \uc8fc\uc18c \ubcf5\uc0ac
+async function shareApp() {
+  const data = { title: '\uae38\uc7a1\uc774 \ub0b4\ube44', text: '\uc124\uce58 \uc5c6\uc774 \ubc14\ub85c \uc4f0\ub294 \ubb34\ub8cc \ub0b4\ube44\uac8c\uc774\uc158', url: APP_URL };
+  if (navigator.share) {
+    try { await navigator.share(data); return; } catch (e) { if (e && e.name === 'AbortError') return; }
+  }
+  copyText(APP_URL, '\uc571 \uc8fc\uc18c\ub97c \ubcf5\uc0ac\ud588\uc2b5\ub2c8\ub2e4. \uce74\uce74\uc624\ud1a1 \ub300\ud654\ucc3d\uc5d0 \ubd99\uc5ec \ub123\uc5b4 \ubcf4\ub0b4\uc138\uc694');
+}
+
 // ===== 14-main.js =====
 // \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 \uc2dc\uc791 \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
 function bindUI() {
@@ -4758,6 +4997,7 @@ function boot() {
   bindUI();
   MV.whenLoaded(refreshPts);
   go('home');
+  initA2hs();
   GPS.start();
   setInterval(() => { if (store.settings.theme === 'auto') applyTheme(); if (S.screen === 'home') renderChips(); }, 60000);
   const bootEl = $('#boot');
@@ -4780,7 +5020,7 @@ function boot() {
       toast('\uc800\uc7a5\ub41c \uc7a5\uc18c \uc774\ub984\u00b7\uc8fc\uc18c\ub97c \ud55c\uae00\ub85c \ubc14\uafe8\uc2b5\ub2c8\ub2e4');
     }).catch(() => { /* \ub2e4\uc74c\uc5d0 \ub2e4\uc2dc */ });
   }, 4000);
-  window.__navi = { S, store, MV, Voice, navFix, startTrip, finishNav, applyTheme, openSettings, openPlaces, onPos, reversePlace, searchPlaces, renderSheet, renderChips, setSheetSize };
+  window.__navi = { S, store, MV, Voice, navFix, startTrip, finishNav, applyTheme, openSettings, openPlaces, onPos, reversePlace, searchPlaces, renderSheet, renderChips, setSheetSize, addToHome, ENV };
 }
 
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();

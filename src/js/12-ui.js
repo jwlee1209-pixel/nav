@@ -26,6 +26,8 @@ const IC = {
   car: '<path d="M5 16.5V12l2-5h10l2 5v4.5"/><path d="M3.5 16.5h17M6.5 19.5v-3M17.5 19.5v-3"/><circle cx="7.5" cy="13.5" r="1"/><circle cx="16.5" cy="13.5" r="1"/>',
   nav: '<path d="M12 3 19 20l-7-4-7 4z"/>',
   walk: '<circle cx="13.5" cy="4.5" r="2"/><path d="M12.6 8.6 10.4 14l3.1 2.6-1 4.4M10.4 14 8 20.6M12 9.6l-3.2 3M12.6 8.6l2.6 3 3 .9"/>',
+  share: '<circle cx="17.5" cy="5.5" r="2.5"/><circle cx="6.5" cy="12" r="2.5"/><circle cx="17.5" cy="18.5" r="2.5"/><path d="m8.7 10.8 6.6-4M8.7 13.2l6.6 4"/>',
+  addhome: '<rect x="6.5" y="2.5" width="11" height="19" rx="2.5"/><path d="M12 8.5v6M9 11.5h6"/>',
   route: '<circle cx="6" cy="18.5" r="2.2"/><circle cx="18" cy="5.5" r="2.2"/><path d="M8.3 18.5H15a3.2 3.2 0 0 0 0-6.4H9a3.2 3.2 0 0 1 0-6.4h6.7"/>',
 };
 const ic = (n, size = 22, fill = false) => `<svg viewBox="0 0 24 24" width="${size}" height="${size}" fill="${fill ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${IC[n]}</svg>`;
@@ -235,7 +237,7 @@ function renderChips() {
 function homeSheet() {
   const tabs = h('div', { class: 'seg', role: 'tablist' },
     ...[['recent', '최근 목적지'], ['fav', '즐겨찾기'], ['trips', '주행 기록']].map(([k, label]) => h('button', { type: 'button', role: 'tab', id: 'tab-' + k, 'aria-pressed': S.homeTab === k ? 'true' : 'false', text: label, onclick: () => { S.homeTab = k; renderSheet(); } })));
-  if (S.homeTab === 'trips') return [gpsAlert(), h('div', { class: 'sec-head' }, tabs), ...tripsTab()];
+  if (S.homeTab === 'trips') return [gpsAlert(), installCard(), h('div', { class: 'sec-head' }, tabs), ...tripsTab()];
   const list = h('ul', { class: 'list' });
   const items = S.homeTab === 'recent' ? store.recents : store.favs;
   if (!items.length) {
@@ -248,7 +250,7 @@ function homeSheet() {
       h('button', { class: 'btn btn--sm', type: 'button', id: 'btnSaveHere', onclick: () => saveHere() }, h('span', { svg: ic('pin', 16) }), '현재 위치 저장'),
       h('button', { class: 'btn btn--sm btn--ghost', type: 'button', onclick: openPlaces }, h('span', { svg: ic('star', 16) }), '내 장소 관리')),
     gpsNote());
-  return [gpsAlert(), h('div', { class: 'sec-head' }, tabs), ...(S.homeTab === 'fav' ? froutesSection() : []), list, manage];
+  return [gpsAlert(), installCard(), h('div', { class: 'sec-head' }, tabs), ...(S.homeTab === 'fav' ? froutesSection() : []), list, manage];
 }
 
 // 위치를 못 쓰는 이유와 해결 방법(한곳에서 관리)

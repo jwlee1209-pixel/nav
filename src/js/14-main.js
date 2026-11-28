@@ -97,6 +97,7 @@ function boot() {
   bindUI();
   MV.whenLoaded(refreshPts);
   go('home');
+  initA2hs();
   GPS.start();
   setInterval(() => { if (store.settings.theme === 'auto') applyTheme(); if (S.screen === 'home') renderChips(); }, 60000);
   const bootEl = $('#boot');
@@ -119,7 +120,7 @@ function boot() {
       toast('저장된 장소 이름·주소를 한글로 바꿨습니다');
     }).catch(() => { /* 다음에 다시 */ });
   }, 4000);
-  window.__navi = { S, store, MV, Voice, navFix, startTrip, finishNav, applyTheme, openSettings, openPlaces, onPos, reversePlace, searchPlaces, renderSheet, renderChips, setSheetSize };
+  window.__navi = { S, store, MV, Voice, navFix, startTrip, finishNav, applyTheme, openSettings, openPlaces, onPos, reversePlace, searchPlaces, renderSheet, renderChips, setSheetSize, addToHome, ENV };
 }
 
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();
